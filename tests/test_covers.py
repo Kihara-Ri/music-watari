@@ -89,6 +89,30 @@ class PrefixScoringTests(unittest.TestCase):
                                '物語シリーズ', 'JP-5', self.url, '2015', country='JP')
         self.assertLess(c['score'], 0.65)
 
+class CjkVariantTests(unittest.TestCase):
+    """简体输入 ↔ 繁体目录：Unihan T→S 折叠（周杰伦《叶惠美》在 iTunes/MB 是繁体名+英文艺名）。"""
+    def test_folded_equality_and_similarity(self):
+        from covers import similarity, artist_matches
+        self.assertEqual(normalized('葉惠美'), normalized('叶惠美'))
+        self.assertEqual(similarity('叶惠美', '葉惠美'), 1.0)
+        self.assertEqual(similarity('周杰伦', '周杰倫'), 1.0)
+        self.assertTrue(artist_matches('周杰伦', '周杰倫'))
+        self.assertFalse(artist_matches('周杰伦', 'Jay Chou'))  # 英文艺名仍不算同一人
+    def test_candidate_exact_across_scripts(self):
+        from covers import CoverService
+        svc = CoverService()
+        c = svc.candidate('叶惠美', '周杰伦', '葉惠美', '周杰倫',
+                          'CAA-x', 'https://coverartarchive.org/release/x/f-500.jpg', '2003')
+        self.assertTrue(c['exact'])
+        self.assertEqual(c['score'], 1.0)
+    def test_english_artist_name_stays_non_exact(self):
+        from covers import CoverService
+        svc = CoverService()
+        c = svc.candidate('叶惠美', '周杰伦', '葉惠美', 'Jay Chou',
+                          'JP-1', 'https://is1-ssl.mzstatic.com/a/100x100bb.jpg', '2003', country='JP')
+        self.assertFalse(c['exact'])
+        self.assertGreaterEqual(c['score'], 0.65)  # 进候选可手选，不自动带入
+
 class GroupCdFrontTests(unittest.TestCase):
     def test_prefers_cd_release_front(self):
         from covers import CoverService

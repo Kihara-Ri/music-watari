@@ -13,10 +13,12 @@ from difflib import SequenceMatcher
 from urllib.parse import urlencode, urlsplit, quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from domain import ValidationError
+from cjkvariants import T2S
 
 
 def normalized(text):
-    return ''.join(c for c in unicodedata.normalize('NFKC', text).casefold() if c.isalnum())
+    # T→S 折叠让简体输入能对上繁体目录（周杰伦/周杰倫）；两侧同变换，只增容不改语义
+    return ''.join(c for c in unicodedata.normalize('NFKC', text).casefold().translate(T2S) if c.isalnum())
 
 
 def similarity(a, b):
