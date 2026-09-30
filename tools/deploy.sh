@@ -1,3 +1,4 @@
+#!/bin/bash
 # 碟渡裸机发布脚本（在开发机上运行；服务器需 ssh 免密 + sudo）
 #
 #   DEPLOY_HOST=你的主机 tools/deploy.sh            常规发布：构建→打包→上传→健康检查→切软链→失败自动回滚
@@ -9,8 +10,9 @@
 # 可用环境变量覆盖：DEPLOY_HOST（必填）、DEPLOY_DIR（默认 /opt/diedu）、
 # SERVICE（默认 diedu）、APP_PORT（默认 8765）、KEEP_RELEASES（默认 5）。
 # deploy/diedu.service 默认以 diedu 用户运行，按需先在服务器创建用户或改 unit。
+# 注意：$VAR 后紧跟全角字符会被 macOS bash/zsh 并入变量名（C.UTF-8 locale），
+# 一律写成 ${VAR} 形式；shebang 必须在首行，否则脚本由调用方 shell 解释。
 
-#!/bin/bash
 set -euo pipefail
 
 HOST="${DEPLOY_HOST:-}"
@@ -78,11 +80,11 @@ remote "mkdir -p '$BASE/releases/$STAMP' && tar -xzf /tmp/album-ledger.tar.gz -C
 # ── 首次初始化：release 布局 + systemd 服务 ────────────────────────
 if [ "$MODE" = "--init" ]; then
   if remote "[ -f '$BASE/app.py' ]"; then
-    say "检测到扁平安装，迁入 releases/legacy-$STAMP（data/ 原地保留）"
+    say "检测到扁平安装，迁入 releases/legacy-${STAMP}（data/ 原地保留）"
     remote "mkdir -p '$BASE/releases/legacy-$STAMP' && cd '$BASE' && find . -maxdepth 1 -mindepth 1 \
       ! -name data ! -name releases ! -name service.env ! -name current -exec mv {} releases/legacy-$STAMP/ \;"
   fi
-  say "安装 systemd unit（$SERVICE，按需先在服务器创建 diedu 用户）"
+  say "安装 systemd unit（${SERVICE}，按需先在服务器创建 diedu 用户）"
   scp -q deploy/diedu.service "$HOST:/tmp/diedu.service"
   remote "sudo mv /tmp/diedu.service /etc/systemd/system/$SERVICE.service && sudo systemctl daemon-reload && sudo systemctl enable '$SERVICE'"
   [ -f "$ROOT/deploy/service.env.example" ] || true
@@ -102,7 +104,7 @@ sleep 2
 for i in 1 2 3 4 5; do
   if H="$(health)"; then
     say "健康检查通过：$H"
-    say "发布完成：$BASE/releases/$STAMP（上一版：${PREV:-无}）"
+    say "发布完成：$BASE/releases/${STAMP}（上一版：${PREV:-无}）"
     remote "cd '$BASE/releases' && ls -1d */ | grep -v legacy | sort | head -n -$KEEP_RELEASES | xargs -r rm -rf"
     exit 0
   fi
