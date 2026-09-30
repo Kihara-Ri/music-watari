@@ -1,0 +1,124 @@
+// 专辑详情抽屉：封面大图、字段、实物照片墙、双笔记、运输与交易历史。
+import {useApp} from '../state/AppContext';
+import type {AppCtx} from '../state/AppContext';
+import {fmt, fmtJPY, jpyCost, rmb, shipFeeText, yuan} from '../core/format';
+import {SALE_NAMES, STATUS_NAMES} from '../types';
+import {Cover} from '../components/Cover';
+import {openRecordForm} from './RecordForm';
+import {openSaleForm} from './SaleForm';
+import {bulkAction} from './shared';
+
+export function openDetail(app: AppCtx, id: string) {
+  const r = app.rec(id);
+  if (!r) { app.toast('记录不存在，请刷新页面', 'err'); return; }
+  app.openDrawer({title: '专辑详情', content: <DetailBody id={id}/>, footer: <DetailFooter id={id}/>});
+}
+
+function DetailBody({id}: {id: string}) {
+  const app = useApp();
+  const r = app.rec(id);
+  if (!r) return null;
+  const sales = app.state.sales.filter(s => s.items.some(i => i.recordId === id));
+  const shipment = r.shipmentId ? app.state.shipments.find(s => s.id === r.shipmentId) : undefined;
+  const shipItem = shipment && shipment.currency === 'JPY'
+    ? shipment.items.find(i => i.recordId === id) : undefined;
+  const approx = jpyCost(r);
+  const tags: [string, React.ReactNode][] = [
+    ['买入金额', r.price === '' ? '待补'
+      : `${r.currency === 'JPY' ? fmtJPY(r.price) : fmt(r.price)} ${r.currency === 'JPY' ? '日元' : '人民币'}`
+        + (approx ? ` ` : '')],
+    ['买入日期', r.date || '待补'],
+    ['购买渠道', r.location || '—'],
+    ['当日汇率', r.currency === 'JPY' && r.rate ? `100 円 = ¥${Number(r.rate).toFixed(2)}` : '—'],
+    ['额外费用（含运费分摊）', r.fees && Number(r.fees) ? yuan(r.fees) : '—'],
+    ['碟盒', r.version || '—'],
+    ['版次', r.pressing ? (r.pressing === '日版' && r.obi ? `${r.pressing}（${r.obi}）` : r.pressing) : '—'],
+  ];
+  return (
+    <div>
+      <div className="record-detail">
+        <div className="big"><Cover r={r}/></div>
+        <div>
+          <h2>{r.title}</h2>
+          <p className="artist">{r.artist}</p>
+          <span className={`pill ${r.status}`}>{STATUS_NAMES[r.status]}</span>
+          {r.listed ? <span className="pill listed">已上架</span> : null}
+        </div>
+      </div>
+      <dl className="detail-grid">
+        {tags.map(([k, val]) => (
+          <div key={k}><dt>{k}</dt><dd>
+            {k === '买入金额' && approx ? <>{val} <span className="rmb">{rmb(approx)}</span></> : val}
+            {k === '额外费用（含运费分摊）' && shipItem?.feeOriginal
+              ? <> <span className="rmb">含国际运费 {fmtJPY(shipItem.feeOriginal)} 円 ≈ {yuan(shipItem.fee)}</span></>
+              : null}
+          </dd></div>
+        ))}
+      </dl>
+      {r.photoCount ? (
+        <>
+          <h3 className="section-title">实物照片</h3>
+          <div className="photo-strip">
+            {Array.from({length: r.photoCount}, (_, i) => (
+              <a key={i} href={`/api/photo/${r.id}/${i}`} target="_blank" rel="noopener">
+                <img src={`/api/photo/${r.id}/${i}`} loading="lazy" alt={`实物照片 ${i + 1}`}/>
+              </a>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {r.note ? <><h3 className="section-title">笔记 · 这张副本</h3><p className="note-text">{r.note}</p></> : null}
+      {r.noteAlbum ? <><h3 className="section-title">笔记 · 这张专辑</h3><p className="note-text">{r.noteAlbum}</p></> : null}
+      {shipment && shipment.status !== 'cancelled' ? (
+        <>
+          <h3 className="section-title">运输包裹</h3>
+          <p className="small-note">
+            {shipment.method} · {shipment.date} 发货
+            {shipment.arrivedDate ? ` · 已签收 ${shipment.arrivedDate}` : ' · 在途'}
+            {' '}· 运费分摊 {shipFeeText(shipment.currency,
+              shipment.items.find(i => i.recordId === id)?.feeOriginal,
+              shipment.items.find(i => i.recordId === id)?.fee || 0)}
+          </p>
+        </>
+      ) : null}
+      {sales.length ? (
+        <>
+          <h3 className="section-title">交易历史</h3>
+          {sales.map(s => {
+            const item = s.items.find(i => i.recordId === id)!;
+            return (
+              <p className="small-note" key={s.id}>
+                {s.date} 售出 · {SALE_NAMES[s.status]}
+                {s.receivedDate ? ` · 到账 ${s.receivedDate}` : ''} · 到手 {yuan(item.net)}
+                {item.profit !== null ? ` · 利润 ${yuan(item.profit)}` : ''}
+                {s.address ? ` · ${s.address}` : ''}
+              </p>
+            );
+          })}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function DetailFooter({id}: {id: string}) {
+  const app = useApp();
+  const r = app.rec(id);
+  if (!r) return null;
+  return (
+    <>
+      <button onClick={() => openRecordForm(app, id)}>编辑</button>
+      {['overseas', 'domestic'].includes(r.status)
+        ? <button className="quiet" onClick={() => bulkAction(app, r.listed ? 'unlist' : 'list', [id], r.listed ? '已取消上架' : '已标记上架')}>
+            {r.listed ? '取消上架' : '标记上架'}</button> : null}
+      {r.status === 'domestic'
+        ? <button className="quiet" onClick={() => bulkAction(app, 'to_overseas', [id])}>调回海外</button> : null}
+      {['overseas', 'domestic'].includes(r.status) ? (
+        <button className="quiet danger"
+                onClick={() => bulkAction(app, 'delete', [id], '已移入回收站，可在设置中恢复')}>移除</button>
+      ) : null}
+      {r.status === 'domestic'
+        ? <button className="primary" onClick={() => openSaleForm(app, [id])}>记录售出</button> : null}
+    </>
+  );
+}

@@ -1,0 +1,309 @@
+import json, tempfile, unittest, base64
+from pathlib import Path
+from decimal import Decimal
+from domain import clean_record, cost, allocate, ValidationError
+from storage import Store, SCHEMA
+from rates import RateService
+
+class FakeRates:
+    """Deterministic per-100 rate for tests; unknown dates → None."""
+    def __init__(self, table): self.table=dict(table)
+    def get(self, day): return self.table.get(str(day)[:10])
+    def warm(self, days): pass
+    def status(self): return {'days': len(self.table), 'latest': max(self.table) if self.table else None}
+
+class LedgerTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory()
+        self.store=Store(Path(self.tmp.name)/'db.sqlite3', FakeRates({'2026-09-07':'4.8','2026-01-22':'4.4'}))
+    def tearDown(self):self.tmp.cleanup()
+    def buy(self, **kw):
+        d={'title':'测试专辑','artist':'艺人','date':'2026-09-07','price':'2000','currency':'JPY','fees':'10',**kw}
+        return self.store.save(d)['ids'][0]
+    def record(self,id):return next(r for r in self.store.state()['records'] if r['id']==id)
+    def sell(self,ids,**kw):return self.store.sell({'ids':ids,'gross':'160','fees':'10','date':'2026-09-07',**kw})['id']
+    def sale(self,id):return next(s for s in self.store.state()['sales'] if s['id']==id)
+    def ship(self,ids,**kw):return self.store.ship({'ids':ids,'method':'EMS','cost':'30','date':'2026-09-07',**kw})['id']
+    # ── cost model ──
+    def test_auto_rate_cost(self):
+        id=self.buy();self.assertEqual(self.record(id)['cost'],'106.00')
+    def test_edition_roundtrip(self):
+        id=self.buy(version='纸盒',pressing='日版',obi='无侧标');r=self.record(id)
+        self.assertEqual(r['version'],'纸盒');self.assertEqual(r['pressing'],'日版');self.assertEqual(r['obi'],'无侧标')
+        self.assertEqual(self.record(self.buy())['version'],'')
+        self.assertEqual(self.record(self.buy())['pressing'],'')
+    def test_photos_roundtrip(self):
+        jpeg='data:image/jpeg;base64,'+base64.b64encode(b'\xff\xd8fakejpegbytes').decode()
+        pid=self.buy(photos=[jpeg,jpeg])
+        r=self.record(pid);self.assertEqual(r['photoCount'],2)
+        d=self.store.photos_dir/pid;self.assertEqual(len(list(d.iterdir())),2)
+        self.store.save({'id':pid,'revision':self.record(pid)['revision'],'photos':[0,jpeg]})
+        self.assertEqual(self.record(pid)['photoCount'],2)
+        self.assertEqual(sorted(p.name for p in d.iterdir()),['0.jpg','1.jpg'])
+        self.store.save({'id':pid,'revision':self.record(pid)['revision'],'photos':[]})
+        self.assertEqual(self.record(pid)['photoCount'],0);self.assertFalse(d.exists())
+        with self.assertRaises(ValidationError):
+            self.store.save({'title':'x','artist':'y','date':'2026-09-07','price':'1','currency':'JPY','photos':['data:text/html;base64,AAAA']})
+        self.assertEqual(self.record(self.buy())['photoCount'],0)
+    def test_new_jpy_overseas_cny_domestic(self):
+        j=self.buy();c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.assertEqual(self.record(j)['status'],'overseas');self.assertEqual(self.record(c)['status'],'domestic')
+    def test_missing_rate_or_price_is_unknown_cost(self):
+        a=self.buy(date='1999-01-01');b=self.buy(price='')
+        self.assertIsNone(self.record(a)['cost']);self.assertIsNone(self.record(b)['cost'])
+    def test_actual_priority_beats_rate(self):
+        id=self.buy(actual='102.25');r=self.record(id)
+        self.assertEqual(r['cost'],'112.25');self.assertNotIn('rate',r)
+    def test_cny(self):self.assertEqual(self.record(self.buy(currency='CNY',price='100',date='2026-09-07'))['cost'],'110.00')
+    def test_decimal_half_up(self):
+        self.assertEqual(self.record(self.buy(price='1',fees='0'))['cost'],'0.05')
+    def test_invalid_inputs(self):
+        for kw in [{'price':'-1'},{'price':'NaN'},{'date':'2026-99-01'}]:
+            with self.assertRaises(ValidationError):self.buy(**kw)
+    def test_duplicate_purchase_independent(self):
+        a=self.buy();b=self.buy(price='1000');sid=self.sell([a])
+        self.assertEqual(self.record(b)['status'],'overseas');self.assertEqual(self.record(b)['cost'],'58.00')
+    # ── sale lifecycle: shipping → complete ──
+    def test_sell_then_receive(self):
+        id=self.buy();sid=self.sell([id])
+        self.assertEqual(self.record(id)['status'],'shipping');self.assertEqual(self.sale(sid)['status'],'shipping')
+        self.assertEqual(self.sale(sid)['items'][0]['profit'],'44.00')  # 预估利润
+        self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+        s=self.sale(sid);self.assertEqual(s['status'],'complete');self.assertEqual(s['receivedDate'],'2026-09-20')
+        self.assertEqual(self.record(id)['status'],'sold')
+    def test_sell_rejects_complete_status(self):
+        with self.assertRaises(ValidationError):self.store.sell({'ids':[self.buy()],'gross':'10','fees':'0','date':'2026-09-07','status':'complete'})
+    def test_postage_reduces_net(self):
+        id=self.buy();sid=self.sell([id],postage='5')
+        self.assertEqual(self.sale(sid)['items'][0]['net'],'145.00')
+    def test_no_actions_after_receive(self):
+        sid=self.sell([self.buy()]);self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-08'})
+        for act in ({'action':'refund','refund':'10','date':'2026-09-09'},{'action':'cancel'},{'action':'receive','date':'2026-09-09'}):
+            with self.assertRaises(ValidationError):self.store.sale_action({'id':sid,**act})
+    def test_double_sale_rejected(self):
+        id=self.buy();self.sell([id]);
+        with self.assertRaises(ValidationError):self.sell([id])
+        self.assertEqual(len(self.store.state()['sales']),1)
+    def test_sale_cancel_restores_previous_status(self):
+        id=self.buy();sid=self.sell([id]);self.store.sale_action({'id':sid,'action':'cancel'})
+        self.assertEqual(self.record(id)['status'],'overseas');self.assertEqual(self.sale(sid)['status'],'cancelled')
+    def test_refund_only_while_shipping(self):
+        id=self.buy();sid=self.sell([id]);self.store.sale_action({'id':sid,'action':'refund','refund':'160','date':'2026-09-08','returned':True})
+        self.assertEqual(self.record(id)['status'],'domestic');self.assertEqual(self.sale(sid)['items'][0]['profit'],'-10.00')
+    def test_allocation_conserves_cents(self):
+        for cents in range(1,100):
+            total=Decimal(cents)/100;parts=allocate(total,[1,2,3]);self.assertEqual(sum(map(Decimal,parts)),total)
+    def test_batch_buy_fee_allocation(self):
+        item={'title':'A','artist':'B','date':'2026-09-07','price':'100','currency':'CNY'}
+        self.store.save({'items':[item,item,item],'batchFees':'1','allocation':'equal'})
+        self.assertEqual(sum(Decimal(r['cost']) for r in self.store.state()['records']),Decimal('301'))
+    def test_batch_atomic(self):
+        with self.assertRaises(ValidationError):self.store.save({'items':[{'title':'ok','artist':'A','date':'2026-09-07','price':10,'currency':'CNY'},{'title':''}]})
+        self.assertEqual(self.store.state()['records'],[])
+    # ── shipments ──
+    def test_ship_adds_fee_share_and_status(self):
+        a=self.buy();b=self.buy(price='1000')
+        sid=self.ship([a,b])
+        ra,rb=self.record(a),self.record(b)
+        self.assertEqual(ra['fees'],'25.00');self.assertEqual(rb['fees'],'25.00')  # 30/2
+        self.assertEqual(ra['status'],'transit');self.assertEqual(rb['status'],'transit')
+        sh=next(s for s in self.store.state()['shipments'] if s['id']==sid)
+        self.assertEqual(sh['status'],'transit');self.assertEqual(sh['cost'],'30.00')
+    def test_ship_cost_in_album_cost(self):
+        a=self.buy();self.ship([a])
+        # 2000*4.8/100 + 10 + 运费30（单张不均摊）= 136.00
+        self.assertEqual(self.record(a)['cost'],'136.00')
+    def test_ship_requires_overseas(self):
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        with self.assertRaises(ValidationError):self.ship([c])
+    def test_ship_jpy_converts_at_day_rate(self):
+        a=self.buy();b=self.buy()
+        sid=self.ship([a,b],currency='JPY',cost='1000')  # 1000円 × 4.8/100 = ¥48
+        sh=next(s for s in self.store.state()['shipments'] if s['id']==sid)
+        self.assertEqual(sh['cost'],'48.00')
+        self.assertEqual(sh['currency'],'JPY');self.assertEqual(sh['costOriginal'],'1000.00')
+        self.assertEqual(self.record(a)['fees'],'34.00')  # 买入 fees 10 + 均摊 24
+        self.assertEqual([i['feeOriginal'] for i in sh['items']],['500.00','500.00'])  # 日元原额分摊
+    def test_ship_jpy_without_rate_rejected(self):
+        a=self.buy()
+        with self.assertRaises(ValidationError):self.ship([a],currency='JPY',cost='100',date='2026-02-01')
+    def test_shipment_edit_currency_recalculates(self):
+        a=self.buy();sid=self.ship([a])  # 默认人民币 30 → fees 40
+        self.store.update_shipment({'id':sid,'currency':'JPY','cost':'1000'})
+        sh=next(s for s in self.store.state()['shipments'] if s['id']==sid)
+        self.assertEqual(sh['cost'],'48.00');self.assertEqual(sh['costOriginal'],'1000.00')
+        self.assertEqual(sh['items'][0]['feeOriginal'],'1000.00')
+        self.assertEqual(self.record(a)['fees'],'58.00')  # 40 + 48 − 30
+        self.assertEqual(self.record(a)['cost'],'154.00')  # 96 折算 + 58 fees
+    def test_arrive_then_rollback(self):
+        a=self.buy();sid=self.ship([a])
+        self.store.shipment_action({'id':sid,'action':'arrive','date':'2026-09-18'})
+        self.assertEqual(self.record(a)['status'],'domestic')
+        sh=next(s for s in self.store.state()['shipments'] if s['id']==sid)
+        self.assertEqual(sh['status'],'arrived');self.assertEqual(sh['arrivedDate'],'2026-09-18')
+        self.store.shipment_action({'id':sid,'action':'undo_arrive'})
+        self.assertEqual(self.record(a)['status'],'transit')
+        sh=next(s for s in self.store.state()['shipments'] if s['id']==sid)
+        self.assertEqual(sh['status'],'transit');self.assertEqual(sh['arrivedDate'],'')
+    def test_rollback_blocked_when_sold(self):
+        a=self.buy();sid=self.ship([a])
+        self.store.shipment_action({'id':sid,'action':'arrive','date':'2026-09-18'})
+        sale_id=self.sell([a])
+        with self.assertRaises(ValidationError):self.store.shipment_action({'id':sid,'action':'undo_arrive'})
+        self.store.sale_action({'id':sale_id,'action':'cancel'})
+        self.store.shipment_action({'id':sid,'action':'undo_arrive'})  # now ok
+        self.assertEqual(self.record(a)['status'],'transit')
+    def test_cancel_shipment_reverts_fees(self):
+        a=self.buy();sid=self.ship([a])
+        self.assertEqual(self.record(a)['cost'],'136.00')
+        self.store.shipment_action({'id':sid,'action':'cancel'})
+        r=self.record(a)
+        self.assertEqual(r['status'],'overseas');self.assertEqual(r['fees'],'10.00');self.assertEqual(r['cost'],'106.00')
+        self.assertNotIn('shipmentId',r)
+    def test_update_shipment_cost_reallocates(self):
+        a=self.buy();b=self.buy(price='1000');sid=self.ship([a,b])
+        self.store.update_shipment({'id':sid,'cost':'50','method':'船运'})
+        self.assertEqual(self.record(a)['fees'],'35.00');self.assertEqual(self.record(b)['fees'],'35.00')
+    def test_to_overseas_bulk(self):
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.store.bulk({'action':'to_overseas','ids':[c]})
+        self.assertEqual(self.record(c)['status'],'overseas')
+        with self.assertRaises(ValidationError):self.store.bulk({'action':'to_overseas','ids':[c]})
+    def test_delete_blocked_in_transit(self):
+        a=self.buy();self.ship([a])
+        with self.assertRaises(ValidationError):self.store.bulk({'action':'delete','ids':[a]})
+    # ── 上架标记（国内库存的附加标记，只经 bulk 写入）──
+    def test_listed_mark_roundtrip(self):
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.assertNotIn('listed',self.record(c))
+        self.store.bulk({'action':'list','ids':[c]})
+        self.assertTrue(self.record(c)['listed'])
+        sid=self.sell([c])  # 上架中的专辑照常售出
+        self.assertEqual(self.record(c)['status'],'shipping')
+        self.store.sale_action({'id':sid,'action':'cancel'})
+        r=self.record(c)
+        self.assertEqual(r['status'],'domestic');self.assertTrue(r['listed'])  # 撤销后标记保留
+        self.store.bulk({'action':'unlist','ids':[c]})
+        self.assertNotIn('listed',self.record(c))
+    def test_listed_overseas_too(self):
+        j=self.buy()  # 海外库存（如メルカリ在售）
+        self.store.bulk({'action':'list','ids':[j]})
+        self.assertTrue(self.record(j)['listed'])
+        sid=self.sell([j])  # 海外上架中直接售出
+        self.assertEqual(self.record(j)['status'],'shipping')
+        self.store.sale_action({'id':sid,'action':'cancel'})
+        r=self.record(j)
+        self.assertEqual(r['status'],'overseas');self.assertTrue(r['listed'])
+        self.store.bulk({'action':'unlist','ids':[j]})
+        self.assertNotIn('listed',self.record(j))
+    def test_listed_rejected_off_inventory(self):
+        a=self.buy();shid=self.ship([a])
+        with self.assertRaises(ValidationError):self.store.bulk({'action':'list','ids':[a]})  # 在途
+        self.store.shipment_action({'id':shid,'action':'arrive','date':'2026-09-18'})
+        sid=self.sell([a]);self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+        with self.assertRaises(ValidationError):self.store.bulk({'action':'list','ids':[a]})  # 已售出
+        b=self.buy();self.store.bulk({'action':'delete','ids':[b]})
+        with self.assertRaises(ValidationError):self.store.bulk({'action':'list','ids':[b]})  # 回收站
+    def test_listed_not_writable_via_save(self):
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.store.bulk({'action':'list','ids':[c]})
+        r=dict(self.record(c));r['listed']=False
+        self.store.save(r)
+        self.assertTrue(self.record(c)['listed'])  # 编辑表单改不了上架标记
+        self.assertNotIn('listed',self.record(self.buy(currency='CNY',price='100',date='2026-09-07')))
+    def test_to_overseas_clears_listed(self):
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.store.bulk({'action':'list','ids':[c]})
+        self.store.bulk({'action':'to_overseas','ids':[c]})
+        r=self.record(c)
+        self.assertEqual(r['status'],'overseas');self.assertNotIn('listed',r)
+    def test_csv_export_lists_listed(self):
+        from server.export_csv import albums_csv
+        c=self.buy(currency='CNY',price='100',date='2026-09-07')
+        self.store.bulk({'action':'list','ids':[c]})
+        rows=albums_csv(self.store.state()).decode().splitlines()
+        self.assertIn('上架',rows[0]);self.assertIn(',是,',rows[1])
+    # ── misc ──
+    def test_edit_conflict_and_profit_recalc(self):
+        id=self.buy();r=self.record(id);sid=self.sell([id]);
+        with self.assertRaises(ValidationError):self.store.save(r)
+        r=self.record(id);self.store.save({**r,'price':'2500'});self.assertEqual(self.sale(sid)['items'][0]['profit'],'20.00')
+    def test_rate_fields_never_persist(self):
+        id=self.buy();r=dict(self.record(id));r['rate']='9.9'
+        self.store.save(r);self.assertEqual(self.record(id)['cost'],'106.00')
+    def test_import_idempotent_raw_preserved(self):
+        source=[{'id':'old','title':'日文','artist':'歌手','note':'原始感想','rawRemark':'記録','purchase':{'date':'2026-01-01','currency':'RMB','priceValue':30}}]
+        self.store.import_data(source);self.store.import_data(source);b=self.store.backup()
+        self.assertEqual(len(b['records']),1);self.assertEqual(b['records'][0]['original'],source[0]);self.assertEqual(b['records'][0]['status'],'domestic')
+    def test_backup_restore_roundtrip_with_shipments(self):
+        a=self.buy();b=self.buy(price='1000');self.ship([a])
+        sid=self.sell([b]);self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+        backup=self.store.backup();self.assertEqual(len(backup['shipments']),1)
+        self.buy(title='extra');self.store.restore_backup(backup)
+        restored=self.store.backup()
+        self.assertEqual(restored['records'],backup['records']);self.assertEqual(restored['sales'],backup['sales']);self.assertEqual(restored['shipments'],backup['shipments'])
+    def test_legacy_schema1_backup_upgrades(self):
+        legacy={'format':'album-ledger','schema':1,'createdAt':'2026-09-01T00:00:00',
+            'records':[{'id':'a1','title':'T','artist':'A','date':'2026-01-01','price':'1000.00','currency':'JPY','rate':'4.7','actual':'','fees':'0.00','note':'','tradeNote':'','version':'','condition':'','tag':'','storage':'','releaseYear':'','rawRemark':'','cover':'','status':'review','revision':1,'createdAt':'2026-09-01T00:00:00'}],
+            'sales':[{'id':'s1','date':'2026-02-01','receivedDate':'2026-02-01','status':'pending','gross':'80','fees':'2','note':'','channel':'闲鱼','items':[{'recordId':'a1','gross':'80','fees':'2','refund':'0'}]}],
+            'audit':[],'settings':{}}
+        self.store.restore_backup(legacy)
+        rec=self.record('a1');sale=self.sale('s1')
+        self.assertEqual(rec['status'],'domestic');self.assertNotIn('rate',rec);self.assertEqual(sale['status'],'complete')
+    def test_real_import(self):
+        # 框架仓库不含个人数据；把自己的 albums.json 放进 data/ 才跑此测试
+        src=Path(__file__).parents[1]/'data'/'albums.json'
+        if not src.exists(): return self.skipTest('data/albums.json 不存在')
+        self.store.rates=FakeRates({})
+        r=self.store.import_data(json.loads(src.read_text()))
+        self.assertGreater(r['count'],0)
+        self.assertEqual(len(self.store.state()['records']),r['count'])
+    # ── RYM 艺人绑定 ──
+    def test_rym_bind_by_page_title(self):
+        self.buy(artist='米津玄師')
+        token=self.store.rym_token()
+        r=self.store.bind_artist(token,'米津玄師 Albums: songs, discography, biography, and more',
+                                 'https://rateyourmusic.com/artist/kenshi_yonezu')
+        self.assertEqual(r['artist'],'米津玄師')
+        self.assertEqual(self.store.artist_links(),{'米津玄師':'https://rateyourmusic.com/artist/kenshi_yonezu'})
+    def test_rym_bind_rejects_bad_token_and_url(self):
+        self.buy(artist='米津玄師');self.store.rym_token()
+        with self.assertRaises(ValidationError):self.store.bind_artist('nope','米津玄師','https://rateyourmusic.com/artist/x')
+        good=self.store.rym_token()
+        with self.assertRaises(ValidationError):self.store.bind_artist(good,'米津玄師','https://evil.test/artist/x')
+        with self.assertRaises(ValidationError):self.store.bind_artist(good,'米津玄師','https://rateyourmusic.com/search?searchterm=x')
+        with self.assertRaises(ValidationError):self.store.bind_artist(good,'','https://rateyourmusic.com/artist/x')
+        self.assertEqual(self.store.artist_links(),{})
+    def test_rym_bind_unknown_artist_is_noop(self):
+        self.buy(artist='米津玄師');self.store.rym_token()
+        r=self.store.bind_artist(self.store.rym_token(),'Bump of Chicken albums and songs',
+                                 'https://rateyourmusic.com/artist/bump-of-chicken')
+        self.assertIsNone(r['artist']);self.assertEqual(self.store.artist_links(),{})
+    def test_rym_rebind_ignored_and_settings_exported(self):
+        self.buy(artist='米津玄師')
+        token=self.store.rym_token()
+        self.store.bind_artist(token,'米津玄師 music | Rate Your Music','https://rateyourmusic.com/artist/kenshi_yonezu')
+        r=self.store.bind_artist(token,'米津玄師 elsewhere','https://rateyourmusic.com/artist/somewhere-else')
+        self.assertIsNone(r['artist'])
+        self.assertEqual(self.store.artist_links()['米津玄師'],'https://rateyourmusic.com/artist/kenshi_yonezu')
+        self.assertEqual(self.store.state()['settings']['rym-links']['米津玄師'],'https://rateyourmusic.com/artist/kenshi_yonezu')
+
+class RateServiceTests(unittest.TestCase):
+    def test_weekend_rolls_back(self):
+        svc=RateService(fetch=lambda s,e:{'2026-01-09':'4.429'})
+        self.assertEqual(svc.get('2026-01-11'),'4.429')  # Sunday → Friday quote
+    def test_unavailable_returns_none(self):
+        from rates import RateUnavailable
+        def boom(s,e):raise RateUnavailable('down')
+        svc=RateService(fetch=boom)
+        self.assertIsNone(svc.get('2026-01-09'))
+    def test_cached_second_call_skips_fetch(self):
+        calls=[]
+        def fetch(s,e):
+            calls.append(1);return {'2026-03-02':'4.5'}
+        svc=RateService(fetch=fetch)
+        self.assertEqual(svc.get('2026-03-02'),'4.5')
+        self.assertEqual(svc.get('2026-03-02'),'4.5')
+        self.assertEqual(len(calls),1)
+
+if __name__=='__main__':unittest.main()

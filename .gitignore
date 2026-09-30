@@ -1,0 +1,23 @@
+# 运行数据与隐私
+data/
+部署登录信息.txt
+albums-backup-*.sqlite3
+
+# 构建产物与临时
+dist/
+VERSION
+__pycache__/
+*.pyc
+test-results/
+nohup.out
+*.log
+
+# 前端依赖
+web/node_modules/
+
+# 工具状态目录（编辑器/agent 产生，不属于应用）
+.codegraph/
+.playwright-mcp/
+.v2c/
+.zcode/
+.DS_Store

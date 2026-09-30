@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>专辑簿 · 图标方向稿</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:40px 24px 80px; background:#0e1014; color:#e8ebf1;
+        font:15px/1.7 -apple-system,"PingFang SC","Hiragino Sans GB",sans-serif; }
+  main { max-width:860px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:#98a2b3; margin:0 0 20px; }
+  .palette { display:flex; gap:8px; margin:0 0 28px; }
+  .palette i { font-style:normal; font-size:12px; color:#98a2b3; border:1px solid #262c38; border-radius:8px; padding:4px 10px; }
+  .palette i b { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .card { background:#161920; border:1px solid #262c38; border-radius:18px; padding:22px 24px; margin:0 0 18px; }
+  .card.baseline { border-style:dashed; }
+  .head { display:flex; gap:14px; margin-bottom:16px; }
+  .num { flex:none; font-weight:700; color:#ffb454; border:1px solid #333b4b; border-radius:10px; padding:2px 10px; height:fit-content; }
+  .head h2 { margin:0; font-size:17px; }
+  .head p { margin:4px 0 0; color:#98a2b3; font-size:14px; }
+  .row { display:flex; gap:20px; align-items:stretch; flex-wrap:wrap; }
+  .hero { width:150px; flex:none; }
+  .hero svg { width:150px; height:150px; border-radius:33px; display:block; }
+  .cols { flex:1; min-width:260px; display:flex; flex-direction:column; gap:10px; }
+  .strip { display:flex; align-items:center; gap:12px; border-radius:12px; padding:10px 14px; }
+  .strip.dark { background:#0e1014; }
+  .strip.lightstrip { background:#f2efe8; }
+  .strip.wall { background:linear-gradient(120deg,#31424a,#1d2b38 60%,#2a2333); }
+  .tag { flex:none; width:64px; font-size:12px; color:#98a2b3; }
+  .lightstrip .tag { color:#7a7466; }
+  .wall .tag { color:#c8d2d8; }
+  .chip { display:inline-block; }
+  .chip svg { width:100%; height:100%; display:block; }
+  .chip.light { border-radius:8px; overflow:hidden; }
+  .chip.squircle { border-radius:23%; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  .chip.circle { border-radius:50%; overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.45); }
+  .homestrip { background:linear-gradient(135deg,#31424a,#1d2b38 55%,#2a2333); border-radius:18px; padding:22px; display:flex; gap:26px; justify-content:center; flex-wrap:wrap; }
+  .app { display:flex; flex-direction:column; align-items:center; gap:6px; font-size:12px; color:#eef2f5; }
+  .appicon { width:58px; height:58px; border-radius:13px; overflow:hidden; box-shadow:0 5px 14px rgba(0,0,0,.5); }
+  .appicon svg { width:100%; height:100%; display:block; }
+  .foot { color:#5f6b7e; font-size:13px; margin-top:26px; }
+</style></head><body><main>
+<h1>专辑簿 · 图标方向稿</h1>
+<p class="sub">六个方向 × 同一套检验：大图 / 小尺寸（64·44·28·18）/ 浅色环境 / 圆角与圆形裁切。选定方向后再出正式稿（含 16px 简化版、maskable 版与全套 PNG）。</p>
+<div class="palette">
+  <i><b style="background:#0e1014"></b>bg #0e1014</i>
+  <i><b style="background:#161920"></b>surface</i>
+  <i><b style="background:#ffb454"></b>amber #ffb454</i>
+  <i><b style="background:#ffc678"></b>amber-strong</i>
+  <i><b style="background:#294e43"></b>旧绿（现状）</i>
+</div>
+
+<div class="card baseline">
+  <div class="head"><span class="num">现状</span><div><h2>现在的图标</h2><p>黑胶母题没问题，但有两个硬伤：① 深绿 × 奶油与界面的深炭 × 琥珀完全脱节；② favicon.svg（绿底）和 icon-512.png（奶油底）自己都不一致。线宽偏细，16px 时纹理糊掉。</p></div></div>
+  <div class="row"><div class="strip dark"><span class="tag">favicon.svg</span><img src="../../static/favicon.svg" width="64" height="64"><img src="../../static/favicon.svg" width="32" height="32"><img src="../../static/favicon.svg" width="18" height="18"></div>
+  <div class="strip dark"><span class="tag">icon-512.png</span><img src="../../static/icon-512.png" width="64" height="64"><img src="../../static/icon-512.png" width="32" height="32"><img src="../../static/icon-512.png" width="18" height="18"></div></div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">01</span><div><h2>金纹唱片</h2><p>延续现在的黑胶母题，但换成界面同源的深炭底 + 琥珀金：唱片纹理变细、加一道「光打在纹路上」的金色高光弧。最稳的演进，一看还是「音乐」，但不再说「播放器」而说「收藏」。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">01′</span><div><h2>金纹唱片 · 墨绿版</h2><p>同一构图的 heritage 配色：保留你原来选的墨绿 × 奶油 × 金，只把工艺做精（渐变、高光弧、统一线宽）。如果绿是你的执念，选它。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">02</span><div><h2>孔方唱片</h2><p>把唱片中心和铜钱合体：金色唱片 + 方形中孔。一张「用来交易的碟」，音乐和账本一个图形说完，也是五个方向里概念最锋利的。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">03</span><div><h2>出套</h2><p>最直白的 CD 语言：方形封套，金碟滑出一半。任何人 0.5 秒看懂「专辑收藏」；金碟同时有硬币的联想，暗合交易。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">04</span><div><h2>封面墙</h2><p>应用主界面本身就是封面列表——图标即界面：2×2 封面格，右下一张金封面微微抬起。最「App 感」，但和工具类图标最容易撞脸。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="head"><span class="num">05</span><div><h2>金印「簿」</h2><p>不画唱片，画名字：金底墨字一枚印。「簿」字点出账本本质，中文气质最重；但 16px 下笔画会糊，落地时需改刻简笔版。</p></div></div>
+  <div class="row">
+    <div class="hero"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></div>
+    <div class="cols">
+      <div class="strip dark"><span class="tag">小尺寸</span><span class="chip " style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip " style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip " style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip " style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span></div>
+      <div class="strip lightstrip"><span class="tag">浅色环境</span><span class="chip light" style="width:64px;height:64px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip light" style="width:44px;height:44px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip light" style="width:28px;height:28px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip light" style="width:18px;height:18px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span></div>
+      <div class="strip wall"><span class="tag">裁切模拟</span><span class="chip squircle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span class="chip circle" style="width:84px;height:84px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span></div>
+    </div>
+  </div>
+</div>
+<h1 style="font-size:18px">同一屏 · 主屏观感</h1>
+<p class="sub">模拟手机主屏（深色壁纸）下的第一眼。</p>
+<div class="homestrip"><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+    <radialGradient id="label" cx="38%" cy="32%" r="80%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset="1" stop-color="#f0a13c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#151922"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#333b4b" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#e8ebf1" stroke-opacity=".10" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="url(#amber)" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="url(#label)"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#231703" stroke-opacity=".22" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#0d0f13"/>
+</svg></span><span>专辑簿</span></div><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg></span><span>专辑簿</span></div><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="36%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="170" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="256" cy="256" r="148" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="256" cy="256" r="124" fill="none" stroke="#231703" stroke-opacity=".13" stroke-width="3"/>
+  <circle cx="256" cy="256" r="100" fill="none" stroke="#231703" stroke-opacity=".11" stroke-width="3"/>
+  <path d="M136 196 A136 136 0 0 1 322 118" fill="none" stroke="#ffffff" stroke-opacity=".28" stroke-width="9" stroke-linecap="round"/>
+  <rect x="224" y="224" width="64" height="64" rx="13" fill="#0d0f13"/>
+</svg></span><span>专辑簿</span></div><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#1a1e27"/>
+      <stop offset="1" stop-color="#0d0f13"/>
+    </radialGradient>
+    <radialGradient id="coin" cx="35%" cy="30%" r="85%">
+      <stop offset="0" stop-color="#ffd89b"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e28c28"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="318" cy="256" r="118" fill="url(#coin)"/>
+  <circle cx="318" cy="256" r="118" fill="none" stroke="#231703" stroke-opacity=".25" stroke-width="2"/>
+  <circle cx="318" cy="256" r="44" fill="none" stroke="#231703" stroke-opacity=".20" stroke-width="3"/>
+  <circle cx="318" cy="256" r="13" fill="#0d0f13"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="#1d222d"/>
+  <rect x="86" y="144" width="224" height="224" rx="30" fill="none" stroke="#3a4454" stroke-width="3"/>
+  <rect x="108" y="166" width="180" height="180" rx="20" fill="none" stroke="#e8ebf1" stroke-opacity=".08" stroke-width="3"/>
+</svg></span><span>专辑簿</span></div><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#171b23"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </radialGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd08a"/>
+      <stop offset=".55" stop-color="#ffb454"/>
+      <stop offset="1" stop-color="#e8912f"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <rect x="77" y="77" width="168" height="168" rx="34" fill="#1f2530" stroke="#3a4454" stroke-width="2"/>
+  <rect x="267" y="77" width="168" height="168" rx="34" fill="#272f3c" stroke="#3f4959" stroke-width="2"/>
+  <rect x="77" y="267" width="168" height="168" rx="34" fill="#303949" stroke="#444f61" stroke-width="2"/>
+  <rect x="275" y="275" width="168" height="168" rx="34" fill="#000000" opacity=".35"/>
+  <rect x="267" y="267" width="168" height="168" rx="34" fill="url(#amber)"/>
+  <rect x="285" y="285" width="132" height="132" rx="22" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="4"/>
+</svg></span><span>专辑簿</span></div><div class="app"><span class="appicon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc678"/>
+      <stop offset="1" stop-color="#f09c3a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#gold)"/>
+  <rect x="36" y="36" width="440" height="440" rx="92" fill="none" stroke="#231703" stroke-opacity=".30" stroke-width="5"/>
+  <text x="256" y="345" font-family="'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif" font-size="252" font-weight="600" fill="#231703" text-anchor="middle">簿</text>
+</svg></span><span>专辑簿</span></div></div>
+<p class="foot">方向稿仅供选型，几何与配色在定稿时继续打磨；落地交付：favicon.svg + 16px 简化版 + icon-192/512 + maskable 专用版 + apple-touch-icon。</p>
+</main></body></html>

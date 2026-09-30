@@ -1,0 +1,12 @@
+/* 设计变量：颜色 / 圆角 / 阴影 / 字体 —— 全站唯一写 :root 的文件 */
+:root{
+  --bg:#0e1014; --bg-glow:rgba(91,141,239,.05);
+  --surface:#161920; --surface-2:#1c2029; --surface-3:#232834;
+  --border:#262c38; --border-strong:#333b4b;
+  --text:#e8ebf1; --muted:#98a2b3; --faint:#5f6b7e;
+  --accent:#5b8def; --accent-strong:#8ab2f8; --accent-ink:#0a1a30;
+  --green:#5dd39e; --blue:#6ea8fe; --red:#ff7a7a; --amber:#8ab2f8; --yellow:#f0c35e;
+  --radius:14px; --radius-sm:10px;
+  --shadow:0 8px 28px rgba(0,0,0,.42);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}

@@ -1,0 +1,29 @@
+# 裸机运行的 systemd 单元模板（Docker 部署不需要本文件）。
+# 默认按 /opt/diedu + diedu 用户安装；路径或用户不同请同步修改，或用环境变量：
+#   DEPLOY_DIR=… SERVICE=… tools/deploy.sh --init
+[Unit]
+Description=Diedu (album ledger)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=diedu
+# current 是指向 releases/<时间戳> 的软链；发布 = 切链 + 重启，回滚 = 切回上一版
+WorkingDirectory=/opt/diedu/current
+EnvironmentFile=/opt/diedu/service.env
+# 数据在 releases 之外，永不随发布覆盖
+ExecStart=/usr/bin/python3 app.py --port 8765 --data-dir /opt/diedu/data --public-origin ${PUBLIC_ORIGIN}
+Restart=on-failure
+RestartSec=5
+# SIGTERM 优雅停机窗口（收完在途请求）
+TimeoutStopSec=25
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/diedu/data
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,40 @@
+# 碟渡 · Docker 一键部署
+#
+#   docker compose up -d --build                 # 启动（首次会构建镜像）
+#   docker compose logs -f app                   # 看日志
+#   docker compose up -d --build                 # 升级 = git pull 后再跑一次
+#   docker compose down                          # 停止（./data 数据保留）
+#
+# 数据全部落在 ./data（数据库/照片/每日备份），与代码和镜像完全解耦。
+# 对外提供 HTTPS 时：反代到 127.0.0.1:8765，并在 .env 写 PUBLIC_ORIGIN=https://your.domain
+# （启用公网访问前先设登录密码：docker compose exec app python3 app.py --set-password）
+
+services:
+  app:
+    build: .
+    image: diedu:latest
+    container_name: diedu
+    ports:
+      - "8765:8765"            # 宿主机端口冲突时改左边（容器内固定 8765）
+    volumes:
+      - ./data:/data
+    environment:
+      - PUBLIC_ORIGIN=${PUBLIC_ORIGIN:-}
+      - TZ=${TZ:-Asia/Shanghai}
+    restart: unless-stopped
+
+  # 异地持续备份（可选）：docker compose --profile backup up -d
+  # 先把桶信息填进 deploy/litestream.docker.yml，密钥写 .env：
+  #   LITESTREAM_ACCESS_KEY_ID=…
+  #   LITESTREAM_SECRET_ACCESS_KEY=…
+  litestream:
+    image: litestream/litestream:latest
+    command: replicate -config /etc/litestream.yml
+    volumes:
+      - ./data:/data
+      - ./deploy/litestream.docker.yml:/etc/litestream.yml:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=${LITESTREAM_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${LITESTREAM_SECRET_ACCESS_KEY:-}
+    restart: unless-stopped
+    profiles: ["backup"]

@@ -1,0 +1,16 @@
+# 构建上下文瘦身：这些目录不进镜像（Dockerfile 只 COPY 明确列出的文件）
+.git
+data
+dist
+web/node_modules
+design
+tools
+tests
+deploy
+.codegraph
+.playwright-mcp
+.v2c
+.zcode
+.DS_Store
+*.md
+docs

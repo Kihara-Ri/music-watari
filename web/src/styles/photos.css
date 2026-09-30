@@ -1,0 +1,27 @@
+/* 实物照片：表单缩略图、批量照片、详情照片墙、灯箱 */
+.photo-thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.photo-thumbs:empty{display:none}
+.photo-thumb{position:relative;width:72px;height:72px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface-2)}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.photo-thumb button{position:absolute;top:3px;right:3px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;padding:0;font-size:12px;line-height:1;border-radius:50%;background:rgba(9,11,15,.88);color:#fff;border:none}
+.photo-thumb.small{width:44px;height:44px}
+.photo-thumb.pending,.photo-thumb.failed{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-style:dashed}
+.photo-thumb .ph-wait{width:18px;height:18px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--accent);animation:ph-spin .8s linear infinite}
+.photo-thumb .ph-tag{font-size:10px;color:var(--muted);max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.photo-thumb .ph-tag.err{color:var(--red)}
+@keyframes ph-spin{to{transform:rotate(360deg)}}
+.photo-actions{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap}
+.photo-actions button{padding:5px 11px;font-size:12.5px}
+.photo-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.photo-strip a{display:block;width:86px;height:86px;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:var(--surface-2);cursor:zoom-in}
+.photo-strip img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .15s}
+.photo-strip a:hover img{transform:scale(1.04)}
+.batch-photos{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
+
+/* 灯箱 */
+#lightbox{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(4,6,10,.9);cursor:zoom-out;animation:lb-in .15s ease}
+#lightbox[hidden]{display:none}
+#lightbox img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:var(--shadow)}
+@keyframes lb-in{from{opacity:0}to{opacity:1}}
+.cam-ico{width:14px;height:14px;flex:none}
+.cam-ico svg{width:100%;height:100%;display:block}

@@ -1,0 +1,24 @@
+# 裸机运行的 Litestream 配置（Docker 场景用 litestream.docker.yml）。
+# 把 <BASE>（默认 /opt/diedu）、bucket / path / region 换成实际值；
+# 密钥经环境变量 AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY 注入（litestream.service 的 EnvironmentFile）。
+#
+# 首次启用：
+#   1. 服务器安装 litestream 二进制（见 litestream.io/docs/installation）
+#   2. 建对象存储桶（如 Backblaze B2），密钥写入 <BASE>/litestream.env（chmod 600）
+#   3. 恢复演练：litestream restore -o /tmp/restore-test.sqlite3 s3://<bucket>/diedu/albums
+#   4. 装服务：sudo cp deploy/litestream.service /etc/systemd/system/ && sudo systemctl enable --now litestream
+#
+# 灾难恢复：litestream restore -o <BASE>/data/albums.sqlite3 s3://<bucket>/diedu/albums
+
+dbs:
+  - path: /opt/diedu/data/albums.sqlite3
+    replicas:
+      - type: s3
+        bucket: YOUR-BUCKET
+        path: diedu/albums
+        region: us-west-004
+    retention:
+      24h: 24          # 近 24 小时每小时一份
+      168h: 12         # 近一周每 14 小时一份
+      720h: 4          # 近 30 天每 7.5 天一份
+    sync-interval: 10s

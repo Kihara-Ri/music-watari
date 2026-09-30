@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0" stop-color="#2c5449"/>
+      <stop offset="1" stop-color="#1d3931"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="172" fill="#1a332c"/>
+  <circle cx="256" cy="256" r="172" fill="none" stroke="#4a7a6a" stroke-opacity=".6" stroke-width="2"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="128" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="106" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <circle cx="256" cy="256" r="84" fill="none" stroke="#efede2" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M158 156 A139 139 0 0 1 376 184" fill="none" stroke="#efede2" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="54" fill="#d5b778"/>
+  <circle cx="256" cy="256" r="54" fill="none" stroke="#6b4f16" stroke-opacity=".4" stroke-width="3"/>
+  <circle cx="256" cy="256" r="11" fill="#1d3931"/>
+</svg>

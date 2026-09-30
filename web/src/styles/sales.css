@@ -1,0 +1,25 @@
+/* 销售单卡片：售出中页与已交易页共用（专辑行 + 金额脚注） */
+.sale-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+.sale-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.sale-top .when{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.sale-top .spacer{flex:1}
+.sale-items{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.sale-album{display:flex;gap:12px;align-items:center}
+.sale-album .thumb{width:46px;height:46px;border-radius:9px;overflow:hidden;flex:none;background:var(--surface-2)}
+.sale-album .thumb img,.sale-album .thumb .cover-fallback{width:100%;height:100%;object-fit:cover}
+.sale-album .t{font-weight:600;font-size:13.5px;text-align:left;padding:0;background:none;border:none;min-height:0}
+.sale-album .t:hover{color:var(--accent-strong)}
+.sale-album .a{font-size:12px;color:var(--muted)}
+.sale-album .sa-price{margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
+.sale-album .sa-price b{font-size:13.5px}
+.sale-album .sa-price small{display:block;color:var(--faint);font-size:11px}
+.sale-foot{display:flex;align-items:center;gap:18px;border-top:1px solid var(--border);padding-top:12px;flex-wrap:wrap}
+.sale-foot .cell{display:flex;flex-direction:column;gap:1px}
+.sale-foot .cell span{font-size:11px;color:var(--faint)}
+.sale-foot .cell b{font-size:14px;font-variant-numeric:tabular-nums}
+.sale-foot .spacer{flex:1}
+.sale-foot .actions{display:flex;gap:7px}
+
+@media (max-width:840px){
+  .sale-foot .cell b{font-size:13px}
+}

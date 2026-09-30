@@ -1,0 +1,20 @@
+[Unit]
+Description=Litestream SQLite replication (diedu)
+After=network-online.target diedu.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=diedu
+ExecStart=/usr/local/bin/litestream replicate -config /opt/diedu/litestream.yml
+Restart=on-failure
+RestartSec=10
+EnvironmentFile=/opt/diedu/litestream.env
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/diedu/data
+
+[Install]
+WantedBy=multi-user.target

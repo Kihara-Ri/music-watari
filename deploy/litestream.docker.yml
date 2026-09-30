@@ -1,0 +1,19 @@
+# Docker 场景的 Litestream 配置（docker compose --profile backup 启用）。
+# 把 bucket / path / region 换成你的对象存储信息；密钥经 .env 注入，不写进文件。
+#
+# 灾难恢复（新机器上）：
+#   docker run --rm -v ./data:/data -e AWS_ACCESS_KEY_ID=… -e AWS_SECRET_ACCESS_KEY=… \
+#     litestream/litestream restore -o /data/albums.sqlite3 s3://<bucket>/diedu/albums
+
+dbs:
+  - path: /data/albums.sqlite3
+    replicas:
+      - type: s3
+        bucket: YOUR-BUCKET
+        path: diedu/albums
+        region: us-west-004
+    retention:
+      24h: 24          # 近 24 小时每小时一份
+      168h: 12         # 近一周每 14 小时一份
+      720h: 4          # 近 30 天每 7.5 天一份
+    sync-interval: 10s
