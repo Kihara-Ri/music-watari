@@ -19,11 +19,14 @@
 
 ```sh
 git clone https://github.com/Kihara-Ri/music-watari && cd music-watari
+cp .env.example .env          # 按需填 PUBLIC_ORIGIN / 备份密钥
 docker compose up -d --build
 # 打开 http://127.0.0.1:8765 —— 数据全部落在 ./data，与代码解耦
 ```
 
 升级 = `git pull && docker compose up -d --build`；停止 = `docker compose down`（数据保留）。
+
+也可以在 [Releases](https://github.com/Kihara-Ri/music-watari/releases) 直接下载 `album-ledger.tar.gz`（无需 git，裸机 Python 运行，见部署说明）。
 
 **裸 Python（零依赖运行）：**
 
@@ -67,6 +70,8 @@ tools/            deploy.sh 发布 · 打包 · 数据导入脚本
 python3 -m unittest discover -s tests -v
 npm --prefix web run typecheck && npm --prefix web run build
 ```
+
+每次 push 由 GitHub Actions 自动执行同样的测试 + **数据泄漏扫描**（个人数据文件与身份串不得入库）。本地开发请先执行一次 `tools/setup-hooks.sh` 启用 commit/push 拦截钩子——仓库不含任何个人数据，这条红线靠上面三层防线保证。
 
 ---
 

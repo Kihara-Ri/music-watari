@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  data-guard:
+    name: 数据泄漏扫描
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 当前文件树扫描（文件名 + 内容）
+        run: tools/check-data-leak.sh
+      - name: 全历史文件名扫描（个人数据不得进任何提交）
+        run: |
+          if git log --all --pretty=format: --name-only | sort -u \
+             | grep -E '(^data/|\.sqlite3$|\.sqlite3-|/albums\.json$|部署登录信息|出售记录|封面核对报告|管理系统方案)'; then
+            echo '✗ git 历史中混入个人数据文件'
+            exit 1
+          fi
+          echo '✓ 全历史无个人数据文件'
+
+  backend:
+    name: 后端测试（纯标准库）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s tests -v
+
+  web:
+    name: 前端 typecheck + 构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm --prefix web ci
+      - run: npm --prefix web run typecheck
+      - run: npm --prefix web run build

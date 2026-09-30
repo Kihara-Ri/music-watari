@@ -1,14 +1,16 @@
+# 碟渡 · Nginx 反代模板（HTTPS + ACME 续期）
+# 使用前把 your.domain 全部替换为你的域名；证书路径随 certbot lineage 自动对应。
 server {
     listen 80;
-    server_name albums.kihara.cn;
-    location ^~ /.well-known/acme-challenge/ { root /var/www/album-ledger-acme; }
+    server_name your.domain;
+    location ^~ /.well-known/acme-challenge/ { root /var/www/diedu-acme; }
     location / { return 301 https://$host$request_uri; }
 }
 server {
     listen 443 ssl;
-    server_name albums.kihara.cn;
-    ssl_certificate /etc/letsencrypt/live/albums.kihara.cn/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/albums.kihara.cn/privkey.pem;
+    server_name your.domain;
+    ssl_certificate /etc/letsencrypt/live/your.domain/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your.domain/privkey.pem;
     client_max_body_size 50m;
     location / {
         proxy_pass http://127.0.0.1:8765;

@@ -1,0 +1,3 @@
+#!/bin/sh
+# pre-commit：拦截把个人数据提交进暂存区（git commit -n 可绕过，CI 会兜底）。
+exec "$(dirname "$0")/../check-data-leak.sh" --cached

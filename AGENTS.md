@@ -7,7 +7,11 @@
 ## 红线
 
 1. **服务端零第三方运行依赖**（纯标准库）。工具脚本可用标准库 + 已装库（如 PIL）。
-2. **绝不触碰 `data/` 下已有数据**：代码只经 `storage.py` 的事务写库；任何脚本不得直接改 `data/*.sqlite3`。**仓库与 git 历史不得包含任何个人数据**（采购记录、成交截图、密码、域名等）——`data/` 已整体 gitignore，历史数据导入文件放 `data/albums.json`。
+2. **绝不触碰 `data/` 下已有数据**：代码只经 `storage.py` 的事务写库；任何脚本不得直接改 `data/*.sqlite3`。**仓库与 git 历史不得包含任何个人数据**（采购记录、成交截图、密码、域名、ssh 主机名等）。三道防线必须保持有效：
+   - `.gitignore` 安全网（`*.sqlite3`/`.env`/`albums.json`/凭证目录等模式）；
+   - 本地钩子 `tools/hooks/`（pre-commit 扫暂存区、pre-push 扫全树）——**克隆后必须执行 `tools/setup-hooks.sh` 启用**；
+   - CI 权威闸门 `.github/workflows/ci.yml`（文件树 + 全历史扫描，红灯即修复，不得绕过）。
+   共用检测脚本 `tools/check-data-leak.sh`；新增敏感模式要同时进它的 FILE_RE/CONTENT_RE。个人配置的真实值（域名/密钥/路径）只放 `data/`（未跟踪）或服务器上，仓库里一律用 `your.domain` 等占位符。
 3. **金额语义**：服务端 Decimal、字符串传输；前端 `Number()` 仅用于显示。**成本缺失 = null，永不当 0**；利润只计成本已知的明细；分摊尾差保证总额不变。
 4. **CSP 无内联**：不用内联 `<script>`/`<style>`；前端只用 ES module；外部资源仅限 CSP 白名单域。
 5. **行为不变的重构必须零行为、零视觉变化**。业务口径、文案、交互有任何拿不准的，先问用户，不自作主张。
@@ -57,7 +61,7 @@ python3 app.py --port <空闲端口> --data-dir /private/tmp/xxx --no-seed      
 
 - **Docker 一键部署是主路径**：`docker compose up -d --build`。改了 `Dockerfile` / `docker-compose.yml` / `web/` / `static/` 中任何构建输入，必须实测 `docker compose build` 通过再提交；`.dockerignore` 与 Dockerfile 的 COPY 清单保持同步（新目录默认不进镜像）。
 - **数据与框架解耦**：容器数据只写 `/data` 卷；compose 挂载 `./data`；任何代码不得把用户数据写到其他位置。
-- **git**：语义化版本 tag（`v主.次.补丁`）；远端历史必须干净（不引入个人数据后**严禁**普通提交——需重建历史）。裸机发布 = `tools/deploy.sh`（release 布局 + 健康检查 + 自动回滚；首次 `--init`）。
+- **git**：语义化版本 tag（`v主.次.补丁`）。CI 绿灯才允许打 tag。**发布 Release =** 打 tag → `python3 tools/package_app.py`（VERSION 注入）→ `gh release create <tag> dist/album-ledger.tar.gz --generate-notes --notes "…"`，附 sha256。裸机发布 = `tools/deploy.sh`（release 布局 + 健康检查 + 自动回滚；首次 `--init`）。
 - **服务器布局（裸机）**：`BASE/releases/<时间戳>/` + `current` 软链 + `data/` 与 `service.env` 在 releases 之外——**不得把数据放进 release 目录**。
 - **数据安全三层**：每日快照（Backups）+ 发布前快照（deploy.sh）+ Litestream 异地复制（`deploy/litestream*.yml`）。动 schema 前必须确认快照存在。
 - **文档即真相**：`README.md`、`使用说明.md`、`部署说明.md` 与实际行为必须同步，不同步视为未完成；文档不写具体个人的域名/路径/账号。

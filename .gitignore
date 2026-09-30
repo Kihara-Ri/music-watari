@@ -3,6 +3,23 @@ data/
 部署登录信息.txt
 albums-backup-*.sqlite3
 
+# ── 数据安全网：以下文件永不入库（钩子 + CI 双重拦截，见 tools/check-data-leak.sh）──
+# 数据库 / 备份 / 快照
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3.bak
+# 环境与密钥（.env 存 docker compose 的 PUBLIC_ORIGIN 与 Litestream 密钥）
+.env
+!.env.example
+service.env
+litestream.env
+# 历史数据导入与成交凭证
+albums.json
+售出的CD交易记录/
+メルカリ出售记录/
+
 # 构建产物与临时
 dist/
 VERSION

@@ -1,0 +1,3 @@
+#!/bin/sh
+# pre-push：推送前再扫一遍完整工作树（防绕过 pre-commit 的提交溜上远端）。
+exec "$(dirname "$0")/../check-data-leak.sh" tree
