@@ -15,7 +15,7 @@ FROM python:3.12-slim
 RUN apt-get update -qq && apt-get install -y --no-install-recommends tzdata \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY app.py domain.py storage.py covers.py rates.py security.py backups.py ./
+COPY app.py domain.py storage.py covers.py cjkvariants.py rates.py security.py backups.py ./
 COPY server/ server/
 COPY static/ static/
 COPY --from=web /static/index.html static/index.html
