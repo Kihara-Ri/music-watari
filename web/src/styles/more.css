@@ -3,14 +3,14 @@
 .more-page section+section{margin-top:28px}
 .more-page h2{font-size:12px;font-weight:550;color:var(--faint);margin-bottom:8px}
 .more-page nav{display:flex;flex-direction:column}
-.more-page nav a,.more-page .install-nav{display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 0;text-decoration:none;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;text-align:left}
-.more-page nav a>span:nth-child(2){flex:1;min-width:0}
+.more-page nav a,.more-page .install-nav,.more-page .theme-row{display:flex;align-items:center;gap:14px;min-height:72px;padding:12px 0;text-decoration:none;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;text-align:left}
+.more-page nav a>span:nth-child(2),.more-page .theme-row>span:nth-child(2){flex:1;min-width:0}
 .more-page strong{display:block;font-size:15px;font-weight:600}
 .more-page small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 .more-page .nav-ico{width:24px;font-size:19px;color:var(--muted)}
 .more-page .more-arrow{font-size:24px;color:var(--faint)}
 .more-page b{font-size:12px;color:var(--muted);font-weight:500}
-.more-page nav a:hover,.more-page .install-nav:hover{color:var(--accent-strong)}
+.more-page nav a:hover,.more-page .install-nav:hover,.more-page .theme-row:hover{color:var(--accent-strong)}
 .more-page .local-note{padding:24px 0 0}
 .ledger-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;margin-bottom:18px}
 .ledger-summary .sl-row{display:block;padding:18px 0;border-bottom:1px solid var(--border)}

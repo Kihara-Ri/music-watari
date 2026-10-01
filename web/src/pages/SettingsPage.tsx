@@ -7,8 +7,6 @@ import {PageHead} from '../components/PageHead';
 import {ModuleChooser} from '../components/ModuleChooser';
 import {VisionSettings} from '../components/VisionSettings';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
-import {Seg} from '../components/ui/Seg';
-import type {ThemePref} from '../core/theme';
 
 interface ImportPreview {
   count: number;
@@ -111,13 +109,6 @@ export function SettingsPage() {
   return (
     <>
       <PageHead title="设置与备份" label="KEEP IT IN ORDER"/>
-      <section className="settings-section">
-        <h3>外观</h3>
-        <p>浅色与深色主题可手动固定，跟随系统则随设备外观自动切换。</p>
-        <Seg ariaLabel="外观模式" className="theme-seg"
-             options={[{value: 'light', label: '浅色'}, {value: 'dark', label: '深色'}, {value: 'system', label: '跟随系统'}]}
-             value={app.theme} onValue={v => app.setTheme(v as ThemePref)}/>
-      </section>
       <section className="settings-section">
         <h3>功能模块</h3>
         <p>按需要选择收藏、购入记录、二手交易与海外周转。</p>

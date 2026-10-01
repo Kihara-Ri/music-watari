@@ -2,6 +2,7 @@
 import type {ReactNode} from 'react';
 import {useApp} from '../state/AppContext';
 import {sum, yuan} from '../core/format';
+import {ThemeToggle} from './ThemeToggle';
 
 export function PageHead({title, desc, actions, label}: {
   title: ReactNode; desc?: ReactNode; actions?: ReactNode; label?: string;
@@ -13,7 +14,11 @@ export function PageHead({title, desc, actions, label}: {
         <h1>{title}</h1>
         {desc ? <p>{desc}</p> : null}
       </div>
-      {actions ? <div className="head-actions">{actions}</div> : null}
+      {/* 外观切换常驻右上角（手机端隐藏，改在「更多」页） */}
+      <div className="head-actions">
+        {actions}
+        <ThemeToggle/>
+      </div>
     </header>
   );
 }

@@ -17,12 +17,9 @@
 .module-option span{display:grid;gap:3px}
 .module-option strong{font-size:13px}
 .module-option small{font-size:12px;color:var(--muted);line-height:1.5}
-/* 外观三态分段：桌面限宽避免拉满整栏，手机仍铺满便于点按 */
-.theme-seg{max-width:280px}
 
 @media (max-width:840px){
   .settings-section{padding:15px 14px}
-  .theme-seg{max-width:none}
   .inline-actions button,.inline-actions .link-button,.inline-actions .file-label{min-height:42px}
   .pw-change input{min-height:44px}
   .module-option{min-height:44px}

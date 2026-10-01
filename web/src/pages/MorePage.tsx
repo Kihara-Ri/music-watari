@@ -1,6 +1,7 @@
 import {useApp} from '../state/AppContext';
 import {PageHead} from '../components/PageHead';
 import {InstallNavItem} from '../components/InstallNavItem';
+import {ThemeToggle} from '../components/ThemeToggle';
 
 export function MorePage({installEvt, onInstalled}: {installEvt: Event | null; onInstalled: () => void}) {
   const {modules, state} = useApp();
@@ -23,6 +24,7 @@ export function MorePage({installEvt, onInstalled}: {installEvt: Event | null; o
         <h2 id="more-manage">管理</h2>
         <nav aria-label="管理入口">
           <a href="#settings"><span className="nav-ico" aria-hidden="true">⚙</span><span><strong>设置与备份</strong><small>功能组合、数据导出与恢复</small></span><span className="more-arrow" aria-hidden="true">›</span></a>
+          <ThemeToggle withLabel/>
           {installEvt ? <InstallNavItem evt={installEvt} onInstalled={onInstalled}/> : null}
         </nav>
       </section>
