@@ -107,6 +107,10 @@ remote "mkdir -p '$BASE/releases'"
 say "上传并解压到 releases/$STAMP …"
 send_file "$PACKAGE_PATH" "/tmp/album-ledger-$STAMP.tar.gz"
 remote "mkdir -p '$BASE/releases/$STAMP' && tar -xzf /tmp/album-ledger-$STAMP.tar.gz -C '$BASE/releases/$STAMP' && rm /tmp/album-ledger-$STAMP.tar.gz"
+# 补丁更新器以 root 运行且 UMask 收紧，解压出的 release 会是 root 私有目录，
+# 应用用户进不去；对齐当前版本的属主并放开读取，手动发布路径不受影响。
+remote "chmod -R u+rwX,go+rX '$BASE/releases/$STAMP'"
+remote "chown -R --reference='$BASE/current' '$BASE/releases/$STAMP' 2>/dev/null || true"
 
 # ── 首次初始化：release 布局 + systemd 服务 ────────────────────────
 if [ "$MODE" = "--init" ]; then
