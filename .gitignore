@@ -14,6 +14,7 @@ albums-backup-*.sqlite3
 .env
 !.env.example
 service.env
+update.env
 vision-config.json
 litestream.env
 # 历史数据导入与成交凭证

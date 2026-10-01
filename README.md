@@ -46,6 +46,8 @@ docker compose up -d --build
 
 也可以在 [Releases](https://github.com/Kihara-Ri/music-watari/releases) 直接下载 `album-ledger.tar.gz`（无需 git，裸机 Python 运行，见部署说明）。
 
+裸机部署可开启[补丁自动更新](部署说明.md#补丁自动更新可选)：每分钟检查正式 Release，只更新同主次版本的补丁，功能版本手动确认。
+
 **裸 Python（零依赖运行）：**
 
 ```sh

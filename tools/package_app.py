@@ -5,6 +5,7 @@
 前端源码（web/）与 node_modules 不进包：改前端后在 Mac 上重新 `npm run build` 再打包。
 """
 import io
+import hashlib
 import subprocess
 import tarfile
 from pathlib import Path
@@ -21,10 +22,12 @@ except Exception:
     version = 'untagged'
 
 files = [root / n for n in ['app.py', 'domain.py', 'storage.py', 'covers.py', 'cjkvariants.py',
-                            'rates.py', 'security.py', 'backups.py', 'README.md', '使用说明.md']]
+                            'rates.py', 'security.py', 'backups.py', 'README.md', '使用说明.md',
+                            '部署说明.md', 'CHANGELOG.md']]
 files += list((root / 'server').rglob('*.py'))
 files += list((root / 'static').rglob('*'))
 files += list((root / 'deploy').glob('*'))
+files += [root / 'tools' / name for name in ('deploy.sh', 'update_release.py')]
 
 with tarfile.open(out / 'album-ledger.tar.gz', 'w:gz') as tar:
     for path in sorted(files):
@@ -36,3 +39,6 @@ with tarfile.open(out / 'album-ledger.tar.gz', 'w:gz') as tar:
     tar.addfile(info, io.BytesIO(data))
 
 print(f'Application package: {out / "album-ledger.tar.gz"} (VERSION={version})')
+digest = hashlib.sha256((out / 'album-ledger.tar.gz').read_bytes()).hexdigest()
+(out / 'album-ledger.tar.gz.sha256').write_text(f'{digest}  album-ledger.tar.gz\n')
+print(f'SHA256: {digest}')

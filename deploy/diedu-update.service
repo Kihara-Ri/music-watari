@@ -1,0 +1,15 @@
+[Unit]
+Description=Diedu official patch release updater
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/diedu/update.env
+ExecStart=/usr/bin/python3 /opt/diedu/current/tools/update_release.py
+TimeoutStartSec=180
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/diedu

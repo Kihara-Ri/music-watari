@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Diedu official patch releases every minute
+
+[Timer]
+OnBootSec=60s
+OnUnitActiveSec=60s
+AccuracySec=1s
+Unit=diedu-update.service
+
+[Install]
+WantedBy=timers.target
