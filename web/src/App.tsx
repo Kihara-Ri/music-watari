@@ -51,10 +51,21 @@ export default function App() {
   const [flip, setFlip] = useState(false);
   const [tradeFilter, setTradeFilter] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
-  const [mobileShelfView, setMobileShelfView] = useState<'list' | 'cards'>(() => {
-    try { return localStorage.getItem('diedu-mobile-shelf-view') === 'cards' ? 'cards' : 'list'; }
-    catch { return 'list'; }
+  const [shelfView, setShelfViewState] = useState<'list' | 'cards'>(() => {
+    // 未手动切换过时按窗口宽度给默认：手机紧凑列表，桌面维持原卡片布局。
+    const fallback = () => { try { return matchMedia('(max-width:840px)').matches ? 'list' : 'cards'; } catch { return 'list'; } };
+    try {
+      const v = localStorage.getItem('diedu-shelf-view') ?? localStorage.getItem('diedu-mobile-shelf-view');
+      return v === 'list' || v === 'cards' ? v : fallback();
+    } catch { return fallback(); }
   });
+  const setShelfView = useCallback((v: 'list' | 'cards') => {
+    setShelfViewState(v);
+    try {
+      localStorage.setItem('diedu-shelf-view', v);
+      localStorage.removeItem('diedu-mobile-shelf-view'); // 旧键名仅限手机时留下，切换时迁移
+    } catch { /* 浏览器不允许存储时仍可切换视图 */ }
+  }, []);
   const [mobileSelecting, setMobileSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [theme, setThemeState] = useState<ThemePref>(() => themePref());
@@ -178,7 +189,7 @@ export default function App() {
     flip, setFlip,
     tradeFilter, setTradeFilter,
     shelfFilter, setShelfFilter,
-    mobileShelfView, setMobileShelfView, mobileSelecting, setMobileSelecting,
+    shelfView, setShelfView, mobileSelecting, setMobileSelecting,
     selected, setSelected,
     theme, setTheme,
     rec: id => state.records.find(r => r.id === id),

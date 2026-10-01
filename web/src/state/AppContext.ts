@@ -27,7 +27,7 @@ export interface AppCtx {
   flip: boolean; setFlip(v: boolean): void;
   tradeFilter: string; setTradeFilter(v: string): void;
   shelfFilter: string; setShelfFilter(v: string): void;
-  mobileShelfView: 'list' | 'cards'; setMobileShelfView(v: 'list' | 'cards'): void;
+  shelfView: 'list' | 'cards'; setShelfView(v: 'list' | 'cards'): void;
   mobileSelecting: boolean; setMobileSelecting(v: boolean): void;
   selected: ReadonlySet<string>; setSelected(s: Set<string>): void;
   theme: ThemePref; setTheme(v: ThemePref): void;
@@ -35,7 +35,8 @@ export interface AppCtx {
   refresh(): Promise<void>;
   toast(msg: string, kind?: ToastKind): void;
   openDrawer(spec: DrawerSpec): void;
-  closeDrawer(force?: boolean): void;
+  /** 请求关闭抽屉（脏表单会先弹确认）。返回 false = 被用户取消，抽屉保持打开。 */
+  closeDrawer(force?: boolean): boolean;
   setDrawerDirty(v: boolean): void;
 }
 

@@ -158,7 +158,7 @@ export function ShelfPage() {
   }
 
   return (
-    <div className={`shelf-page mobile-${app.mobileShelfView}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
+    <div className={`shelf-page shelf-${app.shelfView}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
       <PageHead title={modules.circulation && !isTrash ? <><span className="desktop-shelf-title">{title}</span><span className="mobile-shelf-title">库存</span></> : title} desc={desc} label="COLLECTION" actions={isTrash ? null : (
         <>
           <button onClick={() => openBatchForm(app)}>批量录入</button>
@@ -209,9 +209,9 @@ export function ShelfPage() {
         ) : null}
         <Dropdown id="sort" value={sort} options={modules.acquisition ? SORTS : [{value: 'new', label: '最近添加'}, {value: 'artist', label: '按艺人'}]} label="排序方式"
                   onPick={v => app.setSort(v as SortMode)}/>
-        <div className="mobile-view-switch" role="group" aria-label="库存显示方式">
-          <button aria-label="列表视图" aria-pressed={app.mobileShelfView === 'list'} onClick={() => app.setMobileShelfView('list')}>☷ 列表</button>
-          <button aria-label="卡片视图" aria-pressed={app.mobileShelfView === 'cards'} onClick={() => app.setMobileShelfView('cards')}>▦ 卡片</button>
+        <div className="view-switch" role="group" aria-label="库存显示方式">
+          <button aria-label="列表视图" aria-pressed={app.shelfView === 'list'} onClick={() => app.setShelfView('list')}>☷ 列表</button>
+          <button aria-label="卡片视图" aria-pressed={app.shelfView === 'cards'} onClick={() => app.setShelfView('cards')}>▦ 卡片</button>
         </div>
         {!isTrash && selectable.length ? <button className="mobile-select-toggle" aria-pressed={app.mobileSelecting || !!curSelected.size}
           onClick={() => {
