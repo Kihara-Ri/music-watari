@@ -64,14 +64,27 @@ def make_handler(svc):
                     self.send({'error': '不允许跨站请求'}, 403); return False
             return True
 
+        def logged_in(self):
+            return not svc.auth or svc.auth.valid(self.headers.get('Cookie'))
+
         def authorized(self):
-            if svc.auth and not svc.auth.valid(self.headers.get('Cookie')):
+            if not self.logged_in():
                 self.send({'error': '请登录后继续操作'}, 401); return False
             return True
 
+        def redirect_login(self):
+            # 页面与静态资源未登录走 302，浏览器直接落到登录页；API 走 authorized() 的 401
+            self.send_response(302)
+            self.send_header('Location', '/login')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+
         def session_cookie(self, token, logout=False):
+            # 服务端会话 30 天滑动续期（security.valid）才是真正的门；cookie 寿命给足
+            # 余量，避免仍在使用的设备因 cookie 先到期而被迫重新登录。
             return ('album_session=' + token + '; Path=/; HttpOnly; SameSite=Strict; Max-Age='
-                    + ('0' if logout else str(30 * 86400))
+                    + ('0' if logout else str(180 * 86400))
                     + ('; Secure' if svc.public_origin else ''))
 
         # ── 分发 ──
@@ -83,6 +96,9 @@ def make_handler(svc):
                 fn = routes.resolve_get(path)
                 if fn: return fn(self, svc)
                 return self.send({'error': '接口不存在'}, 404)
+            # 服务端登录门：未登录只放行登录页及其依赖（static_files.PUBLIC）
+            if not self.logged_in() and path not in static_files.PUBLIC:
+                return self.redirect_login()
             return static_files.serve(self, path)
 
         def do_POST(self):

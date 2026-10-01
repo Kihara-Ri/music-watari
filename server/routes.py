@@ -3,6 +3,7 @@
 GET 处理函数签名 fn(h, svc)；POST 为 fn(h, svc, body)。
 h 提供 send()/query；svc 是注入的服务集合（见 context.Services）。
 """
+import hashlib
 import mimetypes
 import threading
 from urllib.parse import parse_qs, urlsplit
@@ -88,6 +89,17 @@ def api_logout(h, svc, body):
     h.send({'ok': True}, headers={'Set-Cookie': h.session_cookie('', True)})
 
 
+def api_password(h, svc, body):
+    """改密：验证当前密码后换新；除当前会话外其他设备全部退出。"""
+    current, new = body.get('current', ''), body.get('next', '')
+    if not isinstance(current, str) or not isinstance(new, str) or len(current) > 1024 or len(new) > 1024:
+        raise ValidationError('密码格式不正确')
+    keep = svc.auth.token(h.headers.get('Cookie'))
+    keep_hash = hashlib.sha256(keep.encode()).hexdigest() if keep else None
+    svc.auth.change_password(current, new, keep_hash)
+    h.send({'ok': True})
+
+
 # ── POST：封面（只读缓存，不进写锁）─────────────────────────────────
 def api_covers_search(h, svc, body):
     h.send(svc.covers.search(body.get('title', ''), body.get('artist', ''), body.get('country', 'AUTO')))
@@ -134,6 +146,7 @@ POST = {
     # path: (处理函数, 需要登录, 需要 WRITE_LOCK)
     '/api/login': (api_login, False, False),
     '/api/logout': (api_logout, True, False),
+    '/api/password': (api_password, True, True),
     '/api/covers/search': (api_covers_search, True, False),
     '/api/covers/download': (api_covers_download, True, False),
     '/api/records': (api_records, True, True),
