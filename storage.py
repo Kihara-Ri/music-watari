@@ -13,7 +13,7 @@ import json, sqlite3, uuid, base64, re, shutil, secrets
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlsplit
-from domain import ValidationError, clean_record, clean_modules, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
+from domain import ValidationError, clean_record, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
 from covers import normalized, artist_variants
 from decimal import Decimal
 
@@ -214,7 +214,7 @@ class Store:
                     old=self.get(db,'records',item['id'])
                     if item.get('revision')!=old['revision']: raise ValidationError('记录已变更，请关闭详情并重新打开')
                     r=clean_record({**old,**item})
-                    for k in ('id','status','sourceId','original','saleId','shipmentId','previousStatus','createdAt','listed'):
+                    for k in ('id','status','sourceId','original','saleId','shipmentId','previousStatus','createdAt','listed','listingChannel','listingUrl'):
                         if k in old: r[k]=old[k]
                         else: r.pop(k,None)
                     r['revision']=old['revision']+1
@@ -246,6 +246,10 @@ class Store:
         if not ids: raise ValidationError('请先选择专辑')
         if action in ('list', 'unlist'): self.require_module('trading')
         if action == 'to_overseas': self.require_module('circulation')
+        listing = data.get('listing')
+        if listing is not None:
+            if action != 'list' or not isinstance(listing, dict): raise ValidationError('上架资料格式不正确')
+            listing = clean_listing(listing)
         self.checkpoint()
         with self.connect() as db:
             for id in ids:
@@ -256,6 +260,7 @@ class Store:
                 elif action=='list':
                     if r['status'] not in ('overseas','domestic'): raise ValidationError('只有库存中的专辑能标记上架')
                     r['listed']=True
+                    if listing is not None: r.update(listing)
                 elif action=='unlist':
                     if r['status'] not in ('overseas','domestic'): raise ValidationError('只有库存中的专辑能取消上架')
                     r.pop('listed',None)
@@ -431,6 +436,8 @@ class Store:
         ids=set()
         for r in b['records']:
             normalized=clean_record(r)
+            if r.get('listingChannel') or r.get('listingUrl'):
+                clean_listing({'channel': r.get('listingChannel', ''), 'url': r.get('listingUrl', '')})
             if any(normalized.get(k)!=r.get(k) for k in ('title','artist','date','price','currency','fees','actual','cover')):
                 raise ValidationError('备份中的专辑字段不完整或格式不正确')
             if not isinstance(r.get('revision'),int) or r['revision']<1: raise ValidationError('备份缺少记录版本')

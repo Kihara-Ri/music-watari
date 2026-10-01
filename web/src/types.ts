@@ -39,7 +39,9 @@ export interface AlbumRecord {
   shipmentId?: string;
   saleId?: string;
   previousStatus?: Status;
-  listed?: boolean;         // 国内库存的附加标记：已挂闲鱼在售
+  listed?: boolean;         // 持有副本的上架标记，与位置和交易状态分开
+  listingChannel?: string;
+  listingUrl?: string;
   sourceId?: string;
   releaseYear?: string;
   rawRemark?: string;

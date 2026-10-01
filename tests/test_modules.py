@@ -107,3 +107,23 @@ class ModuleTests(unittest.TestCase):
         with self.assertRaises(ValidationError): self.store.restore_backup(bad)
         self.assertEqual(self.store.backup()['records'], backup['records'])
 
+    def test_listing_roundtrip_validation_and_core_edit_preservation(self):
+        self.modules(trading=True)
+        rid = self.store.save({'title': '出售', 'artist': '艺人'})['ids'][0]
+        self.store.bulk({'action': 'list', 'ids': [rid], 'listing': {'channel': '二手平台', 'url': 'https://example.test/item/1'}})
+        r = self.store.state()['records'][0]
+        self.store.save({'id': rid, 'revision': r['revision'], 'storage': '柜子', 'listingUrl': 'https://other.test'})
+        self.assertEqual(self.store.state()['records'][0]['listingUrl'], 'https://example.test/item/1')
+        for url in ('javascript:alert(1)', 'https://user:pass@example.test', 'https://[broken'):
+            with self.subTest(url=url), self.assertRaises(ValidationError):
+                self.store.bulk({'action': 'list', 'ids': [rid], 'listing': {'url': url}})
+        self.store.bulk({'action': 'unlist', 'ids': [rid]})
+        self.assertFalse(self.store.state()['records'][0].get('listed', False))
+        self.assertEqual(self.store.state()['records'][0]['listingChannel'], '二手平台')
+        backup = self.store.backup()
+        self.store.restore_backup(copy.deepcopy(backup))
+        self.assertEqual(self.store.state()['records'][0]['listingUrl'], 'https://example.test/item/1')
+
+
+if __name__ == '__main__':
+    unittest.main()

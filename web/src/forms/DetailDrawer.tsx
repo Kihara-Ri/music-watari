@@ -7,6 +7,7 @@ import {statusName} from '../core/modules';
 import {Cover} from '../components/Cover';
 import {openRecordForm} from './RecordForm';
 import {openSaleForm} from './SaleForm';
+import {openListingForm} from './ListingForm';
 import {bulkAction} from './shared';
 
 export function openDetail(app: AppCtx, id: string) {
@@ -60,6 +61,12 @@ function DetailBody({id}: {id: string}) {
           </dd></div>
         ))}
       </dl>
+      {app.modules.trading && (r.listingChannel || r.listingUrl) ? <>
+        <h3 className="section-title">上架资料</h3>
+        <p className="small-note">{r.listingChannel || '未填写平台'}
+          {r.listingUrl ? <> · <a href={r.listingUrl} target="_blank" rel="noopener noreferrer">打开商品页面 ↗</a></> : null}
+        </p>
+      </> : null}
       {r.photoCount ? (
         <>
           <h3 className="section-title">实物照片</h3>
@@ -113,6 +120,8 @@ function DetailFooter({id}: {id: string}) {
   return (
     <>
       <button onClick={() => openRecordForm(app, id)}>编辑</button>
+      {app.modules.trading && ['overseas', 'domestic'].includes(r.status)
+        ? <button className="quiet" onClick={() => openListingForm(app, id)}>上架资料</button> : null}
       {app.modules.trading && ['overseas', 'domestic'].includes(r.status)
         ? <button className="quiet" onClick={() => bulkAction(app, r.listed ? 'unlist' : 'list', [id], r.listed ? '已取消上架' : '已标记上架')}>
             {r.listed ? '取消上架' : '标记上架'}</button> : null}

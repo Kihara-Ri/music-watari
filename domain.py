@@ -6,6 +6,7 @@ A record without price or without a rate has unknown cost (None, never 0).
 """
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date
+from urllib.parse import urlsplit
 
 STATUSES = ('overseas', 'transit', 'domestic', 'shipping', 'sold', 'trash')
 MODULE_NAMES = ('acquisition', 'trading', 'circulation')
@@ -24,6 +25,19 @@ def clean_modules(enabled):
     return {k: enabled[k] for k in MODULE_NAMES}
 
 
+def clean_listing(data):
+    if not isinstance(data, dict): raise ValidationError('上架资料格式不正确')
+    channel = str(data.get('channel', '')).strip()
+    url = str(data.get('url', '')).strip()
+    if len(channel) > 100 or len(url) > 2000: raise ValidationError('上架资料过长')
+    try:
+        parsed = urlsplit(url)
+        valid = parsed.scheme in ('http', 'https') and parsed.hostname and not parsed.username and not parsed.password
+    except ValueError:
+        valid = False
+    if url and not valid: raise ValidationError('请填写 http 或 https 商品链接')
+    result = {'listingChannel': channel, 'listingUrl': url}
+    return result
 
 
 def number(value, name='金额', optional=False):
@@ -67,6 +81,8 @@ def clean_record(data):
     r.pop('rate', None)
     r.pop('rateSource', None)
     r.pop('listed', None)  # 上架标记只经 storage.bulk 的 list/unlist 写入，表单通道不可改
+    r.pop('listingChannel', None)
+    r.pop('listingUrl', None)
     for k in ('location','note','noteAlbum','tradeNote','version','pressing','obi','condition','tag','storage','releaseYear','rawRemark'):
         r[k] = str(r.get(k,'')).strip()
         if len(r[k]) > 50000: raise ValidationError('备注过长')
