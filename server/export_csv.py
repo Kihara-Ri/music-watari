@@ -40,12 +40,12 @@ def sales_csv(state):
 
 def albums_csv(state):
     rows = [['专辑', '艺人', '状态', '上架', '购买日期', '渠道', '碟盒', '版次', '侧标', '币种',
-             '买入金额', '100日元兑人民币', '实际人民币支出', '额外买入费用', '人民币成本', '笔记']]
+             '买入金额', '100日元兑人民币', '实际人民币支出', '额外买入费用', '人民币成本', '笔记', '存放位置']]
     for r in state['records']:
         rows.append([_cell(v) for v in [
             r['title'], r['artist'], RECORD_STATUS.get(r['status'], r['status']),
             '是' if r.get('listed') else '',
             r.get('date'), r.get('location'), r.get('version'), r.get('pressing'), r.get('obi'),
             r.get('currency'), r.get('price'), r.get('rate'), r.get('actual'),
-            r.get('fees'), r.get('cost'), r.get('note')]])
+            r.get('fees'), r.get('cost'), r.get('note'), r.get('storage')]])
     return _csv_bytes(rows)

@@ -44,7 +44,7 @@ function SaleForm({ids}: {ids: string[]}) {
     <form id="sale-form" onSubmit={submit}>
       <div className="drawer-body">
         <div className="error" role="alert">{error}</div>
-        {rs.map(r => r && <AlbumLine key={r.id} r={r}/>)}
+        {rs.map(r => r && <AlbumLine key={r.id} r={r} showCost={app.modules.acquisition}/>)}
         <div className="form-grid form-section">
           <Field label="成交价（买家支付，元）" name="gross" type="number" required min="0" step="0.01"
                  inputMode="decimal" value={v.gross} onChange={e => set({gross: e.target.value})}/>
@@ -61,7 +61,7 @@ function SaleForm({ids}: {ids: string[]}) {
         </div>
         <div className="preview">
           <strong>{net === null ? '—' : yuan(net)}</strong>
-          <p>
+          {app.modules.acquisition ? <p>
             {unknown ? '部分专辑成本待补，利润稍后自动补齐。'
               : net === null ? '' : `买入成本 ${yuan(csum)} · 预估利润 `}
             {unknown || net === null ? null
@@ -69,7 +69,7 @@ function SaleForm({ids}: {ids: string[]}) {
                   {yuan(Number((net - csum).toFixed(2)))}
                 </span>}
             {rs.length > 1 ? ' · 多张按张数均摊' : ''}
-          </p>
+          </p> : null}
           <p>买家签收、钱款到账后点「确认收货」转为已售出。</p>
         </div>
         <details className="adv">

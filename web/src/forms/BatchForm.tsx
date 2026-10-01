@@ -27,10 +27,11 @@ export function openBatchForm(app: AppCtx) {
 
 export function BatchForm() {
   const app = useApp();
+  const {modules} = app;
   const {error, saving, run, setError} = useFormSubmit();
-  const [date, setDate] = useState(today());
-  const [currency, setCurrency] = useState<Currency>((prefs.get('currency', 'JPY') as Currency) || 'JPY');
-  const [location, setLocation] = useState(prefs.get('location', ''));
+  const [date, setDate] = useState(modules.acquisition ? today() : '');
+  const [currency, setCurrency] = useState<Currency>((prefs.get('currency', modules.circulation ? 'JPY' : 'CNY') as Currency) || 'JPY');
+  const [location, setLocation] = useState(modules.acquisition ? prefs.get('location', '') : '');
   const [rows, setRows] = useState<BatchRow[]>([makeRow(), makeRow()]);
   const queue = useRef(new PhotoQueue());
   const fileInput = useRef<HTMLInputElement>(null);
@@ -70,7 +71,7 @@ export function BatchForm() {
       const items = rows.map(r => ({
         title: r.title, artist: r.artist, price: r.price, version: r.version,
         photos: r.photos.filter(p => !('error' in p)).map(p => (p as {data: string}).data),
-        date, currency, location, fees: '0',
+        date: modules.acquisition ? date : '', currency, location: modules.acquisition ? location : '', fees: '0', status: modules.circulation && currency === 'JPY' ? 'overseas' : 'domestic',
       }));
       prefs.set('location', location);
       prefs.set('currency', currency);
@@ -82,8 +83,8 @@ export function BatchForm() {
     <form id="batch-form" onSubmit={submit}>
       <div className="drawer-body">
         <div className="error" role="alert">{error}</div>
-        <div className="form-grid">
-          <Field label="买入日期" name="batch-date" type="date" required value={date}
+        {modules.acquisition ? <div className="form-grid">
+          <Field label="买入日期" name="batch-date" type="date" value={date}
                  onChange={e => { setDate(e.target.value); dirty(); }}/>
           <div className="field">
             <span className="field-label"><label>币种</label></span>
@@ -91,9 +92,9 @@ export function BatchForm() {
                  options={[{value: 'JPY', label: '日元'}, {value: 'CNY', label: '人民币'}]}
                  value={currency} onValue={c => { setCurrency(c as Currency); dirty(); }}/>
           </div>
-          <ShopField value={location} records={app.state.records} defaultShop={prefs.get('location', '')}
+          <ShopField value={location} records={app.state.records} defaultShop={modules.acquisition ? prefs.get('location', '') : ''}
                      onChange={v => { setLocation(v); dirty(); }}/>
-        </div>
+        </div> : null}
         <div className="batch-heading">专辑名 / 艺人 / 金额 / 碟盒 / 照片</div>
         <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden
                onChange={e => {
@@ -109,9 +110,9 @@ export function BatchForm() {
                        value={row.title} onChange={e => { setRow(i, {title: e.target.value}); dirty(); }}/>
                 <input name="batchArtist" aria-label="艺人" placeholder="艺人" required
                        value={row.artist} onChange={e => { setRow(i, {artist: e.target.value}); dirty(); }}/>
-                <input name="batchPrice" aria-label="金额" placeholder="金额" type="number" min="0"
-                       step="0.01" required value={row.price}
-                       onChange={e => { setRow(i, {price: e.target.value}); dirty(); }}/>
+                {modules.acquisition ? <input name="batchPrice" aria-label="金额" placeholder="金额" type="number" min="0"
+                       step="0.01" value={row.price}
+                       onChange={e => { setRow(i, {price: e.target.value}); dirty(); }}/> : null}
                 <input name="batchVersion" aria-label="碟盒" placeholder="碟盒" autoComplete="off"
                        value={row.version} onChange={e => { setRow(i, {version: e.target.value}); dirty(); }}/>
                 <button type="button" className="batch-photo-btn" aria-label="添加实物照片"
@@ -131,10 +132,10 @@ export function BatchForm() {
         </div>
         <button type="button" className="quiet"
                 onClick={() => { setRows(prev => [...prev, makeRow()]); dirty(); }}>＋ 再加一张</button>
-        <div className="cost-line" id="batch-preview">
+        {modules.acquisition ? <div className="cost-line" id="batch-preview">
           <b>{rows.length} 张 · 合计 {currency === 'JPY' ? fmtJPY(total) : fmt(total)} {currency === 'JPY' ? '円' : '元'}</b>
           {' '}· 保存后进「{currency === 'JPY' ? '海外库存' : '国内库存'}」
-        </div>
+        </div> : null}
       </div>
       <div className="drawer-footer">
         <button type="button" onClick={() => app.closeDrawer()}>取消</button>

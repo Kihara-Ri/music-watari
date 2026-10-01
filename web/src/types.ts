@@ -43,6 +43,7 @@ export interface AlbumRecord {
   sourceId?: string;
   releaseYear?: string;
   rawRemark?: string;
+  storage?: string;         // 实物存放位置，与购买渠道 location 分开
 }
 
 export interface SaleItem {
@@ -112,8 +113,15 @@ export interface AppState {
   shipments: Shipment[];
   audit: AuditEntry[];
   settings: Record<string, unknown>;
+  modules?: {enabled: ModuleFlags; configured: boolean; needsSetup: boolean}; // 旧运行进程尚未重启时可能缺失
   rateService?: { days: number; latest: string | null };
   service?: { login: boolean; version?: string; backup: BackupStatus };
+}
+
+export interface ModuleFlags {
+  acquisition: boolean;
+  trading: boolean;
+  circulation: boolean;
 }
 
 export interface BackupFile {

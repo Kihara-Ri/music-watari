@@ -110,3 +110,9 @@ details.adv[open] summary{margin-bottom:8px}
   .form-grid{grid-template-columns:1fr}
   .drawer{width:100vw}
 }
+.batch-collection .batch-row{grid-template-columns:1.35fr .8fr 96px 36px 26px}
+@media (max-width:840px){
+  .batch-collection .batch-row{grid-template-columns:minmax(0,1fr) 44px 34px}
+  .batch-collection .batch-row>:nth-child(5){grid-column:2}
+  .batch-collection .batch-row>:nth-child(6){grid-column:3}
+}

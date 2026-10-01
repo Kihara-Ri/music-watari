@@ -4,7 +4,7 @@
 import {createContext, useContext} from 'react';
 import type {ReactNode} from 'react';
 import type {ThemePref} from '../core/theme';
-import type {AlbumRecord, AppState, SortMode} from '../types';
+import type {AlbumRecord, AppState, ModuleFlags, SortMode} from '../types';
 
 export interface DrawerSpec {
   title: string;
@@ -19,6 +19,7 @@ export type ToastKind = 'ok' | 'warn' | 'err';
 
 export interface AppCtx {
   state: AppState;
+  modules: ModuleFlags;
   page: string;
   query: string; setQuery(v: string): void;
   sort: SortMode; setSort(v: SortMode): void;

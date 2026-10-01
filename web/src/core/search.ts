@@ -85,7 +85,7 @@ const hayCache = new WeakMap<AlbumRecord, string>();
 export function recordHaystack(r: AlbumRecord): string {
   let hay = hayCache.get(r);
   if (!hay) {
-    hay = [r.title, r.artist, r.location || '', r.note || '', ...extrasFor(r.artist)]
+    hay = [r.title, r.artist, r.storage || '', r.location || '', r.note || '', ...extrasFor(r.artist)]
       .filter(Boolean).map(haystackOf).join(' ');
     hayCache.set(r, hay);
   }

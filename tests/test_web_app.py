@@ -27,6 +27,18 @@ class WebTests(unittest.TestCase):
   self.assertEqual(self.req('/api/state',cookie=cookie)[0],200)
   self.assertEqual(self.req('/api/logout',{},cookie=cookie)[0],200)
   self.assertEqual(self.req('/api/state',cookie=cookie)[0],401)
+ def test_module_settings_api_and_disabled_operation(self):
+  flags={'acquisition':False,'trading':False,'circulation':False}
+  self.assertEqual(self.req('/api/modules',{'enabled':flags})[0],401)
+  _,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
+  self.assertEqual(self.req('/api/modules',{'enabled':flags},cookie=cookie,origin='https://evil.test')[0],403)
+  self.assertEqual(self.req('/api/modules',{'enabled':flags},cookie=cookie)[0],200)
+  status,_,body=self.req('/api/state',cookie=cookie);self.assertEqual(status,200)
+  self.assertEqual(json.loads(body)['modules']['enabled'],flags)
+  _,_,body=self.req('/api/records',{'title':'收藏','artist':'艺人'},cookie=cookie)
+  rid=json.loads(body)['ids'][0]
+  self.assertEqual(self.req('/api/bulk',{'ids':[rid],'action':'list'},cookie=cookie)[0],400)
+  self.assertEqual(self.req('/api/modules',{'enabled':{**flags,'circulation':True}},cookie=cookie)[0],400)
  def test_origins_and_hosts(self):
   self.assertEqual(self.req('/api/login',{'password':'test-password-12345'},origin='https://evil.test')[0],403)
   self.assertEqual(self.req('/',host='evil.test')[0],403)

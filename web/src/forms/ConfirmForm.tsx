@@ -62,7 +62,7 @@ export function ConfirmForm({kind, id, arriveCount, sale, restoreData}: {
         {kind === 'cancel_shipment' && <p>包裹取消，专辑退回「海外库存」，运费分摊从成本中扣回。</p>}
         {kind === 'receive' && (
           <>
-            <p>买家已签收、钱款已到账。交易转为「已售出」，利润计入统计，此后不再支持退款操作。</p>
+            <p>买家已签收、钱款已到账。交易转为「已售出」，{app.modules.acquisition ? '利润' : '到账金额'}计入统计，此后不再支持退款操作。</p>
             <div className="form-grid form-section">
               <Field label="到账日期" name="receive-date" type="date" required value={date} onChange={e => setDate(e.target.value)}/>
             </div>
@@ -71,7 +71,7 @@ export function ConfirmForm({kind, id, arriveCount, sale, restoreData}: {
         {kind === 'cancel' && <p>用于纠正误记或未成交，专辑回到原状态，交易保留撤销历史。</p>}
         {kind === 'refund' && (
           <>
-            <p className="help">仅限「售出中」的交易；销售费用保留为损失；勾选退货则专辑回到国内库存。</p>
+            <p className="help">仅限「售出中」的交易；销售费用保留为损失；勾选退货则专辑回到{app.modules.circulation ? '国内库存' : '我的收藏'}。</p>
             <div className="form-grid form-section">
               <Field label="退款总额（元）" name="refund" type="number" required min="0"
                      max={sale?.gross} step="0.01" value={refund} onChange={e => setRefund(e.target.value)}/>

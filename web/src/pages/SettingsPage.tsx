@@ -4,6 +4,7 @@ import {api} from '../core/api';
 import {useApp} from '../state/AppContext';
 import type {BackupFile} from '../types';
 import {PageHead} from '../components/PageHead';
+import {ModuleChooser} from '../components/ModuleChooser';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
 import {Seg} from '../components/ui/Seg';
 import type {ThemePref} from '../core/theme';
@@ -117,12 +118,17 @@ export function SettingsPage() {
              value={app.theme} onValue={v => app.setTheme(v as ThemePref)}/>
       </section>
       <section className="settings-section">
+        <h3>功能模块</h3>
+        <p>按需要选择收藏、购入记录、二手交易与海外周转。</p>
+        {state.modules ? <ModuleChooser/> : <p className="small-note">当前后端仍是旧版本。重启碟渡服务后，即可选择功能模块；原有账本可以继续使用。</p>}
+      </section>
+      <section className="settings-section">
         <h3>自动化服务</h3>
-        <p>封面从 iTunes / MusicBrainz 公开资料库自动抓取；日元成本按购买当天汇率自动折算，无需手动维护。</p>
+        <p>封面从 iTunes / MusicBrainz 公开资料库自动抓取。{app.modules.acquisition ? '日元成本按购买当天汇率自动折算，无需手动维护。' : ''}</p>
         <p className="small-note">
-          版本 {state.service?.version || 'dev'} · 汇率缓存：{state.rateService
+          版本 {state.service?.version || 'dev'}{app.modules.acquisition ? <> · 汇率缓存：{state.rateService
             ? `${state.rateService.days} 天（最新 ${state.rateService.latest || '—'}）`
-            : '不可用'}
+            : '不可用'}</> : null}
           {' '}· 最近备份：{state.service?.backup?.last || '尚未生成'}
         </p>
         {state.service?.backup?.error
@@ -131,7 +137,7 @@ export function SettingsPage() {
 
       <section className="settings-section">
         <h3>导入专辑资料</h3>
-        <p>支持 albums.json 格式（先预览再导入，重复来源自动跳过，导入后默认进入国内库存）。</p>
+        <p>支持 albums.json 格式（先预览再导入，重复来源自动跳过）。{app.modules.circulation ? '按买入币种进入海外或国内库存。' : '导入后进入我的收藏，原始购买资料会保留。'}</p>
         <div className="inline-actions">
           <label className="file-label">选择 JSON 文件
             <input type="file" accept=".json,application/json" aria-label="选择专辑导入文件" hidden
@@ -191,6 +197,7 @@ export function SettingsPage() {
         <h3>完整备份与恢复</h3>
         <p>备份包含所有专辑、封面、包裹与交易。恢复会替换当前数据，恢复前会自动保存当前状态。</p>
         <div className="inline-actions">
+          <a className="link-button" href="/api/export">导出专辑 CSV</a>
           <a className="link-button" href="/api/backup">下载完整备份</a>
           <label className="file-label">恢复备份
             <input type="file" accept=".json,application/json" aria-label="选择完整备份" hidden

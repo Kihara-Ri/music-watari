@@ -9,7 +9,7 @@ import {matchRecords, norm, artistSuggestions} from '../core/search';
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
 import type {AlbumRecord, Currency, Status} from '../types';
-import {STATUS_NAMES} from '../types';
+import {statusName} from '../core/modules';
 import {Seg} from '../components/ui/Seg';
 import {Switch} from '../components/ui/Switch';
 import {ShopField} from '../components/ShopField';
@@ -31,23 +31,24 @@ export function openRecordForm(app: AppCtx, id?: string) {
 
 export function RecordForm({id}: {id?: string}) {
   const app = useApp();
+  const {modules} = app;
   const r = id ? app.rec(id) : undefined;
   const {error, saving, run, setError} = useFormSubmit();
   const formRef = useRef<HTMLFormElement>(null);
 
   const base = useRef<Partial<AlbumRecord>>(r ? {...r} : {
-    title: '', artist: '', price: '', date: today(),
-    currency: (prefs.get('currency', 'JPY') as Currency) || 'JPY',
-    location: prefs.get('location', ''), fees: '0', actual: '', note: '',
+    title: '', artist: '', price: '', date: modules.acquisition ? today() : '',
+    currency: (prefs.get('currency', modules.circulation ? 'JPY' : 'CNY') as Currency) || 'CNY',
+    location: modules.acquisition ? prefs.get('location', '') : '', fees: '0', actual: '', note: '',
   });
-  const where: Status | null = r ? null : (base.current.currency === 'CNY' ? 'domestic' : 'overseas');
+  const where: Status | null = r ? null : !modules.circulation ? 'domestic' : (base.current.currency === 'CNY' ? 'domestic' : 'overseas');
 
   const [v, setV] = useState(() => ({
     title: base.current.title || '',
     artist: base.current.artist || '',
     price: base.current.currency === 'JPY' && base.current.price !== ''
       ? String(Math.round(Number(base.current.price))) : (base.current.price || ''),
-    date: base.current.date || today(),
+    date: base.current.date ?? '',
     currency: (base.current.currency || 'JPY') as Currency,
     location: base.current.location || '',
     fees: base.current.fees || '0',
@@ -56,6 +57,7 @@ export function RecordForm({id}: {id?: string}) {
     obi: base.current.obi || '',
     note: base.current.note || '',
     noteAlbum: base.current.noteAlbum || '',
+    storage: base.current.storage || '',
     status: (where ?? base.current.status) as Status | undefined,
   }));
   const set = (patch: Partial<typeof v>) => setV(prev => ({...prev, ...patch}));
@@ -154,7 +156,7 @@ export function RecordForm({id}: {id?: string}) {
       const q = value.trim();
       const dup = app.state.records.filter(x => q && norm(x.title) === norm(q) && x.id !== base.current.id);
       setDupHint(dup.length
-        ? `库中已有 ${dup.length} 张这张专辑（${dup.map(x => STATUS_NAMES[x.status] || x.status).join('、')}）。同一张买了多个版本就分别保存，保存后可在版本里注明区别。`
+        ? `库中已有 ${dup.length} 张这张专辑（${dup.map(x => statusName(x.status, modules)).join('、')}）。同一张买了多个版本就分别保存，保存后可在版本里注明区别。`
         : '');
       if (q.length < 2) { setHints({label: '', items: []}); return; }
       const hits = matchRecords(q, app.state.records);
@@ -205,7 +207,7 @@ export function RecordForm({id}: {id?: string}) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (v.currency === 'CNY') { if (!cancelled) setPreview({hidden: true, text: ''}); return; }
+      if (!modules.acquisition || v.currency === 'CNY') { if (!cancelled) setPreview({hidden: true, text: ''}); return; }
       let rate: number | null = null;
       if (v.price !== '') {
         if (rateCache.current?.date === v.date) {
@@ -227,7 +229,7 @@ export function RecordForm({id}: {id?: string}) {
       setPreview({hidden: false, text});
     })();
     return () => { cancelled = true; };
-  }, [v.currency, v.price, v.date, v.fees]);
+  }, [v.currency, v.price, v.date, v.fees, modules.acquisition]);
 
   // ── 照片 ──
   const photos = usePhotoSlots(
@@ -262,7 +264,7 @@ export function RecordForm({id}: {id?: string}) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const names: [string, string][] = [['title', '专辑名'], ['artist', '艺人'], ['price', '金额'], ['date', '买入日期']];
+    const names: [string, string][] = [['title', '专辑名'], ['artist', '艺人']];
     const miss = names.filter(([k]) => !String((v as Record<string, unknown>)[k] ?? '').trim());
     if (miss.length) { setError('请填写：' + miss.map(([, n]) => n).join('、')); return; }
     if (photos.hasPending) { setError('还有照片在处理中，等缩略图就绪后再保存'); return; }
@@ -270,11 +272,20 @@ export function RecordForm({id}: {id?: string}) {
       const payload: Record<string, unknown> = {...base.current, ...v, status: v.status || where || base.current.status};
       delete payload.cost;
       delete payload.rate;
-      payload.actual = '';
+      const openedPrice = base.current.currency === 'JPY' && base.current.price !== ''
+        ? String(Math.round(Number(base.current.price))) : (base.current.price || '');
+      if (modules.acquisition && (v.price !== openedPrice || v.currency !== base.current.currency || v.date !== base.current.date)) payload.actual = '';
+      if (!modules.acquisition) {
+        // 隐藏的购买信息沿用原值；编辑收藏资料不能补日期或清空原金额。
+        for (const key of ['price', 'date', 'currency', 'location', 'fees', 'actual'] as const)
+          payload[key] = base.current[key] ?? (key === 'currency' ? 'CNY' : key === 'fees' ? '0' : '');
+      }
       payload.photos = photos.slots.filter(p => !('error' in p))
         .map(p => 'existing' in p ? p.existing : (p as {data: string}).data);
-      prefs.set('location', v.location);
-      prefs.set('currency', v.currency);
+      if (modules.acquisition) {
+        prefs.set('location', v.location);
+        prefs.set('currency', v.currency);
+      }
       await api('records', payload);
     });
   };
@@ -317,10 +328,10 @@ export function RecordForm({id}: {id?: string}) {
           </div>
         </section>
 
-        <section className="money-block form-section">
+        {modules.acquisition ? <section className="money-block form-section">
           <div className="money-row">
             <div className="field">
-              <label htmlFor="f-price">买入金额</label>
+              <label htmlFor="f-price">买入金额（选填）</label>
               <div className="amount-group">
                 <Seg className="seg-cur" ariaLabel="币种"
                      options={[{value: 'JPY', label: '日元'}, {value: 'CNY', label: '人民币'}]}
@@ -329,23 +340,25 @@ export function RecordForm({id}: {id?: string}) {
                        currency: c as Currency,
                        price: c === 'JPY' && v.price !== '' ? String(Math.round(Number(v.price))) : v.price,
                      })}/>
-                <input id="f-price" name="price" type="number" required min="0"
+                <input id="f-price" name="price" type="number" min="0"
                        step={v.currency === 'JPY' ? '10' : '1'} inputMode="decimal"
                        placeholder="按币种填写" value={v.price}
                        onChange={e => { set({price: e.target.value}); dirty(); }}/>
               </div>
             </div>
-            <Field label="买入日期" name="date" type="date" required value={v.date}
+            <Field label="买入日期（选填）" name="date" type="date" value={v.date}
                    onChange={e => { set({date: e.target.value}); dirty(); }}/>
           </div>
           {!preview.hidden && <div className="cost-line">{preview.text}</div>}
-        </section>
+        </section> : null}
 
         <div className="form-grid form-section">
-          <ShopField value={v.location} records={app.state.records}
+          {modules.acquisition ? <ShopField value={v.location} records={app.state.records}
                      defaultShop={prefs.get('location', '')}
-                     onChange={val => { set({location: val}); dirty(); }}/>
-          {!id && (
+                     onChange={val => { set({location: val}); dirty(); }}/> : null}
+          {!modules.circulation ? <Field label="存放位置（选填）" name="storage" value={v.storage}
+            placeholder="例如：书房第二层" onChange={e => { set({storage: e.target.value}); dirty(); }}/> : null}
+          {!id && modules.circulation && (
             <div className="field">
               <span className="field-label"><label>入库位置</label></span>
               <Seg ariaLabel="入库位置"
@@ -418,7 +431,9 @@ export function RecordForm({id}: {id?: string}) {
         <details className="adv">
           <summary>更多信息</summary>
           <div className="form-grid">
-            <div className="field">
+            {modules.circulation ? <Field label="存放位置（选填）" name="storage" value={v.storage}
+              placeholder="例如：书房第二层" onChange={e => { set({storage: e.target.value}); dirty(); }}/> : null}
+            {modules.acquisition ? <div className="field">
               <label htmlFor="f-fees">额外买入费用（人民币）</label>
               <div className="amount-group">
                 <span className="cur-static">人民币</span>
@@ -429,7 +444,7 @@ export function RecordForm({id}: {id?: string}) {
               {shipItem?.feeOriginal
                 ? <small>国际运费 {fmtJPY(shipItem.feeOriginal)} 円 ≈ {yuan(shipItem.fee)}，已摊入上列费用</small>
                 : null}
-            </div>
+            </div> : null}
             <TextareaField label="笔记 · 这张副本" name="note" value={v.note}
                            onChange={val => { set({note: val}); dirty(); }}/>
             <TextareaField label="笔记 · 这张专辑（感想与音乐记录，所有副本共享）" name="noteAlbum"

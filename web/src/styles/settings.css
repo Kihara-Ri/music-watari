@@ -6,6 +6,17 @@
 .pw-change{display:grid;gap:9px;max-width:280px}
 .import-preview{background:var(--surface-2);border-radius:var(--radius-sm);padding:14px;margin-top:12px;font-size:13px}
 .import-preview ul{margin:8px 0 10px 18px;font-size:12px;color:var(--muted)}
+.module-presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.module-preset{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:12px;gap:5px;white-space:normal}
+.module-preset strong{font-size:14px}
+.module-preset span{font-size:12px;line-height:1.5;color:var(--muted)}
+.module-preset[aria-pressed=true]{border-color:var(--accent);background:var(--surface-2)}
+.module-options{display:grid;gap:12px;margin:15px 0}
+.module-option{display:flex;align-items:center;gap:12px;cursor:pointer}
+.module-option input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
+.module-option span{display:grid;gap:3px}
+.module-option strong{font-size:13px}
+.module-option small{font-size:12px;color:var(--muted);line-height:1.5}
 /* 外观三态分段：桌面限宽避免拉满整栏，手机仍铺满便于点按 */
 .theme-seg{max-width:280px}
 

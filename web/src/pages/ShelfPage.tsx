@@ -3,6 +3,8 @@ import {useApp} from '../state/AppContext';
 import type {AlbumRecord, SortMode} from '../types';
 import {fmtMonth, sum, yuan} from '../core/format';
 import {searchScore} from '../core/search';
+import {onShelf} from '../core/modules';
+import type {ModuleFlags} from '../types';
 import {PageHead} from '../components/PageHead';
 import {AlbumCard, CardGrid} from '../components/Cards';
 import {Dropdown} from '../components/ui/Dropdown';
@@ -25,9 +27,9 @@ const LISTED_FILTERS = [
   {value: 'unlisted', label: '未上架'},
 ];
 
-function shelfRecords(records: AlbumRecord[], page: string, query: string, sort: SortMode, listedFilter: string): AlbumRecord[] {
-  let rs = records.filter(r => r.status === page);
-  if (page !== 'trash' && listedFilter !== 'all')
+function shelfRecords(records: AlbumRecord[], page: string, query: string, sort: SortMode, listedFilter: string, modules: ModuleFlags): AlbumRecord[] {
+  let rs = records.filter(r => onShelf(r.status, page, modules));
+  if (modules.trading && page !== 'trash' && listedFilter !== 'all')
     rs = rs.filter(r => listedFilter === 'listed' ? !!r.listed : !r.listed);
   const q = query.trim().toLocaleLowerCase();
   if (q) {
@@ -37,24 +39,25 @@ function shelfRecords(records: AlbumRecord[], page: string, query: string, sort:
     rs.sort((a, b) => sort === 'cost'
       ? ((b.cost === null ? -1 : Number(b.cost)) - (a.cost === null ? -1 : Number(a.cost)))
       : sort === 'artist' ? a.artist.localeCompare(b.artist)
-        : b.date.localeCompare(a.date));
+        : modules.acquisition ? b.date.localeCompare(a.date) : b.createdAt.localeCompare(a.createdAt));
   }
   return rs;
 }
 
 export function ShelfPage() {
   const app = useApp();
-  const {state, page, query, sort, flip, selected, shelfFilter} = app;
+  const {state, modules, page, query, sort, flip, selected, shelfFilter} = app;
   const isTrash = page === 'trash';
   const rymLinks = state.settings['rym-links'] as Record<string, string> | undefined;
-  const all = state.records.filter(r => r.status === page);
+  const all = state.records.filter(r => onShelf(r.status, page, modules));
   const known = all.filter(r => r.cost !== null);
   const listedCount = all.filter(r => r.listed).length;
-  const rs = shelfRecords(state.records, page, query, sort, shelfFilter);
+  const rs = shelfRecords(state.records, page, query, sort, shelfFilter, modules);
+  const selectable = rs.filter(r => r.status !== 'transit');
   const searching = query.trim() !== '';
 
   // 选择集只在当前可见结果内生效
-  const visible = new Set(rs.map(r => r.id));
+  const visible = new Set(selectable.map(r => r.id));
   const curSelected = new Set([...selected].filter(id => visible.has(id)));
   const toggleSelect = (id: string, on: boolean) => {
     const next = new Set(app.selected);
@@ -62,24 +65,25 @@ export function ShelfPage() {
     app.setSelected(next);
   };
 
-  const title = page === 'overseas' ? '海外库存' : page === 'domestic' ? '国内库存' : '回收站';
-  const desc = page === 'overseas' ? '在日本持有的专辑，可标记上架（如メルカリ）或直接记录售出；选中多张可打包运输。'
-    : page === 'domestic' ? '已运回国；标记「已上架」的正在闲鱼出售，其余暂未上架，随时可记录售出。'
+  const title = page === 'domestic' && !modules.circulation ? '我的收藏' : page === 'overseas' ? '海外库存' : page === 'domestic' ? '国内库存' : '回收站';
+  const desc = !modules.circulation && !isTrash ? '整理每张实物的版本、照片和存放位置。'
+    : page === 'overseas' ? (modules.trading ? '在日本持有的专辑，可标记上架（如メルカリ）或直接记录售出；选中多张可打包运输。' : '在海外持有的专辑，选中多张可打包运输。')
+    : page === 'domestic' ? (modules.trading ? '已运回国；标记「已上架」的正在闲鱼出售，其余暂未上架，随时可记录售出。' : '已运回的专辑，记录版本、照片和存放位置。')
       : '移除的专辑保留在这里，随时可以恢复。';
 
   const cardActions = (r: AlbumRecord) => {
     if (page === 'trash') return <button onClick={() => bulkAction(app, 'restore', [r.id])}>恢复</button>;
     return (
       <>
-        <button className="primary" onClick={() => openSaleForm(app, [r.id])}>记录售出</button>
-        <button onClick={() => openRecordForm(app, r.id)}>编辑</button>
+        {modules.trading && r.status !== 'transit' ? <button className="primary" onClick={() => openSaleForm(app, [r.id])}>记录售出</button> : null}
+        <button className="card-edit" onClick={() => openRecordForm(app, r.id)}>编辑</button>
       </>
     );
   };
 
   const renderCard = (r: AlbumRecord) => (
     <AlbumCard key={r.id} r={r} page={page} checked={curSelected.has(r.id)}
-               onSelect={isTrash ? undefined : toggleSelect}
+               onSelect={isTrash || r.status === 'transit' ? undefined : toggleSelect}
                onDetail={id => openDetail(app, id)}
                actions={cardActions(r)}/>
   );
@@ -89,9 +93,10 @@ export function ShelfPage() {
     body = (
       <div className="empty">
         <div className="empty-symbol">{isTrash ? '◎' : '◫'}</div>
-        <h3>{query ? '没有找到匹配的专辑' : page === 'overseas' ? '海外库存是空的' : isTrash ? '回收站是空的' : '库存是空的'}</h3>
+        <h3>{query ? '没有找到匹配的专辑' : !modules.circulation && !isTrash ? '从第一张专辑开始' : page === 'overseas' ? '海外库存是空的' : isTrash ? '回收站是空的' : '库存是空的'}</h3>
         <p>{query ? '试试其他关键词。'
-          : page === 'overseas' ? '录入在海外买入的专辑，或把国内库存调回海外。'
+          : !modules.circulation && !isTrash ? '只需填写专辑名和艺人，其他资料可以慢慢补。'
+            : page === 'overseas' ? '录入在海外买入的专辑，或把国内库存调回海外。'
             : isTrash ? '移除的专辑会出现在这里。'
               : '记录一次买入，封面会自动从公开音乐资料库抓取。'}</p>
         {query
@@ -99,7 +104,7 @@ export function ShelfPage() {
           : !isTrash ? <button className="primary" onClick={() => openRecordForm(app)}>＋ 添加专辑</button> : null}
       </div>
     );
-  } else if (!searching && sort === 'new') {
+  } else if (!searching && sort === 'new' && modules.acquisition) {
     // 按月时间线
     const sorted = [...rs].sort((a, b) => flip
       ? (a.date || '9999').localeCompare(b.date || '9999')
@@ -140,8 +145,8 @@ export function ShelfPage() {
               {a}<span className="ext" aria-hidden="true">↗</span>
             </a>
             <span className="artist-meta">
-              {list.length} 张{total ? ` · 总成本 ${total}` : ''}
-              {knownList.length < list.length ? ` · ${list.length - knownList.length} 张成本待补` : ''}
+              {list.length} 张{modules.acquisition && total ? ` · 总成本 ${total}` : ''}
+              {modules.acquisition && knownList.length < list.length ? ` · ${list.length - knownList.length} 张成本待补` : ''}
             </span>
           </header>
           <CardGrid records={list} renderCard={renderCard}/>
@@ -164,9 +169,9 @@ export function ShelfPage() {
         <span><strong>{all.length}</strong> 张专辑</span>
         {!isTrash && (
           <>
-            <span>总成本 <strong>{known.length ? yuan(sum(known, 'cost')) : '—'}</strong></span>
-            {all.length - known.length ? <span className="hint">· {all.length - known.length} 张成本待补</span> : null}
-            {!isTrash ? <span className="hint">· 已上架 {listedCount} 张</span> : null}
+            {modules.acquisition ? <span>总成本 <strong>{known.length ? yuan(sum(known, 'cost')) : '—'}</strong></span> : null}
+            {modules.acquisition && all.length - known.length ? <span className="hint">· {all.length - known.length} 张成本待补</span> : null}
+            {modules.trading ? <span className="hint">· 已上架 {listedCount} 张</span> : null}
             {page === 'overseas' ? <span className="hint">✈ 勾选多张可打包为一趟运输</span> : null}
           </>
         )}
@@ -175,25 +180,25 @@ export function ShelfPage() {
         {!isTrash && (
           <label className="select-all" title="全选当前结果">
             <input type="checkbox" aria-label="全选当前结果"
-                   checked={!!curSelected.size && curSelected.size === rs.length}
-                   onChange={e => app.setSelected(e.target.checked ? new Set(rs.map(r => r.id)) : new Set())}/>
+                   checked={!!curSelected.size && curSelected.size === selectable.length}
+                   onChange={e => app.setSelected(e.target.checked ? new Set(selectable.map(r => r.id)) : new Set())}/>
             全选
           </label>
         )}
         <div className="search">
-          <input aria-label="搜索专辑" placeholder="搜索专辑、艺人或渠道…" value={query}
+          <input aria-label="搜索专辑" placeholder={modules.acquisition ? '搜索专辑、艺人或渠道…' : '搜索专辑、艺人或存放位置…'} value={query}
                  onChange={e => app.setQuery(e.target.value)}/>
         </div>
-        {sort === 'new' && !searching ? (
+        {modules.acquisition && sort === 'new' && !searching ? (
           <button className={`flip-btn${flip ? ' on' : ''}`} aria-label="倒转时间顺序"
                   title="倒转时间顺序（新↔旧）"
                   onClick={() => app.setFlip(!flip)}>⇅</button>
         ) : null}
-        {!isTrash ? (
+        {!isTrash && modules.trading ? (
           <Dropdown id="listed" value={shelfFilter} options={LISTED_FILTERS} label="上架筛选"
                     onPick={v => app.setShelfFilter(v)}/>
         ) : null}
-        <Dropdown id="sort" value={sort} options={SORTS} label="排序方式"
+        <Dropdown id="sort" value={sort} options={modules.acquisition ? SORTS : [{value: 'new', label: '最近添加'}, {value: 'artist', label: '按艺人'}]} label="排序方式"
                   onPick={v => app.setSort(v as SortMode)}/>
       </div>
       {curSelected.size ? (
@@ -202,16 +207,16 @@ export function ShelfPage() {
           {page === 'overseas' ? (
             <>
               <button className="primary" onClick={() => openShipForm(app, [...curSelected])}>✈ 打包运输</button>
-              <button onClick={() => bulkAction(app, 'list', [...curSelected], '已标记上架')}>标记上架</button>
-              <button onClick={() => bulkAction(app, 'unlist', [...curSelected], '已取消上架')}>取消上架</button>
+              {modules.trading ? <><button onClick={() => bulkAction(app, 'list', [...curSelected], '已标记上架')}>标记上架</button>
+              <button onClick={() => bulkAction(app, 'unlist', [...curSelected], '已取消上架')}>取消上架</button></> : null}
             </>
           ) : null}
           {page === 'domestic' ? (
             <>
-              <button className="primary" onClick={() => openSaleForm(app, [...curSelected])}>合单售出</button>
+              {modules.trading ? <><button className="primary" onClick={() => openSaleForm(app, [...curSelected])}>合单售出</button>
               <button onClick={() => bulkAction(app, 'list', [...curSelected], '已标记上架')}>标记上架</button>
-              <button onClick={() => bulkAction(app, 'unlist', [...curSelected], '已取消上架')}>取消上架</button>
-              <button onClick={() => bulkAction(app, 'to_overseas', [...curSelected])}>调回海外</button>
+              <button onClick={() => bulkAction(app, 'unlist', [...curSelected], '已取消上架')}>取消上架</button></> : null}
+              {modules.circulation ? <button onClick={() => bulkAction(app, 'to_overseas', [...curSelected])}>调回海外</button> : null}
             </>
           ) : null}
           {!isTrash

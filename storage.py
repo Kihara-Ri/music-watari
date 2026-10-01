@@ -13,7 +13,7 @@ import json, sqlite3, uuid, base64, re, shutil, secrets
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlsplit
-from domain import ValidationError, clean_record, cost, number, money, day, allocate, STATUSES
+from domain import ValidationError, clean_record, clean_modules, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
 from covers import normalized, artist_variants
 from decimal import Decimal
 
@@ -102,6 +102,10 @@ class Store:
         return out
     def state(self):
         b=self.backup()
+        enabled = b['settings'].get('modules-v1')
+        b['modules'] = {'enabled': clean_modules(enabled) if enabled is not None else {k: True for k in MODULE_NAMES},
+                        'configured': enabled is not None,
+                        'needsSetup': enabled is None and not any(b[k] for k in ('records', 'sales', 'shipments'))}
         rates=self.record_rates(b['records'])
         for r in b['records']:
             rate = rates.get(r.get('date')) if r.get('currency')=='JPY' and r.get('date') and r.get('actual','')=='' else None
@@ -121,9 +125,24 @@ class Store:
         b['audit']=b['audit'][-100:]
         if self.rates: b['rateService']=self.rates.status()
         return b
+    def set_modules(self, enabled):
+        enabled = clean_modules(enabled)
+        with self.connect() as db:
+            before = self.meta_get(db, 'modules-v1')
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('modules-v1', dumps(enabled)))
+            self.audit(db, '调整功能模块', {'before': before, 'after': enabled})
+        return {'ok': True, 'enabled': enabled}
+    def require_module(self, name):
+        with self.connect() as db:
+            enabled = self.meta_get(db, 'modules-v1')
+        if enabled is not None and not clean_modules(enabled)[name]:
+            label = {'acquisition': '购入记录', 'trading': '二手交易', 'circulation': '海外周转'}[name]
+            raise ValidationError(f'请先在设置中启用「{label}」模块')
     def import_preview(self, source):
         if not isinstance(source,list) or len(source)>10000: raise ValidationError('请选择专辑 JSON 数组文件，最多 10000 条')
-        with self.connect() as db: existing={r.get('sourceId') for r in self.rows(db,'records')}
+        with self.connect() as db:
+            existing={r.get('sourceId') for r in self.rows(db,'records')}
+            modules = self.meta_get(db, 'modules-v1')
         seen=set();good=[];errors=[];duplicates=0
         for i,a in enumerate(source):
             try:
@@ -136,7 +155,8 @@ class Store:
                 r=clean_record({'title':a.get('title'),'artist':a.get('artist'),'date':p.get('date'),
                     'price':p.get('priceValue'),'currency':p.get('currency'),'location':p.get('location'),
                     'note':a.get('note',''),'rawRemark':a.get('rawRemark',''),'releaseYear':a.get('releaseYear','')})
-                r.update(id=uid(),sourceId=sid,original=a,status=default_status(r['currency']),revision=1,createdAt=now())
+                status = default_status(r['currency']) if modules is None or modules['circulation'] else 'domestic'
+                r.update(id=uid(),sourceId=sid,original=a,status=status,revision=1,createdAt=now())
                 good.append(r)
             except (ValidationError,TypeError,AttributeError) as e: errors.append(f'第 {i+1} 条：{e}')
         return {'records':good,'skipped':duplicates,'errors':errors}
@@ -187,6 +207,7 @@ class Store:
             items=[{**i,'fees':f} for i,f in zip(items,shares)]
         with self.connect() as db:
             result=[];plans=[]
+            modules = self.meta_get(db, 'modules-v1')
             for item in items:
                 photos=item.pop('photos',None);item.pop('photoCount',None)
                 if item.get('id'):
@@ -199,10 +220,14 @@ class Store:
                     r['revision']=old['revision']+1
                     self.audit(db,'修改专辑',{'id':r['id'],'before':old})
                 else:
-                    r=clean_record(item)
+                    r=clean_record({'currency': 'CNY', **item} if modules is not None and not modules['circulation'] else item)
                     status=r.get('status') if r.get('status') in ('overseas','domestic') else default_status(r['currency'])
+                    if modules is not None and not modules['circulation']:
+                        if item.get('status') == 'overseas':
+                            raise ValidationError('请先在设置中启用「海外周转」模块')
+                        status = 'domestic'
                     r.update(id=uid(),status=status,revision=1,createdAt=now())
-                    self.audit(db,'记录买入',{'id':r['id'],'title':r['title']})
+                    self.audit(db,'添加专辑' if modules is not None and not modules['acquisition'] else '记录买入',{'id':r['id'],'title':r['title']})
                 if photos is not None:
                     plan=self.prepare_photos(r['id'],photos)
                     plans.append((r['id'],plan))
@@ -219,6 +244,8 @@ class Store:
     def bulk(self, data):
         ids=list(dict.fromkeys(data.get('ids',[])));action=data.get('action')
         if not ids: raise ValidationError('请先选择专辑')
+        if action in ('list', 'unlist'): self.require_module('trading')
+        if action == 'to_overseas': self.require_module('circulation')
         self.checkpoint()
         with self.connect() as db:
             for id in ids:
@@ -249,6 +276,7 @@ class Store:
         if rate in ('',None): raise ValidationError('暂无当日汇率，无法折算日元运费；可直接填人民币金额')
         return Decimal(str(amount))*Decimal(str(rate))/100
     def ship(self,data):
+        self.require_module('circulation')
         ids=list(dict.fromkeys(data.get('ids',[])))
         if not ids: raise ValidationError('请选择要运输的专辑')
         currency=data.get('currency') or 'CNY'
@@ -275,6 +303,7 @@ class Store:
             self.put(db,'shipments',s);self.audit(db,'打包运输',{'id':s['id'],'count':len(rs),'cost':s['cost']})
         return {'id':s['id']}
     def shipment_action(self,data):
+        self.require_module('circulation')
         with self.connect() as db:
             s=self.get(db,'shipments',data.get('id'));old=json.loads(dumps(s));action=data.get('action')
             if action=='arrive':
@@ -304,6 +333,7 @@ class Store:
             self.put(db,'shipments',s);self.audit(db,'运输 '+action,{'before':old,'after':s})
         return {'ok':True}
     def update_shipment(self,data):
+        self.require_module('circulation')
         with self.connect() as db:
             s=self.get(db,'shipments',data.get('id'));old=json.loads(dumps(s))
             if s['status']=='cancelled': raise ValidationError('已撤销的包裹不能修改')
@@ -332,6 +362,7 @@ class Store:
         return {'ok':True}
     # ── sales ──
     def sell(self,data):
+        self.require_module('trading')
         ids=list(dict.fromkeys(data.get('ids',[])))
         if not ids: raise ValidationError('请选择要出售的专辑')
         gross=number(data.get('gross'),'成交价')
@@ -354,6 +385,7 @@ class Store:
             self.put(db,'sales',s);self.audit(db,'记录售出',s)
         return {'id':s['id']}
     def sale_action(self,data):
+        self.require_module('trading')
         with self.connect() as db:
             s=self.get(db,'sales',data.get('id'));old=json.loads(dumps(s));action=data.get('action')
             if s['status']=='complete': raise ValidationError('已确认收货，钱款已成现金，交易不可再改动')
@@ -382,6 +414,8 @@ class Store:
     def restore_backup(self,b):
         if not isinstance(b,dict) or b.get('format')!='album-ledger': raise ValidationError('不是兼容的完整备份文件')
         if not isinstance(b.get('records'),list) or not isinstance(b.get('sales'),list): raise ValidationError('备份内容不完整')
+        if not isinstance(b.get('settings', {}), dict): raise ValidationError('备份的设置无效')
+        if 'modules-v1' in b.get('settings', {}): clean_modules(b['settings']['modules-v1'])
         # Old (schema-1/2) backups are upgraded on the fly so they stay restorable.
         for r in b['records']:
             if r.get('status')=='review': r['status']='domestic'

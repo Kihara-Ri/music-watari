@@ -33,7 +33,7 @@ export function ShippingCard({r}: {r: AlbumRecord}) {
         <div className="card-artist">{r.artist}</div>
         <div className="card-price">
           <span className="p">{item ? yuan(item.net) : '—'}<small>预计到手</small></span>
-          {item && item.profit !== null
+          {app.modules.acquisition && item && item.profit !== null
             ? <span className={`rmb ${Number(item.profit) < 0 ? 'negative' : 'positive'}`}>预估利润 {yuan(item.profit)}</span>
             : null}
         </div>
@@ -106,16 +106,16 @@ export function SaleCard({s}: {s: Sale}) {
               <div>
                 <button className="t" onClick={() => openDetail(app, r.id)}>{r.title}</button>
                 <div className="a">
-                  {r.artist}{r.cost === null ? ' · 成本待补' : ` · 成本 ${yuan(r.cost)}`}
+                  {r.artist}{app.modules.acquisition ? (r.cost === null ? ' · 成本待补' : ` · 成本 ${yuan(r.cost)}`) : ''}
                 </div>
               </div>
               <div className="sa-price">
                 <b>{yuan(i.net)}</b>
-                {i.profit !== null
+                {app.modules.acquisition ? i.profit !== null
                   ? <small className={Number(i.profit) < 0 ? 'negative' : 'positive'}>
                     {shipping ? '预估' : '利润'} {yuan(i.profit)}
                   </small>
-                  : <small>利润待补</small>}
+                  : <small>利润待补</small> : null}
               </div>
             </div>
           );
@@ -126,12 +126,12 @@ export function SaleCard({s}: {s: Sale}) {
         {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{yuan(s.fees)}</b></div> : null}
         {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{yuan(s.postage)}</b></div> : null}
         <div className="cell"><span>{shipping ? '预计到手' : '到手'}</span><b>{yuan(net)}</b></div>
-        <div className="cell">
+        {app.modules.acquisition ? <div className="cell">
           <span>{unknown ? (shipping ? '预估利润（待补）' : '利润（待补）') : shipping ? '预估利润' : '利润'}</span>
           <b className={unknown ? '' : Number(profit) < 0 ? 'negative' : 'positive'}>
             {unknown ? '待补' : yuan(profit)}
           </b>
-        </div>
+        </div> : null}
         <span className="spacer"/>
         {shipping && (
           <div className="actions">

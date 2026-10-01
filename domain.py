@@ -8,10 +8,22 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date
 
 STATUSES = ('overseas', 'transit', 'domestic', 'shipping', 'sold', 'trash')
+MODULE_NAMES = ('acquisition', 'trading', 'circulation')
 
 
 class ValidationError(ValueError):
     pass
+def clean_modules(enabled):
+    """内置模块的唯一配置契约；海外周转需要购入记录来追溯分摊成本。"""
+    if not isinstance(enabled, dict) or set(enabled) != set(MODULE_NAMES):
+        raise ValidationError('请提供完整的模块配置')
+    if any(type(enabled[k]) is not bool for k in MODULE_NAMES):
+        raise ValidationError('模块开关必须为布尔值')
+    if enabled['circulation'] and not enabled['acquisition']:
+        raise ValidationError('海外周转需要同时启用购入记录')
+    return {k: enabled[k] for k in MODULE_NAMES}
+
+
 
 
 def number(value, name='金额', optional=False):

@@ -20,7 +20,7 @@ export function PageHead({title, desc, actions, label}: {
 
 // 侧栏账本：口径与统计页一致（已实现利润只计成本已知的已完成交易）
 export function Ledger() {
-  const {state} = useApp();
+  const {state, modules} = useApp();
   const inv = state.records.filter(r => ['overseas', 'transit', 'domestic'].includes(r.status));
   const known = inv.filter(r => r.cost !== null);
   const ks = state.sales.filter(s => s.status === 'complete').flatMap(s => s.items).filter(i => i.profit !== null);
@@ -29,23 +29,23 @@ export function Ledger() {
   const unknownCount = inv.length - known.length;
   return (
     <div className="side-ledger" aria-label="账本概览">
-      <div className="sl-title">账本</div>
+      <div className="sl-title">{modules.acquisition || modules.trading ? '账本' : '收藏'}</div>
       <div className="sl-row"><span>在库</span><b>{inv.length} 张</b></div>
-      <div className="sl-row">
+      {modules.acquisition ? <div className="sl-row">
         <span>投入成本</span>
         <b>
           {known.length ? yuan(sum(known, 'cost')) : '—'}
           {unknownCount ? <i className="hint"> {unknownCount} 待补</i> : null}
         </b>
-      </div>
-      <div className="sl-row">
+      </div> : null}
+      {modules.trading ? <div className="sl-row">
         <span>售出金额</span>
         <b>{yuan(sold)}</b>
-      </div>
-      <div className="sl-row">
+      </div> : null}
+      {modules.trading && modules.acquisition ? <div className="sl-row">
         <span>已实现利润</span>
         <b className={profit < 0 ? 'negative' : 'positive'}>{yuan(profit)}</b>
-      </div>
+      </div> : null}
     </div>
   );
 }

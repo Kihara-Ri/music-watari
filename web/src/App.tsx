@@ -1,6 +1,7 @@
 // 应用外壳：状态装配、hash 路由、抽屉/toast/PWA 效果、侧栏与页面分发。
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api, ApiError} from './core/api';
+import {pageEnabled, PRESETS} from './core/modules';
 import {applyThemePref, themePref} from './core/theme';
 import type {ThemePref} from './core/theme';
 import {useHashRoute} from './hooks/useHashRoute';
@@ -18,6 +19,7 @@ import {ShippingPage} from './pages/ShippingPage';
 import {TradesPage} from './pages/TradesPage';
 import {StatsPage} from './pages/StatsPage';
 import {SettingsPage} from './pages/SettingsPage';
+import {SetupPage} from './pages/SetupPage';
 
 const NAV = [
   {hash: 'overseas', ico: '◧', label: '海外库存'},
@@ -34,7 +36,7 @@ const MOBILE_NAV = [
 ] as const;
 
 export default function App() {
-  const page = useHashRoute();
+  const route = useHashRoute();
   const [state, setState] = useState<AppState | null>(null);
   const [fatal, setFatal] = useState('');
   const [query, setQuery] = useState('');
@@ -51,6 +53,8 @@ export default function App() {
   const toastTimer = useRef(0);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [installEvt, setInstallEvt] = useState<Event | null>(null);
+  const modules = state?.modules?.needsSetup ? PRESETS[0].enabled : state?.modules?.enabled ?? (state ? PRESETS[3].enabled : undefined);
+  const page = modules && !pageEnabled(route, modules) ? 'domestic' : route;
 
   const refresh = useCallback(async () => { setState(await api<AppState>('state')); }, []);
 
@@ -68,7 +72,11 @@ export default function App() {
     setQuery('');
     setSort('new');
     setShelfFilter('all');
-  }, [page]);
+  }, [page, modules?.acquisition, modules?.trading, modules?.circulation]);
+
+  useEffect(() => {
+    if (modules && page !== route) location.replace('#domestic');
+  }, [modules, page, route]);
 
   // 环绕动画结束（onAnimationEnd）时由 Toast 自己通知消失；定时器只兜底
   const toast = useCallback((msg: string, kind: ToastKind = 'ok') => {
@@ -124,7 +132,7 @@ export default function App() {
     };
   }, []);
 
-  if (!state) {
+  if (!state || !modules) {
     if (fatal) {
       return (
         <div className="empty">
@@ -143,7 +151,7 @@ export default function App() {
   }
 
   const ctx: AppCtx = {
-    state, page,
+    state, modules, page,
     query, setQuery,
     sort, setSort,
     flip, setFlip,
@@ -161,8 +169,12 @@ export default function App() {
   };
   state.records.forEach(r => { if (r.status in counts) counts[r.status]++; });
   counts.trades = state.sales.filter(s => s.status === 'complete').length;
-
-  const content = ['overseas', 'domestic', 'trash'].includes(page) ? <ShelfPage/>
+  if (!modules.circulation) counts.domestic += counts.overseas + counts.transit;
+  const nav = NAV.filter(n => pageEnabled(n.hash, modules)).map(n => ({...n,
+    label: n.hash === 'domestic' && !modules.circulation ? '我的收藏' : n.hash === 'stats' && !modules.trading ? '购入统计' : n.label,
+  }));
+  const content = state.modules?.needsSetup ? <SetupPage/>
+    : ['overseas', 'domestic', 'trash'].includes(page) ? <ShelfPage/>
     : page === 'transit' ? <TransitPage/>
       : page === 'shipping' ? <ShippingPage/>
         : page === 'trades' ? <TradesPage/>
@@ -176,10 +188,10 @@ export default function App() {
         <aside className="sidebar">
           <a className="brand" href="#domestic">
             <img className="brand-logo" src="/icon-192.png" alt="" width="30" height="30"/>
-            <span>碟渡<small>藏 · 渡 · 售</small></span>
+            <span>碟渡<small>{modules.circulation ? '藏 · 渡 · 售' : modules.trading ? '藏 · 售' : '记住每张唱片'}</small></span>
           </a>
           <nav aria-label="主导航">
-            {NAV.map(n => (
+            {nav.map(n => (
               <a key={n.hash} href={`#${n.hash}`} data-nav={n.hash}
                  className={page === n.hash ? 'active' : ''}
                  aria-current={page === n.hash ? 'page' : 'false'}>
@@ -210,7 +222,7 @@ export default function App() {
       </div>
       {offline ? <div id="connection-status" role="status">网络已断开，保存前请恢复连接。</div> : null}
       <nav className="mobile-nav" aria-label="手机导航">
-        {MOBILE_NAV.map(([hash, label]) => (
+        {MOBILE_NAV.filter(([hash]) => pageEnabled(hash, modules)).map(([hash, label]) => (
           <a key={hash} href={`#${hash}`} className={page === hash ? 'active' : ''}>{label}</a>
         ))}
       </nav>

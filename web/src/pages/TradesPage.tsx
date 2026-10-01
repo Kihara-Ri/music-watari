@@ -15,7 +15,7 @@ const TRADE_FILTERS = [
 
 export function TradesPage() {
   const app = useApp();
-  const {state, query, tradeFilter} = app;
+  const {state, modules, query, tradeFilter} = app;
   const q = query.toLowerCase().trim();
   let sales = state.sales.filter(s => ['complete', 'refunded', 'returned'].includes(s.status));
   if (tradeFilter !== 'all') sales = sales.filter(s => s.status === tradeFilter);
@@ -37,8 +37,8 @@ export function TradesPage() {
       <div className="summary">
         <span>已完成 <strong>{all.length}</strong> 笔</span>
         <span>到手 <strong>{yuan(sum(items, 'net'))}</strong></span>
-        <span>利润 <strong className={sum(ks, 'profit') < 0 ? 'negative' : 'positive'}>{yuan(sum(ks, 'profit'))}</strong></span>
-        {items.length - ks.length ? <span className="hint">{items.length - ks.length} 条成本待补，未计入利润</span> : null}
+        {modules.acquisition ? <span>利润 <strong className={sum(ks, 'profit') < 0 ? 'negative' : 'positive'}>{yuan(sum(ks, 'profit'))}</strong></span> : null}
+        {modules.acquisition && items.length - ks.length ? <span className="hint">{items.length - ks.length} 条成本待补，未计入利润</span> : null}
       </div>
       <div className="toolbar">
         <div className="search">

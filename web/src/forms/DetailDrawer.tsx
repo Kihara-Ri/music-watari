@@ -2,7 +2,8 @@
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
 import {fmt, fmtJPY, jpyCost, rmb, shipFeeText, yuan} from '../core/format';
-import {SALE_NAMES, STATUS_NAMES} from '../types';
+import {SALE_NAMES} from '../types';
+import {statusName} from '../core/modules';
 import {Cover} from '../components/Cover';
 import {openRecordForm} from './RecordForm';
 import {openSaleForm} from './SaleForm';
@@ -16,6 +17,7 @@ export function openDetail(app: AppCtx, id: string) {
 
 function DetailBody({id}: {id: string}) {
   const app = useApp();
+  const {modules} = app;
   const r = app.rec(id);
   if (!r) return null;
   const sales = app.state.sales.filter(s => s.items.some(i => i.recordId === id));
@@ -24,6 +26,7 @@ function DetailBody({id}: {id: string}) {
     ? shipment.items.find(i => i.recordId === id) : undefined;
   const approx = jpyCost(r);
   const tags: [string, React.ReactNode][] = [
+    ...(modules.acquisition ? [
     ['买入金额', r.price === '' ? '待补'
       : `${r.currency === 'JPY' ? fmtJPY(r.price) : fmt(r.price)} ${r.currency === 'JPY' ? '日元' : '人民币'}`
         + (approx ? ` ` : '')],
@@ -31,6 +34,8 @@ function DetailBody({id}: {id: string}) {
     ['购买渠道', r.location || '—'],
     ['当日汇率', r.currency === 'JPY' && r.rate ? `100 円 = ¥${Number(r.rate).toFixed(2)}` : '—'],
     ['额外费用（含运费分摊）', r.fees && Number(r.fees) ? yuan(r.fees) : '—'],
+    ] as [string, React.ReactNode][] : []),
+    ['存放位置', r.storage || '—'],
     ['碟盒', r.version || '—'],
     ['版次', r.pressing ? (r.pressing === '日版' && r.obi ? `${r.pressing}（${r.obi}）` : r.pressing) : '—'],
   ];
@@ -41,8 +46,8 @@ function DetailBody({id}: {id: string}) {
         <div>
           <h2>{r.title}</h2>
           <p className="artist">{r.artist}</p>
-          <span className={`pill ${r.status}`}>{STATUS_NAMES[r.status]}</span>
-          {r.listed ? <span className="pill listed">已上架</span> : null}
+          <span className={`pill ${r.status}`}>{statusName(r.status, app.modules)}</span>
+          {app.modules.trading && r.listed ? <span className="pill listed">已上架</span> : null}
         </div>
       </div>
       <dl className="detail-grid">
@@ -69,7 +74,7 @@ function DetailBody({id}: {id: string}) {
       ) : null}
       {r.note ? <><h3 className="section-title">笔记 · 这张副本</h3><p className="note-text">{r.note}</p></> : null}
       {r.noteAlbum ? <><h3 className="section-title">笔记 · 这张专辑</h3><p className="note-text">{r.noteAlbum}</p></> : null}
-      {shipment && shipment.status !== 'cancelled' ? (
+      {app.modules.circulation && shipment && shipment.status !== 'cancelled' ? (
         <>
           <h3 className="section-title">运输包裹</h3>
           <p className="small-note">
@@ -81,7 +86,7 @@ function DetailBody({id}: {id: string}) {
           </p>
         </>
       ) : null}
-      {sales.length ? (
+      {app.modules.trading && sales.length ? (
         <>
           <h3 className="section-title">交易历史</h3>
           {sales.map(s => {
@@ -90,7 +95,7 @@ function DetailBody({id}: {id: string}) {
               <p className="small-note" key={s.id}>
                 {s.date} 售出 · {SALE_NAMES[s.status]}
                 {s.receivedDate ? ` · 到账 ${s.receivedDate}` : ''} · 到手 {yuan(item.net)}
-                {item.profit !== null ? ` · 利润 ${yuan(item.profit)}` : ''}
+                {app.modules.acquisition && item.profit !== null ? ` · 利润 ${yuan(item.profit)}` : ''}
                 {s.address ? ` · ${s.address}` : ''}
               </p>
             );
@@ -108,16 +113,16 @@ function DetailFooter({id}: {id: string}) {
   return (
     <>
       <button onClick={() => openRecordForm(app, id)}>编辑</button>
-      {['overseas', 'domestic'].includes(r.status)
+      {app.modules.trading && ['overseas', 'domestic'].includes(r.status)
         ? <button className="quiet" onClick={() => bulkAction(app, r.listed ? 'unlist' : 'list', [id], r.listed ? '已取消上架' : '已标记上架')}>
             {r.listed ? '取消上架' : '标记上架'}</button> : null}
-      {r.status === 'domestic'
+      {app.modules.circulation && r.status === 'domestic'
         ? <button className="quiet" onClick={() => bulkAction(app, 'to_overseas', [id])}>调回海外</button> : null}
       {['overseas', 'domestic'].includes(r.status) ? (
         <button className="quiet danger"
                 onClick={() => bulkAction(app, 'delete', [id], '已移入回收站，可在设置中恢复')}>移除</button>
       ) : null}
-      {r.status === 'domestic'
+      {app.modules.trading && ['domestic', 'overseas'].includes(r.status)
         ? <button className="primary" onClick={() => openSaleForm(app, [id])}>记录售出</button> : null}
     </>
   );

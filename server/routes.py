@@ -119,6 +119,9 @@ def api_shipment_action(h, svc, body): h.send(svc.store.shipment_action(body))
 def api_shipment_update(h, svc, body): h.send(svc.store.update_shipment(body))
 def api_import(h, svc, body): h.send(svc.store.import_data(body.get('albums')))
 def api_restore(h, svc, body): h.send(svc.store.restore_backup(body))
+def api_modules(h, svc, body): h.send(svc.store.set_modules(body.get('enabled')))
+
+
 
 
 def api_import_preview(h, svc, body):
@@ -159,6 +162,7 @@ POST = {
     '/api/import-preview': (api_import_preview, True, True),
     '/api/import': (api_import, True, True),
     '/api/restore': (api_restore, True, True),
+    '/api/modules': (api_modules, True, True),
     # 书签回传绑定：来自 rateyourmusic.com 的跨站请求，凭令牌鉴权（见 api_artist_bind）
     '/api/artist-bind': (api_artist_bind, False, True),
 }
