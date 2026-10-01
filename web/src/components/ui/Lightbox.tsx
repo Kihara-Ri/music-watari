@@ -15,12 +15,19 @@ export function Lightbox() {
       }
       if ((e.target as HTMLElement).id === 'lightbox') setSrc(null);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSrc(null); };
+    // 捕获阶段先消费 Esc，避免底下的抽屉一起响应。
+    const onKey = (e: KeyboardEvent) => {
+      if (src && e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSrc(null);
+      }
+    };
     document.addEventListener('click', onClick);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('click', onClick);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey, true);
     };
   }, [src]);
 
