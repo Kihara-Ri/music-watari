@@ -5,7 +5,7 @@ set -eu
 cd "$(git rev-parse --show-toplevel)"
 
 # 自匹配防护：下面的敏感串用字符类打碎明文（正则仍命中目标，但本文件不含目标明文）
-FILE_RE='(^data/|\.sqlite3$|\.sqlite3-|\.env$|/albums\.json$|^albums\.json$|部署登录信息|出售记录|封面核对报告|管理系统方案|运营记录)'
+FILE_RE='(^data/|\.sqlite3$|\.sqlite3-|\.env$|(^|/)vision-config\.json$|/albums\.json$|^albums\.json$|部署登录信息|出售记录|封面核对报告|管理系统方案|运营记录)'
 CONTENT_RE='kihara[.]cn|ras[p]5|kihara00[4]5|BEGIN [A-Z ]*PRIVATE KEY'
 
 fail=0

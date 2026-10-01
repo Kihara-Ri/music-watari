@@ -1,24 +1,24 @@
-// 照片槽管理：占位（处理中）→ 串行压缩回填；上限 9 张；删除任意位置。
+// 照片槽管理：占位（处理中）→ 串行压缩回填；上限 30 张；删除任意位置。
 import {useRef, useState} from 'react';
-import {isPending, PhotoQueue, PhotoSlot} from '../core/photos';
+import {isPending, MAX_PHOTOS, PhotoQueue, PhotoSlot} from '../core/photos';
 
 export function usePhotoSlots(initial: PhotoSlot[], notify: (m: string, kind?: 'warn' | 'err') => void) {
   const [slots, setSlots] = useState<PhotoSlot[]>(initial);
   const queue = useRef(new PhotoQueue());
 
   const addFiles = (files: File[]) => {
-    const room = Math.max(9 - slots.length, 0);
+    const room = Math.max(MAX_PHOTOS - slots.length, 0);
     if (files.length > room) notify(`一次最多再加 ${room} 张`, 'warn');
     const picks = files.slice(0, room);
     if (!picks.length) return;
-    const start = slots.length;
-    setSlots(prev => [...prev, ...picks.map(() => ({pending: true} as PhotoSlot))]);
+    const tokens = picks.map(() => crypto.randomUUID());
+    setSlots(prev => [...prev, ...tokens.map(token => ({pending: true, token} as PhotoSlot))]);
     picks.forEach((file, k) => {
-      const idx = start + k;
+      const token = tokens[k];
       queue.current.add(
         file,
-        data => setSlots(prev => prev.map((p, i) => i === idx && 'pending' in p ? {data} : p)),
-        msg => setSlots(prev => prev.map((p, i) => i === idx && 'pending' in p ? {error: msg} : p)),
+        data => setSlots(prev => prev.map(p => p.token === token && 'pending' in p ? {data, token} : p)),
+        msg => setSlots(prev => prev.map(p => p.token === token && 'pending' in p ? {error: msg, token} : p)),
       );
     });
   };

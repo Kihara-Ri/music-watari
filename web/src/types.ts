@@ -46,6 +46,50 @@ export interface AlbumRecord {
   releaseYear?: string;
   rawRemark?: string;
   storage?: string;         // 实物存放位置，与购买渠道 location 分开
+  releaseInfo?: ReleaseInfo;
+  listingDescription?: string;
+  recognition?: Pick<RecognitionResult, 'model' | 'at' | 'evidence' | 'sources' | 'warnings'>;
+}
+
+export interface ReleaseInfo {
+  catalogNumber?: string; barcode?: string; label?: string; country?: string;
+  releaseDate?: string; edition?: string; format?: string; discCount?: string;
+  matrix?: string; extras?: string; observations?: string; tracklist?: string[];
+}
+
+export interface RecognitionFields {
+  title?: string; artist?: string; price?: string; version?: string; pressing?: string;
+  obi?: string; note?: string; releaseInfo?: ReleaseInfo; listingDescription?: string;
+  cover?: string; coverSource?: CoverSource;
+}
+
+export interface ReleaseCandidate {
+  id: string; title: string; artist: string; releaseInfo: ReleaseInfo;
+  identifierMatch: boolean; url: string;
+}
+
+export interface RecognitionResult {
+  fields: RecognitionFields;
+  evidence: {field: string; value: string; photo: number; note: string}[];
+  warnings: string[]; sources: {title: string; url: string}[];
+  candidates: ReleaseCandidate[]; model: string; at: string;
+}
+
+export interface ImportGroup {
+  id: string; photoIds: string[]; fields: RecognitionFields; protected: string[];
+  status: 'idle' | 'queued' | 'running' | 'done' | 'error'; error?: string;
+  result?: RecognitionResult; excluded: boolean; reviewed: boolean; savedId?: string;
+}
+
+export interface ImportDraft {
+  id: string; revision: number; createdAt: string; updatedAt: string;
+  common: {date: string; currency: Currency; location: string; storage: string; status: 'domestic' | 'overseas'};
+  photos: {id: string; name: string; ext: string; url: string}[]; groups: ImportGroup[];
+}
+
+export interface VisionConfig {
+  baseUrl: string; model: string; concurrency: number; lookup: boolean;
+  hasKey: boolean; configured: boolean;
 }
 
 export interface SaleItem {

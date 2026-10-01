@@ -19,6 +19,7 @@ from rates import RateService
 from security import Auth
 from server import Services, make_handler
 from server.version import version
+from server.recognition import VisionService
 from storage import Store
 
 ROOT = Path(__file__).resolve().parent
@@ -28,9 +29,11 @@ def build(data_dir, public_origin=None):
     """从数据目录组装全部服务；无全局单例，测试可用临时目录构建。"""
     data = Path(data_dir)
     rates = RateService(data / 'rates.sqlite3')
-    return Services(store=Store(data / 'albums.sqlite3', rates),
+    store = Store(data / 'albums.sqlite3', rates)
+    covers = CoverService(data / 'cover-cache.sqlite3')
+    return Services(store=store,
                     auth=Auth(data / 'auth.sqlite3'),
-                    covers=CoverService(data / 'cover-cache.sqlite3'),
+                    covers=covers, vision=VisionService(store, covers),
                     rates=rates,
                     public_origin=public_origin)
 
@@ -88,6 +91,7 @@ def main():
         server.serve_forever()
     finally:
         server.server_close()
+        svc.vision.close()
         print('碟渡已停止', flush=True)
 
 

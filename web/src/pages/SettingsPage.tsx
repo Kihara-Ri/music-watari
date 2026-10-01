@@ -5,6 +5,7 @@ import {useApp} from '../state/AppContext';
 import type {BackupFile} from '../types';
 import {PageHead} from '../components/PageHead';
 import {ModuleChooser} from '../components/ModuleChooser';
+import {VisionSettings} from '../components/VisionSettings';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
 import {Seg} from '../components/ui/Seg';
 import type {ThemePref} from '../core/theme';
@@ -135,6 +136,7 @@ export function SettingsPage() {
           ? <p className="small-note" style={{color: 'var(--red)'}}>{state.service.backup.error}</p> : null}
       </section>
 
+      <VisionSettings/>
       <section className="settings-section">
         <h3>导入专辑资料</h3>
         <p>支持 albums.json 格式（先预览再导入，重复来源自动跳过）。{app.modules.circulation ? '按买入币种进入海外或国内库存。' : '导入后进入我的收藏，原始购买资料会保留。'}</p>
@@ -195,7 +197,7 @@ export function SettingsPage() {
 
       <section className="settings-section">
         <h3>完整备份与恢复</h3>
-        <p>备份包含所有专辑、封面、包裹与交易。恢复会替换当前数据，恢复前会自动保存当前状态。</p>
+        <p>备份包含所有专辑、发行资料、上架描述、封面、包裹与交易。实物照片、录入草稿与模型配置需另行备份数据目录。恢复会替换当前账本，恢复前会自动保存当前状态。</p>
         <div className="inline-actions">
           <a className="link-button" href="/api/export">导出专辑 CSV</a>
           <a className="link-button" href="/api/backup">下载完整备份</a>

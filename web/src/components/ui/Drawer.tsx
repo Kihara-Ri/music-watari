@@ -39,7 +39,7 @@ export function Drawer({spec, onClose}: {spec: DrawerSpec; onClose: () => void})
   return (
     <div id="panel" ref={panelRef} onKeyDown={onKeyDown}
          onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <section className={`drawer${spec.wide ? ' wide' : ''}`} role="dialog" aria-modal="true"
+      <section className={`drawer${spec.wide ? ' wide' : ''}${spec.workspace ? ' import-workspace' : ''}`} role="dialog" aria-modal="true"
                aria-labelledby="drawer-title">
         <div className="drawer-head">
           <h2 id="drawer-title">{spec.title}</h2>

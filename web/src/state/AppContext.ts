@@ -11,6 +11,7 @@ export interface DrawerSpec {
   content: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  workspace?: boolean;
   asForm?: boolean;   // 表单类抽屉：内容自带 <form>，撑满抽屉高度
 }
 

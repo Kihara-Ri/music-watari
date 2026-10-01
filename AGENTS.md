@@ -24,7 +24,7 @@
 
 ### 后端
 - 新增 API = `server/routes.py` 表里加一行 + 一个处理函数。**禁止在 `server/http.py` 写具体接口**。
-- 静态文件：`static/` 下任何真实文件自动可访问（`server/static_files.py`），无需登记。
+- 静态文件：`static/` 下任何真实文件自动可访问（`server/static_files.py`），无需登记；但启用登录后仅 `static_files.PUBLIC`（登录页及其渲染依赖、PWA 壳元数据）免登录，其余路径未登录一律服务端 302 到 `/login`。
   手工维护的静态文件：`login.html`、`login.js`、`offline.html`、`sw.js`、`manifest.webmanifest`、图标、`vendor/`。
 - `app.py` 只做 CLI / 组装 / 启动。服务一律经 `server.context.Services` 注入，**禁止模块级单例**（import 零副作用）。
 - 根目录业务模块（`domain/storage/covers/rates/security/backups`）**不得移动或重命名**（`tools/` 依赖顶层 import 路径）；`storage.py` 保持单文件（跨表事务 + 审计内聚，不拆）。
@@ -40,6 +40,18 @@
 
 ## 用户已定案的 UI 偏好（不得回退）
 
+### 功能组合
+
+- 基础收藏始终可用；`acquisition`（购入记录）、`trading`（二手交易）、`circulation`（海外周转）按服务端 `modules-v1` 设置启用。海外周转依赖购入记录，交易可独立启用。
+- 空白实例先选择组合；未配置且已有资料的实例保持全部功能。模块关闭只收起入口，禁止删除、归零或改写原业务记录；关闭海外周转时原持有/在途副本仍可在收藏中看到。
+- 导航、手机更多页面、卡片、详情、单张/批量表单、统计与后端写操作必须使用同一配置。禁用模块的业务写入应明确报错，备份/恢复/导出始终可用。
+- `storage` 是实物存放位置；`location` 仍是购买渠道。名称与艺人必填，购买金额与日期选填，未知成本仍为 null。
+- 新模块的契约和验收入口见 [模块扩展指南](docs/模块扩展指南.md)，不引入动态插件加载或绕过 storage.py 写库。
+
+### 界面规则
+
+- 手机底栏为「库存 / 在途 / 售出中 / 更多」，按模块隐藏无关入口；国内/海外在库存页内切换。「更多」是独立页面，账本是其中的入口，不再使用更多弹出面板。
+- 手机库存支持列表/卡片切换，记住本浏览器选择；勾选框按需开启，编辑从详情进入。桌面卡片与常驻选择维持原布局。
 - 批量操作条是**底部悬浮浮条**（position:fixed），不得挤压页面布局。
 - 排序 / 交易筛选用自定义 dd 下拉（`components/ui/Dropdown.tsx`），不用原生 select。
 - 同专辑多副本分组：subgrid + `grid-column: span N`。**绝不能写 `1 / span N`**（强制换行、行尾留洞）。
@@ -48,6 +60,7 @@
 - **每张副本一条独立记录**（不做「一专辑多库存」）；`version`（碟盒）/`pressing`（版次）/`obi`（侧标，仅日版）三字段语义不得改。
 - 实物照片存文件系统（`data/photos/<id>/`）不进 DB；缩略图点开灯箱；Esc 只关最顶层（灯箱优先于抽屉）。
 - 表单抽屉默认一屏放完（`#panel` 紧凑压缩规则已调好，别放宽）。
+- 外观三态（浅色 / 深色 / 跟随系统，默认跟随系统）入口在设置页。`static/theme.js` 是阻塞式引导脚本（CSP 禁内联）：首帧前写 `<html data-theme>` 并同步 theme-color meta，登录页与主应用共用；tokens.css 基础声明 = 深色兜底，`@supports (color:light-dark())` 内用 `light-dark()` 双值 + `color-scheme` 解析，新颜色一律走 token 不写死。
 
 ## 验证门槛（全部通过才算完成）
 

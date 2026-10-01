@@ -9,11 +9,11 @@ share of the postage onto each album's fees (part of acquisition cost); it
 can be rolled back at any step while albums haven't moved on.
 Sales start at 'shipping'; only 确认收货 turns them into realized cash ('sold').
 """
-import json, sqlite3, uuid, base64, re, shutil, secrets
+import json, sqlite3, uuid, base64, re, shutil, secrets, threading
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlsplit
-from domain import ValidationError, clean_record, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
+from domain import ValidationError, clean_record, clean_release_info, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
 from covers import normalized, artist_variants
 from decimal import Decimal
 
@@ -32,7 +32,7 @@ def rym_artist_url(url):
     if not slug or len(slug) > 120 or any(c in slug for c in '@?#&%. '): return None
     return 'https://rateyourmusic.com/artist/' + slug
 PHOTO_MIME = {'jpeg': '.jpg', 'png': '.png', 'webp': '.webp'}
-MAX_PHOTOS = 9
+MAX_PHOTOS = 30
 
 def uid(): return uuid.uuid4().hex
 
@@ -46,6 +46,8 @@ class Store:
     def __init__(self, path, rates=None):
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         self.photos_dir = self.path.parent / 'photos'
+        self.imports_dir = self.path.parent / 'imports'
+        self.import_lock = threading.RLock()
         self.rates = rates
         with self.connect() as db:
             db.executescript('''CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY, data TEXT NOT NULL);
@@ -241,6 +243,160 @@ class Store:
                     if cur.rowcount:self.audit(db,'同步专辑笔记',{'id':r['id'],'title':r['title'],'siblings':cur.rowcount})
         for rid,plan in plans:self.apply_photos(rid,plan)
         return {'ids':result}
+    # 批量照片草稿只存数据目录；不占账本记录，也不混入设置/凭据导出。
+    def import_folder(self, ident):
+        if not isinstance(ident, str) or not re.fullmatch(r'[0-9a-f]{32}', ident):
+            raise ValidationError('草稿编号不正确')
+        return self.imports_dir / ident
+    def read_import(self, ident):
+        with self.import_lock:
+            path = self.import_folder(ident) / 'draft.json'
+            if not path.exists(): raise ValidationError('草稿不存在')
+            return json.loads(path.read_text(encoding='utf-8'))
+    def write_import(self, draft):
+        folder = self.import_folder(draft['id']); folder.mkdir(parents=True, exist_ok=True)
+        draft['updatedAt'] = now()
+        path = folder / 'draft.json'; temp = folder / 'draft.tmp'
+        temp.write_text(dumps(draft), encoding='utf-8'); temp.chmod(0o600); temp.replace(path)
+        return draft
+    def list_imports(self):
+        with self.import_lock:
+            result = []
+            for path in self.imports_dir.glob('*/draft.json'):
+                d = json.loads(path.read_text(encoding='utf-8'))
+                if any(not g.get('savedId') for g in d['groups']) or not d['groups']:
+                    result.append({'id':d['id'], 'updatedAt':d['updatedAt'],
+                                   'photoCount':len(d['photos']), 'groupCount':len(d['groups'])})
+            return sorted(result, key=lambda d:d['updatedAt'], reverse=True)
+    def create_import(self, common):
+        with self.import_lock:
+            return self.write_import({'id':uid(), 'revision':0, 'createdAt':now(),
+                                      'common':self.clean_import_common(common), 'photos':[], 'groups':[]})
+    def clean_import_common(self, value):
+        if not isinstance(value, dict): raise ValidationError('整批资料格式不正确')
+        currency = value.get('currency', 'CNY')
+        if currency not in ('JPY', 'CNY'): raise ValidationError('币种不正确')
+        status = value.get('status', 'domestic')
+        if status not in ('domestic', 'overseas'): raise ValidationError('入库位置不正确')
+        return {'date':day(value.get('date', ''), optional=True), 'currency':currency,
+                'status':status, 'location':str(value.get('location', ''))[:500],
+                'storage':str(value.get('storage', ''))[:500]}
+    def upload_import_photo(self, ident, name, data):
+        with self.import_lock:
+            d = self.read_import(ident)
+            if len(d['photos']) >= 1000: raise ValidationError('一份草稿最多 1000 张照片，请分批导入')
+            ext, raw = self.prepare_photos(uid(), [data])[0]
+            pid = uid(); folder = self.import_folder(ident) / 'photos'; folder.mkdir(exist_ok=True)
+            path = folder / (pid + ext); path.write_bytes(raw); path.chmod(0o600)
+            d['photos'].append({'id':pid, 'name':str(name)[:500], 'ext':ext,
+                                'url':f'/api/import-photo/{ident}/{pid}'})
+            if not d['groups'] or d['groups'][-1].get('savedId') or d['groups'][-1]['status'] != 'idle':
+                d['groups'].append({'id':uid(), 'photoIds':[], 'fields':{}, 'protected':[],
+                                    'status':'idle', 'excluded':False, 'reviewed':False})
+            d['groups'][-1]['photoIds'].append(pid)
+            d['revision'] += 1
+            return self.write_import(d)
+    def import_photo(self, ident, pid):
+        d = self.read_import(ident)
+        p = next((p for p in d['photos'] if p['id'] == pid), None)
+        if p is None: raise ValidationError('照片不存在')
+        return self.import_folder(ident) / 'photos' / (p['id'] + p['ext'])
+    def import_images(self, draft, group):
+        photos = {p['id']:p for p in draft['photos']}
+        images = []
+        for pid in group['photoIds']:
+            p = photos[pid]; raw = self.import_photo(draft['id'], pid).read_bytes()
+            mime = {'.jpg':'jpeg', '.png':'png', '.webp':'webp'}[p['ext']]
+            images.append('data:image/' + mime + ';base64,' + base64.b64encode(raw).decode())
+        return images
+    def update_import(self, body):
+        with self.import_lock:
+            d = self.read_import(body.get('id'))
+            if body.get('revision') != d['revision']: raise ValidationError('草稿已在别处修改，请重新打开后继续')
+            incoming = body.get('groups')
+            if not isinstance(incoming, list) or len(incoming) > 500: raise ValidationError('最多可分为 500 组')
+            old = {g['id']:g for g in d['groups']}; photos = {p['id'] for p in d['photos']}
+            seen = set(); gids = set(); groups = []
+            allowed = {'title','artist','price','version','pressing','obi','note','releaseInfo','listingDescription'}
+            for item in incoming:
+                if not isinstance(item, dict): raise ValidationError('分组格式不正确')
+                gid = item.get('id'); self.import_folder(gid)
+                if gid in gids: raise ValidationError('分组重复')
+                gids.add(gid)
+                pids = item.get('photoIds', [])
+                if not isinstance(pids, list) or any(not isinstance(p, str) or p not in photos or p in seen for p in pids) or len(set(pids)) != len(pids):
+                    raise ValidationError('照片只能归属一个组')
+                seen.update(pids)
+                previous = old.get(gid, {})
+                if previous.get('savedId') and pids != previous['photoIds']:
+                    raise ValidationError('已入库组的照片不能重新分组')
+                group = {**previous, 'id':gid, 'photoIds':pids,
+                         'excluded':bool(item.get('excluded')), 'reviewed':bool(item.get('reviewed'))}
+                protected = item.get('protected', [])
+                if not isinstance(protected, list) or any(k not in allowed for k in protected): raise ValidationError('字段格式不正确')
+                fields = dict(previous.get('fields', {}))
+                values = item.get('fields', {})
+                if not isinstance(values, dict): raise ValidationError('字段格式不正确')
+                for key in allowed:
+                    if key in values and (not previous or key in protected):
+                        val = values[key]
+                        if key == 'releaseInfo': val = clean_release_info(val)
+                        elif not isinstance(val, str) or len(val) > 50000: raise ValidationError('字段过长或格式不正确')
+                        fields[key] = val
+                if previous and pids != previous['photoIds']:
+                    # 旧图片的自动结果失效；手工录入保留，旧任务不能回写。
+                    fields = {k:v for k,v in fields.items() if k in protected}
+                    for key in ('result','taskToken','error'): group.pop(key, None)
+                    group['status'] = 'idle'; group['reviewed'] = False
+                group.update(fields=fields, protected=list(dict.fromkeys(protected)), status=group.get('status','idle'))
+                if group.get('result') and isinstance(item.get('result'),dict):
+                    urls = {c['url'] for c in group['result'].get('candidates',[])}
+                    sources = group['result'].get('sources',[])
+                    for source in item['result'].get('sources',[]) if isinstance(item['result'].get('sources'),list) else []:
+                        if isinstance(source,dict) and source.get('url') in urls and not any(s['url']==source['url'] for s in sources):
+                            sources.append({'title':'MusicBrainz 人工选择','url':source['url']})
+                    group['result']['sources'] = sources
+                groups.append(group)
+            if any(g.get('savedId') and g['id'] not in gids for g in old.values()): raise ValidationError('已入库组不能移除')
+            d.update(groups=groups, common=self.clean_import_common(body.get('common', d['common'])), revision=d['revision']+1)
+            return self.write_import(d)
+    def commit_import(self, body):
+        with self.import_lock:
+            d = self.read_import(body.get('id')); requested = body.get('groupIds')
+            if not isinstance(requested, list) or not requested: raise ValidationError('请先核对要入库的组')
+            groups = [g for g in d['groups'] if g['id'] in requested]
+            if len(groups) != len(set(requested)): raise ValidationError('分组不存在')
+            if d['common'].get('date') or d['common'].get('location') or any(g.get('fields',{}).get('price') for g in groups):
+                self.require_module('acquisition')
+            with self.connect() as db:
+                existing = {r.get('importKey'):r for r in self.rows(db, 'records') if r.get('importKey')}
+            items = []; pending = []
+            for g in groups:
+                key = d['id'] + ':' + g['id']
+                if key in existing:
+                    r = existing[key]
+                    # 数据库提交后若文件复制中断，下次仍恢复照片且不重复添加记录。
+                    folder = self.photos_dir / r['id']
+                    if r.get('photoCount') and len(list(folder.glob('[0-9]*.*'))) != r['photoCount']:
+                        self.apply_photos(r['id'], self.prepare_photos(uid(), self.import_images(d, g)))
+                    g['savedId'] = r['id']; continue
+                if g.get('excluded') or not g.get('reviewed'): raise ValidationError('请核对后勾选要入库的组')
+                if g['status'] in ('queued','running'): raise ValidationError('还有选中组正在识别')
+                if len(g['photoIds']) > MAX_PHOTOS: raise ValidationError(f'每组最多 {MAX_PHOTOS} 张照片，请先分组')
+                item = {**g['fields'], **d['common'], 'fees':'0', 'importKey':key,
+                        'photos':self.import_images(d,g)}
+                if g.get('result'): item['recognition'] = {k:g['result'][k] for k in ('model','at','evidence','sources','warnings') if k in g['result']}
+                if g['fields'].get('cover'): item['cover'] = g['fields']['cover']
+                items.append(item); pending.append(g)
+            if items:
+                result = self.save({'items':items})
+                for g, rid in zip(pending, result['ids']): g['savedId'] = rid
+            return self.write_import(d)
+    def delete_import(self, ident):
+        with self.import_lock:
+            self.read_import(ident)
+            shutil.rmtree(self.import_folder(ident))
+            return {'ok':True}
     def bulk(self, data):
         ids=list(dict.fromkeys(data.get('ids',[])));action=data.get('action')
         if not ids: raise ValidationError('请先选择专辑')

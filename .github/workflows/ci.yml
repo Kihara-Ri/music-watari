@@ -18,7 +18,7 @@ jobs:
       - name: 全历史文件名扫描（个人数据不得进任何提交）
         run: |
           if git log --all --pretty=format: --name-only | sort -u \
-             | grep -E '(^data/|\.sqlite3$|\.sqlite3-|/albums\.json$|部署登录信息|出售记录|封面核对报告|管理系统方案)'; then
+             | grep -E '(^data/|\.sqlite3$|\.sqlite3-|(^|/)vision-config\.json$|/albums\.json$|部署登录信息|出售记录|封面核对报告|管理系统方案)'; then
             echo '✗ git 历史中混入个人数据文件'
             exit 1
           fi

@@ -9,6 +9,7 @@ import {openRecordForm} from './RecordForm';
 import {openSaleForm} from './SaleForm';
 import {openListingForm} from './ListingForm';
 import {bulkAction} from './shared';
+import {releaseLabels} from '../core/recognition';
 
 export function openDetail(app: AppCtx, id: string) {
   const r = app.rec(id);
@@ -80,6 +81,20 @@ function DetailBody({id}: {id: string}) {
         </>
       ) : null}
       {r.note ? <><h3 className="section-title">笔记 · 这张副本</h3><p className="note-text">{r.note}</p></> : null}
+      {r.releaseInfo && Object.values(r.releaseInfo).some(v => Array.isArray(v) ? v.length : v) ? <>
+        <h3 className="section-title">发行资料</h3>
+        <dl className="detail-grid">{releaseLabels.map(([key,label]) => r.releaseInfo?.[key] ? <div key={key}><dt>{label}</dt><dd>{r.releaseInfo[key]}</dd></div> : null)}</dl>
+        {r.releaseInfo.tracklist?.length ? <details className="adv"><summary>曲目 · {r.releaseInfo.tracklist.length} 首</summary><p className="note-text">{r.releaseInfo.tracklist.join('\n')}</p></details> : null}
+      </> : null}
+      {r.recognition ? <details className="adv"><summary>识别依据与资料来源</summary>
+        <p className="small-note">{r.recognition.model} · {r.recognition.at.replace('T',' ')}</p>
+        {r.recognition.evidence.map((e,i) => <p className="recognition-evidence" key={i}>照片 {e.photo} · {e.value || e.field}{e.note ? `：${e.note}` : ''}</p>)}
+        {r.recognition.sources.map((s,i) => <a className="recognition-source" key={i} href={s.url} target="_blank" rel="noopener noreferrer">{s.title} ↗</a>)}
+      </details> : null}
+      {modules.trading && r.listingDescription ? <>
+        <h3 className="section-title">上架描述草稿</h3><p className="note-text listing-description">{r.listingDescription}</p>
+        <button type="button" className="quiet" onClick={async () => {try {await navigator.clipboard.writeText(r.listingDescription!);app.toast('上架描述已复制');}catch{app.toast('复制失败，可选中文字手动复制','warn');}}}>复制上架描述</button>
+      </> : null}
       {r.noteAlbum ? <><h3 className="section-title">笔记 · 这张专辑</h3><p className="note-text">{r.noteAlbum}</p></> : null}
       {app.modules.circulation && shipment && shipment.status !== 'cancelled' ? (
         <>

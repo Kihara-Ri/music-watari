@@ -2,7 +2,8 @@ import {useState} from 'react';
 import {api} from '../core/api';
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
-import {Field} from './fields';
+import {Field, TextareaField} from './fields';
+import {listingText} from '../core/recognition';
 import {useFormSubmit} from './shared';
 
 export function openListingForm(app: AppCtx, id: string) {
@@ -14,10 +15,11 @@ function ListingForm({id}: {id: string}) {
   const r = app.rec(id);
   const [channel, setChannel] = useState(r?.listingChannel || '');
   const [url, setUrl] = useState(r?.listingUrl || '');
+  const [description, setDescription] = useState(r?.listingDescription || '');
   const {error, saving, run} = useFormSubmit();
   return <form onSubmit={e => {
     e.preventDefault();
-    run(app, async () => { await api('bulk', {action: 'list', ids: [id], listing: {channel, url}}); });
+    run(app, async () => { await api('bulk', {action: 'list', ids: [id], listing: {channel, url, description}}); });
   }}>
     <div className="drawer-body">
       <p className="help">保存商品所在的平台和链接，方便从收藏回到发布页面。</p>
@@ -27,6 +29,15 @@ function ListingForm({id}: {id: string}) {
           placeholder="例如：闲鱼、Discogs、メルカリ" onChange={e => { setChannel(e.target.value); app.setDrawerDirty(true); }}/>
         <Field label="商品链接（选填）" name="listing-url" type="url" value={url} maxLength={2000}
           placeholder="https://…" onChange={e => { setUrl(e.target.value); app.setDrawerDirty(true); }}/>
+      </div>
+      <TextareaField label="上架描述" name="listing-description" value={description}
+        onChange={value => {setDescription(value);app.setDrawerDirty(true);}}/>
+      <div className="photo-actions">
+        <button type="button" onClick={() => {if(r){setDescription(listingText(r));app.setDrawerDirty(true);}}}>从专辑资料生成</button>
+        <button type="button" disabled={!description} onClick={async () => {
+          try {await navigator.clipboard.writeText(description);app.toast('上架描述已复制');}
+          catch {app.toast('复制失败，可选中描述文字手动复制','warn');}
+        }}>复制描述</button>
       </div>
     </div>
     <div className="drawer-footer">

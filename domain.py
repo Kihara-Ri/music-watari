@@ -14,6 +14,28 @@ MODULE_NAMES = ('acquisition', 'trading', 'circulation')
 
 class ValidationError(ValueError):
     pass
+
+
+RELEASE_FIELDS = ('catalogNumber', 'barcode', 'label', 'country', 'releaseDate',
+                  'edition', 'format', 'discCount', 'matrix', 'extras', 'observations')
+
+
+def clean_release_info(value):
+    if not isinstance(value, dict): raise ValidationError('发行资料格式不正确')
+    result = {}
+    for key in RELEASE_FIELDS:
+        text = value.get(key, '')
+        if text is None: text = ''
+        if not isinstance(text, str) or len(text) > 5000:
+            raise ValidationError('发行资料应为文字，且每项不超过 5000 字')
+        result[key] = text.strip()
+    tracks = value.get('tracklist', [])
+    if not isinstance(tracks, list) or len(tracks) > 500 or any(not isinstance(t, str) or len(t) > 500 for t in tracks):
+        raise ValidationError('曲目资料格式不正确')
+    result['tracklist'] = [t.strip() for t in tracks if t.strip()]
+    return result
+
+
 def clean_modules(enabled):
     """内置模块的唯一配置契约；海外周转需要购入记录来追溯分摊成本。"""
     if not isinstance(enabled, dict) or set(enabled) != set(MODULE_NAMES):
@@ -37,6 +59,10 @@ def clean_listing(data):
         valid = False
     if url and not valid: raise ValidationError('请填写 http 或 https 商品链接')
     result = {'listingChannel': channel, 'listingUrl': url}
+    if 'description' in data:
+        description = data['description']
+        if not isinstance(description, str) or len(description)>50000: raise ValidationError('上架描述过长或格式不正确')
+        result['listingDescription'] = description
     return result
 
 
@@ -91,6 +117,10 @@ def clean_record(data):
         raise ValidationError('封面数据不正确')
     if len(cover) > 3000000: raise ValidationError('封面数据过大')
     r['cover'] = cover
+    if 'releaseInfo' in r: r['releaseInfo'] = clean_release_info(r['releaseInfo'])
+    if 'listingDescription' in r:
+        if not isinstance(r['listingDescription'], str) or len(r['listingDescription']) > 50000:
+            raise ValidationError('上架描述过长或格式不正确')
     return r
 
 

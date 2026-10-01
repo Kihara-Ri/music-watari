@@ -8,7 +8,10 @@ import {prefs} from '../core/prefs';
 import {matchRecords, norm, artistSuggestions} from '../core/search';
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
-import type {AlbumRecord, Currency, Status} from '../types';
+import type {AlbumRecord, Currency, Status, RecognitionResult, RecognitionFields, ReleaseInfo, VisionConfig} from '../types';
+import {listingText} from '../core/recognition';
+import {MAX_PHOTOS} from '../core/photos';
+import {RecognitionReview, ReleaseEditor} from '../components/Recognition';
 import {statusName} from '../core/modules';
 import {Seg} from '../components/ui/Seg';
 import {Switch} from '../components/ui/Switch';
@@ -59,8 +62,11 @@ export function RecordForm({id}: {id?: string}) {
     noteAlbum: base.current.noteAlbum || '',
     storage: base.current.storage || '',
     status: (where ?? base.current.status) as Status | undefined,
+    releaseInfo: base.current.releaseInfo ?? {} as ReleaseInfo,
+    listingDescription: base.current.listingDescription ?? '',
   }));
   const set = (patch: Partial<typeof v>) => setV(prev => ({...prev, ...patch}));
+  const liveValues = useRef(v); liveValues.current = v;
   const dirty = () => app.setDrawerDirty(true);
 
   // ── 封面 ──
@@ -243,10 +249,51 @@ export function RecordForm({id}: {id?: string}) {
     return s && s.currency === 'JPY' ? s.items.find(i => i.recordId === id) : undefined;
   })();
 
+  const [visionConfigured, setVisionConfigured] = useState(false);
+  const [recognizing, setRecognizing] = useState(false);
+  const [recognitionMessage, setRecognitionMessage] = useState('');
+  const [recognition, setRecognition] = useState<RecognitionResult | null>(null);
+  const liveRecognition = useRef(recognition); liveRecognition.current = recognition;
+  const livePhotos = useRef(photos.slots); livePhotos.current = photos.slots;
+  const clearRecognition = () => {setRecognition(null);delete base.current.recognition;setRecognitionMessage('');};
+  useEffect(() => { api<VisionConfig>('vision').then(c => setVisionConfigured(c.configured)).catch(() => {}); }, []);
+  const recognize = async () => {
+    const picked = photos.slots;
+    setRecognizing(true); setRecognitionMessage('正在识别照片并核对发行资料…');
+    try {
+      const result = await api<RecognitionResult>('recognize', {recordId:id,
+        photos:picked.filter(p => !('error' in p)).map(p => 'existing' in p ? p.existing : 'data' in p ? p.data : '')});
+      if (!formRef.current?.isConnected) return;
+      if (livePhotos.current !== picked) {setRecognitionMessage('照片已变化，请重新识别。');return;}
+      setRecognition(result); applyRecognition(result.fields); setRecognitionMessage('已补全空白字段，请核对专辑与发行资料。');
+    } catch(err) {setRecognitionMessage(err instanceof Error ? err.message : String(err));}
+    finally {setRecognizing(false);}
+  };
+  const applyRecognition = (fields: RecognitionFields) => {
+    setV(prev => {
+      const next = {...prev};
+      for (const key of ['title','artist','version','pressing','obi'] as const)
+        if (!next[key] && fields[key] && (key!=='obi' || next.pressing==='日版')) next[key] = fields[key]!;
+      next.releaseInfo = {...prev.releaseInfo};
+      for (const [key,value] of Object.entries(fields.releaseInfo ?? {}))
+        if (!next.releaseInfo[key as keyof ReleaseInfo] || (Array.isArray(next.releaseInfo[key as keyof ReleaseInfo]) && !next.releaseInfo.tracklist?.length))
+          Object.assign(next.releaseInfo,{[key]:value});
+      if (!next.listingDescription) next.listingDescription = listingText(next);
+      return next;
+    });
+    const latest=liveValues.current;
+    if (!hasCover && fields.cover && (!latest.title || latest.title === fields.title) && (!latest.artist || latest.artist === fields.artist)) {
+      base.current.cover = fields.cover; base.current.coverSource = fields.coverSource;
+      setHasCover(true); setCoverStatus('已匹配识别作品的封面');
+    }
+    dirty();
+  };
+
   // 是否有实际改动：与打开表单时的快照逐字比对，改回原值会自动回到「未修改」态。
   // 照片槽只记序号/长度（data URL 太长），失败槽与保存口径一致地忽略。
   const sign = () => JSON.stringify([v, base.current.cover || '',
-    photos.slots.map(p => 'existing' in p ? `e${p.existing}` : 'pending' in p ? 'p' : 'error' in p ? '' : `d${p.data.length}`)]);
+    photos.slots.map(p => 'existing' in p ? `e${p.existing}` : 'pending' in p ? 'p' : 'error' in p ? '' : `d${p.data.length}`),
+    recognition ? {model:recognition.model,at:recognition.at,evidence:recognition.evidence,sources:recognition.sources,warnings:recognition.warnings} : base.current.recognition]);
   const pristine = useRef(sign());
   const edited = sign() !== pristine.current;
   useEffect(() => { app.setDrawerDirty(edited); }, [edited]);
@@ -272,6 +319,7 @@ export function RecordForm({id}: {id?: string}) {
       const payload: Record<string, unknown> = {...base.current, ...v, status: v.status || where || base.current.status};
       delete payload.cost;
       delete payload.rate;
+      if (recognition) payload.recognition = {model:recognition.model,at:recognition.at,evidence:recognition.evidence,sources:recognition.sources,warnings:recognition.warnings};
       const openedPrice = base.current.currency === 'JPY' && base.current.price !== ''
         ? String(Math.round(Number(base.current.price))) : (base.current.price || '');
       if (modules.acquisition && (v.price !== openedPrice || v.currency !== base.current.currency || v.date !== base.current.date)) payload.actual = '';
@@ -295,6 +343,29 @@ export function RecordForm({id}: {id?: string}) {
           data-status={where || r?.status} data-cur={v.currency}>
       <div className="drawer-body">
         <div className="error" role="alert">{error}</div>
+        <section className="record-photo-entry" onDragOver={e => e.preventDefault()}
+          onDrop={e => {e.preventDefault();const files=[...e.dataTransfer.files];if(files.length){photos.addFiles(files);clearRecognition();dirty();}}}>
+          <div className="record-photo-head"><strong>实物照片</strong><small>可拖入或多选 · 每张副本最多 {MAX_PHOTOS} 张</small></div>
+          <PhotoThumbs slots={photos.slots} recordId={r?.id ?? null} onRemove={i => {photos.remove(i);clearRecognition();dirty();}}/>
+          <div className="photo-actions">
+            <button type="button" onClick={() => fileInput.current?.click()}>{CamIco}<span>添加照片</span></button>
+            <button type="button" className="primary" disabled={!visionConfigured || !photos.slots.length || photos.hasPending || recognizing}
+              onClick={recognize}>{recognizing ? '识别中…' : '识别并补全'}</button>
+          </div>
+          <p className="small-note" role="status">{recognitionMessage || (visionConfigured ? '正面、背面、侧标和内圈照片有助于核对版本。' : '可先手工录入，在设置中配置模型后使用照片识别。')}</p>
+          <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden
+            onChange={e => {const files=[...(e.target.files ?? [])];e.target.value='';if(files.length){photos.addFiles(files);clearRecognition();dirty();}}}/>
+          {recognition ? <details className="adv"><summary>识别结果与依据{recognition.candidates.length ? ` · ${recognition.candidates.length} 个发行候选` : ''}{recognition.warnings.length ? ' · 有待核对项' : ''}</summary>
+            <RecognitionReview result={recognition} onApply={applyRecognition} onRelease={(release,source) => {
+              if(!formRef.current?.isConnected || liveRecognition.current!==recognition)return;
+              setV(prev => {
+                const next={...prev,releaseInfo:{...prev.releaseInfo,...Object.fromEntries(Object.entries(release).filter(([,val]) => Array.isArray(val) ? val.length : val))}};
+                if(!prev.listingDescription || prev.listingDescription===listingText(prev))next.listingDescription=listingText(next);
+                return next;
+              });
+              setRecognition({...recognition,sources:[...recognition.sources,source]});dirty();
+            }}/></details> : null}
+        </section>
         <div className="form-grid">
           <Field label="专辑名" name="title" required autoComplete="off" value={v.title}
                  onChange={e => onTitleInput(e.target.value)} onBlur={scheduleCover}/>
@@ -409,25 +480,13 @@ export function RecordForm({id}: {id?: string}) {
           </div>
         </div>
 
-        <div className="form-section">
-          <div className="field">
-            <label>实物照片（选填 · 最多 9 张，支持 iPhone 的 HEIC）</label>
-            <PhotoThumbs slots={photos.slots} recordId={r?.id ?? null} onRemove={i => { photos.remove(i); dirty(); }}/>
-            <div className="photo-actions">
-              <button type="button" onClick={() => fileInput.current?.click()}>
-                {CamIco}<span>添加实物照片</span>
-              </button>
-            </div>
-            <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden
-                   onChange={e => {
-                     const files = [...(e.target.files ?? [])];
-                     e.target.value = '';
-                     photos.addFiles(files);
-                     if (files.length) dirty();
-                   }}/>
-          </div>
-        </div>
-
+        <details className="adv">
+          <summary>发行资料与上架描述</summary>
+          <ReleaseEditor prefix="record-release" value={v.releaseInfo} onChange={releaseInfo => {set({releaseInfo});dirty();}}/>
+          <TextareaField label="上架描述草稿" name="listingDescription" value={v.listingDescription}
+            onChange={listingDescription => {set({listingDescription});dirty();}}/>
+          <button type="button" className="quiet" onClick={() => {set({listingDescription:listingText(v)});dirty();}}>从当前资料生成描述</button>
+        </details>
         <details className="adv">
           <summary>更多信息</summary>
           <div className="form-grid">

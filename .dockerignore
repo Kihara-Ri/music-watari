@@ -12,5 +12,6 @@ deploy
 .v2c
 .zcode
 .DS_Store
+vision-config.json
 *.md
 docs

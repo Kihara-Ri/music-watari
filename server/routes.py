@@ -4,6 +4,7 @@ GET 处理函数签名 fn(h, svc)；POST 为 fn(h, svc, body)。
 h 提供 send()/query；svc 是注入的服务集合（见 context.Services）。
 """
 import hashlib
+import base64
 import mimetypes
 import threading
 from urllib.parse import parse_qs, urlsplit
@@ -122,6 +123,40 @@ def api_restore(h, svc, body): h.send(svc.store.restore_backup(body))
 def api_modules(h, svc, body): h.send(svc.store.set_modules(body.get('enabled')))
 
 
+def vision(svc):
+    if svc.vision is None: raise ValidationError('视觉服务未启动，请重启碟渡')
+    return svc.vision
+
+
+def api_vision(h, svc): h.send(vision(svc).public_config())
+def api_release(h, svc): h.send({'releaseInfo':vision(svc).release_details(query(h).get('id'))})
+def api_vision_config(h, svc, body): h.send(vision(svc).configure(body))
+def api_imports(h, svc): h.send({'drafts':svc.store.list_imports()})
+def api_import_draft(h, svc): h.send(svc.store.read_import(query(h).get('id')))
+def api_import_create(h, svc, body): h.send(svc.store.create_import(body.get('common',{})))
+def api_import_upload(h, svc, body): h.send(svc.store.upload_import_photo(body.get('id'),body.get('name',''),body.get('data')))
+def api_import_update(h, svc, body): h.send(svc.store.update_import(body))
+def api_import_start(h, svc, body): h.send(vision(svc).start(body))
+def api_import_commit(h, svc, body): h.send(svc.store.commit_import(body))
+def api_import_delete(h, svc, body): h.send(svc.store.delete_import(body.get('id')))
+
+
+def api_import_photo(h, svc):
+    parts = urlsplit(h.path).path.split('/')
+    if len(parts)!=5: raise ValidationError('照片地址不正确')
+    path = svc.store.import_photo(parts[3],parts[4])
+    h.send(path.read_bytes(),mime=mimetypes.guess_type(path.name)[0] or 'image/jpeg')
+
+
+def api_recognize(h, svc, body):
+    rid = body.get('recordId')
+    if rid:
+        with svc.store.connect() as db: svc.store.get(db,'records',rid)
+    else: rid = '0'*32
+    plan = svc.store.prepare_photos(rid,body.get('photos'))
+    mimes = {'.jpg':'jpeg','.png':'png','.webp':'webp'}
+    images = ['data:image/'+mimes[ext]+';base64,'+base64.b64encode(raw).decode() for ext,raw in plan]
+    h.send(vision(svc).recognize(images))
 
 
 def api_import_preview(h, svc, body):
@@ -138,12 +173,17 @@ GET = {
     '/api/backup': api_backup,
     '/api/artist-links': api_artist_links,
     '/api/export': api_export,
+    '/api/vision': api_vision,
+    '/api/vision/release': api_release,
+    '/api/imports': api_imports,
+    '/api/imports/draft': api_import_draft,
 }
 PUBLIC_GET = {  # 免登录（监控与部署探测）
     '/api/health',
 }
 GET_PREFIX = {  # 带路径参数的接口
     '/api/photo/': api_photo,
+    '/api/import-photo/': api_import_photo,
 }
 POST = {
     # path: (处理函数, 需要登录, 需要 WRITE_LOCK)
@@ -163,6 +203,14 @@ POST = {
     '/api/import': (api_import, True, True),
     '/api/restore': (api_restore, True, True),
     '/api/modules': (api_modules, True, True),
+    '/api/vision/config': (api_vision_config, True, False),
+    '/api/recognize': (api_recognize, True, False),
+    '/api/imports/create': (api_import_create, True, False),
+    '/api/imports/upload': (api_import_upload, True, False),
+    '/api/imports/update': (api_import_update, True, False),
+    '/api/imports/start': (api_import_start, True, False),
+    '/api/imports/commit': (api_import_commit, True, True),
+    '/api/imports/delete': (api_import_delete, True, False),
     # 书签回传绑定：来自 rateyourmusic.com 的跨站请求，凭令牌鉴权（见 api_artist_bind）
     '/api/artist-bind': (api_artist_bind, False, True),
 }
