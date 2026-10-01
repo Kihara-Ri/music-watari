@@ -21,5 +21,13 @@
 .sale-foot .actions{display:flex;gap:7px}
 
 @media (max-width:840px){
-  .sale-foot .cell b{font-size:13px}
+  .sale-card{padding:13px 14px}
+  .sale-top{gap:8px;margin-bottom:10px}
+  .sale-top .when{font-size:12px}
+  /* 金额脚注改两列网格，操作按钮整行铺满 */
+  .sale-foot{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;padding-top:11px}
+  .sale-foot .spacer{display:none}
+  .sale-foot .cell b{font-size:14px}
+  .sale-foot .actions{grid-column:1/-1;margin-top:2px}
+  .sale-foot .actions button{flex:1;min-height:42px}
 }

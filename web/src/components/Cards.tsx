@@ -42,6 +42,7 @@ export function AlbumCard({r, page, checked, onSelect, onDetail, actions}: {
       <div className="card-body">
         <button className="card-title" onClick={() => onDetail(r.id)}>{r.title}</button>
         <div className="card-artist">{r.artist}</div>
+        <div className="list-badges">{badges}</div>
         {tags.length ? (
           <div className="card-tags">{tags.map(t => <span key={t} className="card-edt">{t}</span>)}</div>
         ) : null}

@@ -20,3 +20,11 @@
 /* 外观三态分段：桌面限宽避免拉满整栏，手机仍铺满便于点按 */
 .theme-seg{max-width:280px}
 
+@media (max-width:840px){
+  .settings-section{padding:15px 14px}
+  .theme-seg{max-width:none}
+  .inline-actions button,.inline-actions .link-button,.inline-actions .file-label{min-height:42px}
+  .pw-change input{min-height:44px}
+  .module-option{min-height:44px}
+  .module-presets{grid-template-columns:1fr}
+}

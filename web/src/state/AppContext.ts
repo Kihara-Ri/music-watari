@@ -26,6 +26,8 @@ export interface AppCtx {
   flip: boolean; setFlip(v: boolean): void;
   tradeFilter: string; setTradeFilter(v: string): void;
   shelfFilter: string; setShelfFilter(v: string): void;
+  mobileShelfView: 'list' | 'cards'; setMobileShelfView(v: 'list' | 'cards'): void;
+  mobileSelecting: boolean; setMobileSelecting(v: boolean): void;
   selected: ReadonlySet<string>; setSelected(s: Set<string>): void;
   theme: ThemePref; setTheme(v: ThemePref): void;
   rec(id: string): AlbumRecord | undefined;

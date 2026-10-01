@@ -7,3 +7,13 @@
 .shipment-head .spacer{flex:1}
 .shipment-items{display:flex;flex-direction:column;gap:8px;margin-bottom:13px}
 .shipment-items .sale-album .sa-price small{color:var(--faint)}
+
+@media (max-width:840px){
+  .shipment-card{padding:13px 14px}
+  .shipment-head{gap:6px}
+  /* 头部信息折行：方式/状态一行，说明与操作各自整行，按钮铺满可点 */
+  .shipment-head .meta{order:5;flex-basis:100%;font-size:12px}
+  .shipment-head .spacer{display:none}
+  .shipment-head .actions{order:6;flex-basis:100%;margin-top:2px}
+  .shipment-head .actions button{flex:1;min-height:42px}
+}

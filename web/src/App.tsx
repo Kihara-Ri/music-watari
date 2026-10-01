@@ -9,6 +9,7 @@ import {AppContext} from './state/AppContext';
 import type {AppCtx, DrawerSpec} from './state/AppContext';
 import type {AppState, SortMode} from './types';
 import {Ledger} from './components/PageHead';
+import {InstallNavItem} from './components/InstallNavItem';
 import {Drawer} from './components/ui/Drawer';
 import {Lightbox} from './components/ui/Lightbox';
 import {Toast} from './components/ui/Toast';
@@ -20,6 +21,8 @@ import {TradesPage} from './pages/TradesPage';
 import {StatsPage} from './pages/StatsPage';
 import {SettingsPage} from './pages/SettingsPage';
 import {SetupPage} from './pages/SetupPage';
+import {MorePage} from './pages/MorePage';
+import {LedgerPage} from './pages/LedgerPage';
 
 const NAV = [
   {hash: 'overseas', ico: '◧', label: '海外库存'},
@@ -30,10 +33,14 @@ const NAV = [
   {hash: 'stats', ico: '◷', label: '收支统计'},
 ];
 
-const MOBILE_NAV = [
-  ['overseas', '海外'], ['transit', '在途'], ['domestic', '库存'], ['shipping', '售出中'],
-  ['trades', '已交易'], ['stats', '统计'], ['settings', '设置'],
+// 手机把国内 / 海外收进库存页；低频入口通过独立「更多」页访问。
+const MOBILE_TABS = [
+  {hash: 'domestic', ico: '▤', label: '库存', count: 'inventory'},
+  {hash: 'transit', ico: '✈', label: '在途', count: 'transit'},
+  {hash: 'shipping', ico: '◨', label: '售出中', count: 'shipping'},
 ] as const;
+
+const MORE_HASHES = new Set(['more', 'ledger', 'trades', 'stats', 'settings', 'trash']);
 
 export default function App() {
   const route = useHashRoute();
@@ -44,6 +51,11 @@ export default function App() {
   const [flip, setFlip] = useState(false);
   const [tradeFilter, setTradeFilter] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
+  const [mobileShelfView, setMobileShelfView] = useState<'list' | 'cards'>(() => {
+    try { return localStorage.getItem('diedu-mobile-shelf-view') === 'cards' ? 'cards' : 'list'; }
+    catch { return 'list'; }
+  });
+  const [mobileSelecting, setMobileSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [theme, setThemeState] = useState<ThemePref>(() => themePref());
   const setTheme = useCallback((v: ThemePref) => { applyThemePref(v); setThemeState(v); }, []);
@@ -53,6 +65,7 @@ export default function App() {
   const toastTimer = useRef(0);
   const [offline, setOffline] = useState(!navigator.onLine);
   const [installEvt, setInstallEvt] = useState<Event | null>(null);
+  const [inventoryPage, setInventoryPage] = useState('domestic');
   const modules = state?.modules?.needsSetup ? PRESETS[0].enabled : state?.modules?.enabled ?? (state ? PRESETS[3].enabled : undefined);
   const page = modules && !pageEnabled(route, modules) ? 'domestic' : route;
 
@@ -66,13 +79,20 @@ export default function App() {
     });
   }, [refresh]);
 
-  // 换页重置选择与筛选（与原 navigate 行为一致）
+  // 换页重置选择与筛选，并记住手机库存的地区。
   useEffect(() => {
     setSelected(new Set());
     setQuery('');
     setSort('new');
     setShelfFilter('all');
+    setMobileSelecting(false);
+    if (page === 'domestic' || page === 'overseas') setInventoryPage(page);
   }, [page, modules?.acquisition, modules?.trading, modules?.circulation]);
+
+  useEffect(() => {
+    try { localStorage.setItem('diedu-mobile-shelf-view', mobileShelfView); }
+    catch { /* 浏览器不允许存储时仍可切换视图 */ }
+  }, [mobileShelfView]);
 
   useEffect(() => {
     if (modules && page !== route) location.replace('#domestic');
@@ -157,6 +177,7 @@ export default function App() {
     flip, setFlip,
     tradeFilter, setTradeFilter,
     shelfFilter, setShelfFilter,
+    mobileShelfView, setMobileShelfView, mobileSelecting, setMobileSelecting,
     selected, setSelected,
     theme, setTheme,
     rec: id => state.records.find(r => r.id === id),
@@ -170,8 +191,12 @@ export default function App() {
   state.records.forEach(r => { if (r.status in counts) counts[r.status]++; });
   counts.trades = state.sales.filter(s => s.status === 'complete').length;
   if (!modules.circulation) counts.domestic += counts.overseas + counts.transit;
+  counts.inventory = counts.domestic + (modules.circulation ? counts.overseas : 0);
   const nav = NAV.filter(n => pageEnabled(n.hash, modules)).map(n => ({...n,
     label: n.hash === 'domestic' && !modules.circulation ? '我的收藏' : n.hash === 'stats' && !modules.trading ? '购入统计' : n.label,
+  }));
+  const mobileTabs = MOBILE_TABS.filter(n => pageEnabled(n.hash, modules)).map(n => ({...n,
+    label: n.hash === 'domestic' && !modules.circulation ? '收藏' : n.label,
   }));
   const content = state.modules?.needsSetup ? <SetupPage/>
     : ['overseas', 'domestic', 'trash'].includes(page) ? <ShelfPage/>
@@ -179,7 +204,9 @@ export default function App() {
       : page === 'shipping' ? <ShippingPage/>
         : page === 'trades' ? <TradesPage/>
           : page === 'stats' ? <StatsPage/>
-            : <SettingsPage/>;
+            : page === 'more' ? <MorePage installEvt={installEvt} onInstalled={() => setInstallEvt(null)}/>
+              : page === 'ledger' ? <LedgerPage/>
+                : <SettingsPage/>;
 
   return (
     <AppContext.Provider value={ctx}>
@@ -201,15 +228,7 @@ export default function App() {
             ))}
           </nav>
           <div className="sidebar-bottom">
-            {installEvt ? (
-              <button type="button" className="install-nav" onClick={async () => {
-                const evt = installEvt as Event & {prompt?: () => Promise<void>};
-                await evt.prompt?.();
-                setInstallEvt(null);
-              }}>
-                <span className="nav-ico">⤓</span>安装碟渡
-              </button>
-            ) : null}
+            {installEvt ? <InstallNavItem evt={installEvt} onInstalled={() => setInstallEvt(null)}/> : null}
             <Ledger/>
             <a href="#settings" data-nav="settings"
                className={page === 'settings' ? 'active' : ''}>
@@ -222,9 +241,20 @@ export default function App() {
       </div>
       {offline ? <div id="connection-status" role="status">网络已断开，保存前请恢复连接。</div> : null}
       <nav className="mobile-nav" aria-label="手机导航">
-        {MOBILE_NAV.filter(([hash]) => pageEnabled(hash, modules)).map(([hash, label]) => (
-          <a key={hash} href={`#${hash}`} className={page === hash ? 'active' : ''}>{label}</a>
+        {mobileTabs.map(t => (
+          <a key={t.hash} href={`#${t.hash === 'domestic' && modules.circulation ? inventoryPage : t.hash}`}
+             className={page === t.hash || (t.hash === 'domestic' && page === 'overseas') ? 'active' : ''}
+             aria-current={page === t.hash || (t.hash === 'domestic' && page === 'overseas') ? 'page' : 'false'}>
+            <span className="tab-ico" aria-hidden="true">{t.ico}</span>
+            <span className="tab-label">{t.label}</span>
+            {counts[t.count] ? <b className="tab-badge num">{counts[t.count]}</b> : null}
+          </a>
         ))}
+        <a href="#more" className={MORE_HASHES.has(page) ? 'active' : ''}
+           aria-current={MORE_HASHES.has(page) ? 'page' : 'false'}>
+          <span className="tab-ico" aria-hidden="true">⋯</span>
+          <span className="tab-label">更多</span>
+        </a>
       </nav>
       {drawer ? <Drawer spec={drawer} onClose={() => closeDrawer()}/> : null}
       {toastMsg ? <Toast key={toastMsg.key} kind={toastMsg.kind} text={toastMsg.text} onDone={() => setToastMsg(null)}/> : null}

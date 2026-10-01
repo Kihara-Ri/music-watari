@@ -74,11 +74,12 @@ export function StatsPage() {
         <tbody>
           {Object.keys(months).sort().reverse().map(k => (
             <tr key={k}>
-              <td>{k}</td>
-              <td>{months[k].count} 张</td>
-              <td>{yuan(months[k].net)}</td>
-              {modules.acquisition ? <><td className={months[k].profit < 0 ? 'negative' : 'positive'}>{yuan(months[k].profit)}</td>
-              <td>{months[k].unknown ? `${months[k].unknown} 条` : '—'}</td></> : null}
+              {/* data-l：手机端表格卡片化时的字段名（stats.css 读取） */}
+              <td data-l="月份">{k}</td>
+              <td data-l="售出">{months[k].count} 张</td>
+              <td data-l="到手">{yuan(months[k].net)}</td>
+              {modules.acquisition ? <><td className={months[k].profit < 0 ? 'negative' : 'positive'} data-l="利润">{yuan(months[k].profit)}</td>
+              <td data-l="成本待补">{months[k].unknown ? `${months[k].unknown} 条` : '—'}</td></> : null}
             </tr>
           ))}
           {!Object.keys(months).length && <tr><td colSpan={modules.acquisition ? 5 : 3}>还没有已完成交易。</td></tr>}

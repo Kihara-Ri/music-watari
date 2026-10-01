@@ -108,7 +108,31 @@ details.adv[open] summary{margin-bottom:8px}
 
 @media (max-width:840px){
   .form-grid{grid-template-columns:1fr}
-  .drawer{width:100vw}
+  /* 表单抽屉 → 底部上滑 sheet：顶部圆角 + 抓手，底部避开 Home 条 */
+  .drawer{top:calc(10px + env(safe-area-inset-top));right:0;bottom:0;left:0;width:auto;
+    border-left:none;border-top:1px solid var(--border-strong);border-radius:20px 20px 0 0;
+    box-shadow:0 -14px 44px var(--shadow-ink);animation:sheet-up .26s cubic-bezier(.2,.8,.3,1)}
+  .drawer.wide{width:auto}
+  .drawer::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:38px;height:4.5px;border-radius:99px;background:var(--grabber)}
+  .drawer-head{padding:24px 16px 10px}
+  .drawer-head button{min-width:40px;min-height:40px}
+  .drawer-body{padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
+  .drawer-footer{gap:8px;flex-wrap:wrap;padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+  .drawer-footer button{flex:1 1 calc((100% - 16px)/3);min-height:42px}
+
+  /* 批量录入行重排：专辑名整行，艺人+金额+照片+删除一行，碟盒整行 */
+  .batch-row{grid-template-columns:minmax(0,1fr) 96px 44px 34px;gap:7px}
+  .batch-row>:nth-child(1){grid-column:1/-1;grid-row:1}
+  .batch-row>:nth-child(2){grid-column:1;grid-row:2}
+  .batch-row>:nth-child(3){grid-column:2;grid-row:2}
+  .batch-row>:nth-child(4){grid-column:1/-1;grid-row:3}
+  .batch-row>:nth-child(5){grid-column:3;grid-row:2}
+  .batch-row>:nth-child(6){grid-column:4;grid-row:2}
+  .batch-row>button{padding:8px 0}
+  .batch-row input{font-size:16px}
+  .record-detail{gap:12px}
+  .record-detail .big{width:96px;height:96px}
 }
 .batch-collection .batch-row{grid-template-columns:1.35fr .8fr 96px 36px 26px}
 @media (max-width:840px){

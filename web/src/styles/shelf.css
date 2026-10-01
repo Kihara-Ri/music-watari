@@ -60,10 +60,84 @@
 .artist-meta{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
 
 @media (max-width:840px){
-  .grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:11px}
-  .tl-group{grid-template-columns:72px 13px minmax(0,1fr);column-gap:10px}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+  .card .badge{font-size:10px;padding:2px 7px}
+  .card-title{font-size:13.5px}
+  .card-actions{gap:7px;padding:0 10px 11px}
+  .card-actions button{min-height:40px;padding:9px 8px;font-size:13px}
+  .card-check{padding:9px}
+  .card-check input{width:16px;height:16px}
+  .photo-flag{font-size:10.5px;padding:3px 8px}
+  .tl-group{grid-template-columns:64px 13px minmax(0,1fr);column-gap:9px}
   .tl-label b{font-size:12.5px}
-  .tl-cards{padding-bottom:22px}
+  .tl-cards{padding-bottom:20px}
+  .artist-head{gap:8px}
 }
 
+/* 触屏设备：取消卡片悬停抬升（手指点按后的 hover 状态会粘住不掉） */
+@media (hover:none){
+  .card:hover{transform:none;border-color:var(--border);box-shadow:none}
+}
+
+/* 窄屏手机：时间线收成「月份标题行 + 两列网格」，左侧日期轴在拇指屏上太挤 */
+@media (max-width:500px){
+  .tl-group{display:block}
+  .tl-label{display:flex;align-items:baseline;gap:8px;padding:0 2px 9px;text-align:left}
+  .tl-rail{display:none}
+  .tl-cards{padding-bottom:26px}
+  .tl-cards .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 .card-storage{font-size:12px;color:var(--muted);margin-top:7px;overflow-wrap:anywhere}
+
+/* 手机库存：地区收进页面，显示方式与批量选择按需开启。 */
+.shelf-location,.mobile-shelf-title,.mobile-view-switch,.mobile-select-toggle,.list-badges{display:none}
+@media (max-width:840px){
+  .desktop-shelf-title{display:none}
+  .mobile-shelf-title{display:inline}
+  .shelf-location{display:flex;gap:24px;margin:0 0 14px;border-bottom:1px solid var(--border)}
+  .shelf-location a{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;font-size:14px}
+  .shelf-location a[aria-current=page]{color:var(--text);border-bottom-color:var(--accent)}
+  .shelf-location b{font-size:12px;color:var(--faint);font-weight:500}
+  .shelf-page .toolbar{gap:8px}
+  .shelf-page .toolbar .search{order:-1;flex-basis:100%}
+  .mobile-view-switch{display:flex;gap:2px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:2px}
+  .mobile-view-switch button{padding:7px 8px;min-height:36px;font-size:12px;background:none;border-color:transparent}
+  .mobile-view-switch button[aria-pressed=true]{background:var(--surface-3);color:var(--accent-strong)}
+  .mobile-select-toggle{display:inline-flex;min-height:42px;margin-left:auto;padding:8px 10px}
+  .shelf-page:not(.is-selecting) .select-all,.shelf-page:not(.is-selecting) .card-check{display:none}
+  .shelf-page .card-edit{display:none}
+  .shelf-page .summary{gap:8px 16px;font-size:12px;padding:10px 12px;margin-bottom:12px}
+  .shelf-page .summary .hint{font-size:11px}
+
+  /* 同一副本仍是同一张卡，只在手机列表模式下改变排布。 */
+  .mobile-list .grid{grid-template-columns:minmax(0,1fr);gap:0}
+  .mobile-list .copy-group{grid-column:span 1;margin:18px 0 12px;outline-offset:4px;padding:8px 0 0}
+  .mobile-list .card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
+  .mobile-list .card .cover-wrap{width:64px;height:64px;aspect-ratio:1;border-radius:8px;overflow:hidden}
+  .mobile-list .cover-wrap .card-badges{display:none}
+  .mobile-list .card-body{padding:0;gap:2px;min-width:0}
+  .mobile-list .card-title{font-size:14px;line-height:1.4}
+  .mobile-list .card-artist{font-size:12px}
+  .mobile-list .card-price{margin-top:0;padding-top:3px;gap:4px}
+  .mobile-list .card-price .p{font-size:13px}
+  .mobile-list .card-tags{gap:3px;margin-top:3px}
+  .mobile-list .card-edt{font-size:10px;padding:0 5px}
+  .mobile-list .card-storage{font-size:11px;margin-top:2px}
+  .mobile-list .card-actions{padding:0;gap:0}
+  .mobile-list .card-actions:has(> .card-edit:only-child){display:none}
+  .mobile-list .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 3px;font-size:12px;min-height:44px;color:var(--accent-strong)}
+  .mobile-list.is-selecting .card-actions{display:none}
+  .mobile-list.is-selecting .card{grid-template-columns:64px minmax(0,1fr)}
+  .mobile-list .card-check{top:9px;right:9px;padding:6px;background:var(--surface-3)}
+  .mobile-list .photo-flag{left:3px;bottom:3px;font-size:9px;padding:1px 4px}
+  .mobile-list .list-badges{display:flex;gap:4px;flex-wrap:wrap}
+  .mobile-list .list-badges:empty{display:none}
+  .mobile-list .list-badges .badge{position:static;font-size:10px;padding:1px 6px;background:var(--surface-3);border-radius:99px;box-shadow:none}
+  .mobile-list .tl-group{display:block}
+  .mobile-list .tl-label{display:flex;align-items:baseline;gap:8px;padding:0 0 6px;text-align:left}
+  .mobile-list .tl-rail{display:none}
+  .mobile-list .tl-cards{padding-bottom:24px}
+}
+@media (max-width:500px){
+  .mobile-cards .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}

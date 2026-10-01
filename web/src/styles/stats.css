@@ -9,3 +9,23 @@ table.monthly th,table.monthly td{padding:10px 14px;text-align:right;font-varian
 table.monthly th:first-child,table.monthly td:first-child{text-align:left}
 table.monthly thead th{color:var(--muted);font-weight:550;font-size:12px;background:var(--surface-2)}
 table.monthly tbody tr{border-top:1px solid var(--border)}
+
+@media (max-width:840px){
+  /* 指标块两列紧凑排布 */
+  .stat-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .stat-block{padding:13px 14px}
+  .stat-block strong{font-size:19px}
+  .stat-block small{font-size:11px}
+  /* 月度表卡片化：每行一张卡，字段名由 data-l 提供 */
+  table.monthly,table.monthly tbody,table.monthly tr,table.monthly td{display:block}
+  table.monthly{background:none;border:none;border-radius:0}
+  table.monthly thead{display:none}
+  table.monthly tbody tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:11px 14px;margin-bottom:10px}
+  table.monthly td{text-align:right;padding:4px 0;font-size:13px;border:none}
+  table.monthly td::before{content:attr(data-l);display:block;font-size:11px;color:var(--faint);text-align:left;margin-bottom:1px}
+  table.monthly td:first-child{grid-column:1/-1;text-align:left;font-weight:650;font-size:14px;
+    padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+  table.monthly td:first-child::before{display:none}
+}

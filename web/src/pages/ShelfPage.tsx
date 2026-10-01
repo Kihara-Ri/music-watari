@@ -158,13 +158,22 @@ export function ShelfPage() {
   }
 
   return (
-    <>
-      <PageHead title={title} desc={desc} label="COLLECTION" actions={isTrash ? null : (
+    <div className={`shelf-page mobile-${app.mobileShelfView}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
+      <PageHead title={modules.circulation && !isTrash ? <><span className="desktop-shelf-title">{title}</span><span className="mobile-shelf-title">库存</span></> : title} desc={desc} label="COLLECTION" actions={isTrash ? null : (
         <>
           <button onClick={() => openBatchForm(app)}>批量录入</button>
           <button className="primary" onClick={() => openRecordForm(app)}>＋ 添加专辑</button>
         </>
       )}/>
+      {modules.circulation && !isTrash ? (
+        <nav className="shelf-location" aria-label="库存地区">
+          {(['domestic', 'overseas'] as const).map(p => (
+            <a key={p} href={`#${p}`} aria-current={page === p ? 'page' : 'false'}>
+              {p === 'domestic' ? '国内' : '海外'}<b>{state.records.filter(r => r.status === p).length}</b>
+            </a>
+          ))}
+        </nav>
+      ) : null}
       <div className="summary">
         <span><strong>{all.length}</strong> 张专辑</span>
         {!isTrash && (
@@ -200,6 +209,16 @@ export function ShelfPage() {
         ) : null}
         <Dropdown id="sort" value={sort} options={modules.acquisition ? SORTS : [{value: 'new', label: '最近添加'}, {value: 'artist', label: '按艺人'}]} label="排序方式"
                   onPick={v => app.setSort(v as SortMode)}/>
+        <div className="mobile-view-switch" role="group" aria-label="库存显示方式">
+          <button aria-label="列表视图" aria-pressed={app.mobileShelfView === 'list'} onClick={() => app.setMobileShelfView('list')}>☷ 列表</button>
+          <button aria-label="卡片视图" aria-pressed={app.mobileShelfView === 'cards'} onClick={() => app.setMobileShelfView('cards')}>▦ 卡片</button>
+        </div>
+        {!isTrash && selectable.length ? <button className="mobile-select-toggle" aria-pressed={app.mobileSelecting || !!curSelected.size}
+          onClick={() => {
+            const next = !(app.mobileSelecting || curSelected.size);
+            app.setMobileSelecting(next);
+            if (!next) app.setSelected(new Set());
+          }}>{app.mobileSelecting || curSelected.size ? '取消选择' : '选择'}</button> : null}
       </div>
       {curSelected.size ? (
         <div className="bulkbar">
@@ -222,10 +241,10 @@ export function ShelfPage() {
           {!isTrash
             ? <button onClick={() => bulkAction(app, 'delete', [...curSelected], '已移入回收站，可在设置中恢复')}>移入回收站</button>
             : <button onClick={() => bulkAction(app, 'restore', [...curSelected])}>恢复专辑</button>}
-          <button className="quiet" onClick={() => app.setSelected(new Set())}>取消</button>
+          <button className="quiet" onClick={() => { app.setSelected(new Set()); app.setMobileSelecting(false); }}>取消</button>
         </div>
       ) : null}
       {body}
-    </>
+    </div>
   );
 }

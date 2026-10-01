@@ -19,7 +19,7 @@ export function PageHead({title, desc, actions, label}: {
 }
 
 // 侧栏账本：口径与统计页一致（已实现利润只计成本已知的已完成交易）
-export function Ledger() {
+export function Ledger({mode = 'sidebar'}: {mode?: 'sidebar' | 'page'}) {
   const {state, modules} = useApp();
   const inv = state.records.filter(r => ['overseas', 'transit', 'domestic'].includes(r.status));
   const known = inv.filter(r => r.cost !== null);
@@ -28,8 +28,8 @@ export function Ledger() {
   const sold = sum(state.sales.filter(s => s.status === 'complete').flatMap(s => s.items), 'net');
   const unknownCount = inv.length - known.length;
   return (
-    <div className="side-ledger" aria-label="账本概览">
-      <div className="sl-title">{modules.acquisition || modules.trading ? '账本' : '收藏'}</div>
+    <div className={mode === 'page' ? 'ledger-summary' : 'side-ledger'} aria-label="账本概览">
+      {mode === 'sidebar' ? <div className="sl-title">{modules.acquisition || modules.trading ? '账本' : '收藏'}</div> : null}
       <div className="sl-row"><span>在库</span><b>{inv.length} 张</b></div>
       {modules.acquisition ? <div className="sl-row">
         <span>投入成本</span>
