@@ -33,7 +33,7 @@
 .photo-flag .cam-ico{width:11px;height:11px}
 
 /* 同专辑多张副本：按副本数量跨列，组框只包住自己的卡片（subgrid 与外层同轨等宽） */
-.copy-group{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));grid-template-columns:subgrid;grid-column:1/span 2;padding:14px 0 8px;border:none;border-radius:12px;outline:1px solid var(--border-strong);outline-offset:5px;justify-items:stretch}
+.copy-group{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));grid-template-columns:subgrid;grid-column:span 2;padding:14px 0 8px;border:none;border-radius:12px;outline:1px solid var(--border-strong);outline-offset:5px;justify-items:stretch}
 .copy-group::before{content:"同专辑 · 多张副本";position:absolute;top:-14px;left:12px;font-size:10px;font-weight:600;color:var(--faint);background:var(--bg);padding:0 7px;border-radius:99px}
 
 /* 按月分组的纵向时间线 */

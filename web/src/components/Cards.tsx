@@ -1,6 +1,6 @@
 // 库存卡片与网格：同一专辑（标题+艺人相同）的副本聚成一组，
 // 副本组跨列 = min(副本数, 网格列数)，subgrid 保证与相邻卡片同宽。
-import {useEffect, useMemo, useRef} from 'react';
+import {useLayoutEffect, useMemo, useRef} from 'react';
 import type {ReactNode} from 'react';
 import type {AlbumRecord} from '../types';
 import {norm} from '../core/search';
@@ -70,21 +70,23 @@ export function CardGrid({records, renderCard}: {
     return [...map.values()];
   }, [records]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const fix = () => {
       const g = ref.current;
       if (!g) return;
+      const groups = [...g.querySelectorAll<HTMLElement>('.copy-group')];
+      // 先解除旧跨列，避免卡片 → 列表或缩窄时，旧 span 生成隐式列，
+      // 再被当成真实列数读回，导致副本组一直保留旧宽度。
+      groups.forEach(cg => { cg.style.gridColumn = 'span 1'; });
       let cols = 3;
       try { cols = getComputedStyle(g).gridTemplateColumns.split(' ').length; } catch { /* 无样式时兜底 */ }
-      g.querySelectorAll<HTMLElement>('.copy-group').forEach(cg => {
+      groups.forEach(cg => {
         cg.style.gridColumn = `span ${Math.max(1, Math.min(cg.children.length, cols))}`;
       });
     };
     fix();
-    let timer = 0;
-    const onResize = () => { clearTimeout(timer); timer = window.setTimeout(fix, 180); };
-    window.addEventListener('resize', onResize);
-    return () => { clearTimeout(timer); window.removeEventListener('resize', onResize); };
+    window.addEventListener('resize', fix);
+    return () => window.removeEventListener('resize', fix);
   });
 
   return (
