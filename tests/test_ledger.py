@@ -1,6 +1,8 @@
 import json, tempfile, unittest, base64
 from pathlib import Path
 from decimal import Decimal
+from datetime import date, timedelta
+from unittest.mock import patch
 from domain import clean_record, cost, allocate, ValidationError
 from storage import Store, SCHEMA
 from rates import RateService
@@ -305,5 +307,91 @@ class RateServiceTests(unittest.TestCase):
         self.assertEqual(svc.get('2026-03-02'),'4.5')
         self.assertEqual(svc.get('2026-03-02'),'4.5')
         self.assertEqual(len(calls),1)
+    def test_state_after_edit_reuses_persisted_rates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'rates.sqlite3'
+            RateService(path,fetch=lambda s,e:{'2026-03-02':'4.5'}).warm(['2026-03-02'])
+            def unexpected(s,e):
+                self.fail('cached purchase dates must not fetch again')
+            rates=RateService(path,fetch=unexpected)
+            store=Store(Path(folder)/'albums.sqlite3',rates)
+            rid=store.save({'title':'测试专辑','artist':'艺人','currency':'JPY',
+                           'date':'2026-03-02','price':'2000','fees':'10'})['ids'][0]
+            record=store.state()['records'][0]
+            self.assertEqual(record['cost'],'100.00')
+            store.save({**record,'note':'修改备注'})
+            saved=store.state()['records'][0]
+            self.assertEqual(saved['id'],rid)
+            self.assertEqual(saved['note'],'修改备注')
+            self.assertEqual(saved['cost'],'100.00')
+    def test_warm_reuses_successful_weekend_and_holiday_lookup(self):
+        calls=[]
+        def fetch(s,e):
+            calls.append((s,e));return {'2026-01-09':'4.429'}
+        svc=RateService(fetch=fetch)
+        dates=['2026-01-11','2026-01-12']
+        for _ in range(3):
+            svc.warm(dates)
+            for d in dates:self.assertEqual(svc.get(d),'4.429')
+        self.assertEqual(len(calls),1)
+    def test_warm_fetches_new_date_instead_of_reusing_older_quote(self):
+        calls=[]
+        def fetch(s,e):
+            calls.append((s,e));return {e:'4.6' if e=='2026-03-03' else '4.5'}
+        svc=RateService(fetch=fetch)
+        svc.warm(['2026-03-02'])
+        svc.warm(['2026-03-02','2026-03-03'])
+        self.assertEqual(svc.get('2026-03-02'),'4.5')
+        self.assertEqual(svc.get('2026-03-03'),'4.6')
+        self.assertEqual(len(calls),2)
+    def test_warm_empty_result_keeps_missing_cost_without_repeated_fetch(self):
+        calls=[]
+        def fetch(s,e):calls.append((s,e));return {}
+        with tempfile.TemporaryDirectory() as folder:
+            svc=RateService(fetch=fetch)
+            store=Store(Path(folder)/'albums.sqlite3',svc)
+            store.save({'title':'测试专辑','artist':'艺人','currency':'JPY',
+                        'date':'2026-03-02','price':'2000'})
+            for _ in range(2):self.assertIsNone(store.state()['records'][0]['cost'])
+            self.assertEqual(len(calls),1)
+    def test_failed_warm_can_retry(self):
+        from rates import RateUnavailable
+        calls=[]
+        def fetch(s,e):
+            calls.append((s,e))
+            if len(calls)==1:raise RateUnavailable('down')
+            return {'2026-03-02':'4.5'}
+        svc=RateService(fetch=fetch)
+        svc.warm(['2026-03-02'])
+        svc.warm(['2026-03-02'])
+        self.assertEqual(svc.get('2026-03-02'),'4.5')
+        self.assertEqual(len(calls),2)
+    def test_warm_rechecks_today_when_quote_was_not_published(self):
+        today=date.today().isoformat()
+        yesterday=(date.today()-timedelta(days=1)).isoformat()
+        calls=[]
+        def fetch(s,e):
+            calls.append((s,e))
+            return {yesterday:'4.5'} if len(calls)==1 else {today:'4.6'}
+        svc=RateService(fetch=fetch)
+        with patch('rates.monotonic',return_value=1000):
+            svc.warm([today])
+            self.assertEqual(svc.get(today),'4.5')
+        with patch('rates.monotonic',return_value=1299):svc.warm([today])
+        self.assertEqual(len(calls),1)
+        with patch('rates.monotonic',return_value=1301):svc.warm([today])
+        self.assertEqual(svc.get(today),'4.6')
+        self.assertEqual(len(calls),2)
+    def test_empty_lookup_can_retry_after_cooldown(self):
+        calls=[]
+        def fetch(s,e):
+            calls.append((s,e));return {} if len(calls)==1 else {'2026-03-02':'4.5'}
+        svc=RateService(fetch=fetch)
+        with patch('rates.monotonic',return_value=1000):
+            svc.warm(['2026-03-02'])
+            self.assertIsNone(svc.get('2026-03-02'))
+        with patch('rates.monotonic',return_value=1301):svc.warm(['2026-03-02'])
+        self.assertEqual(svc.get('2026-03-02'),'4.5')
+        self.assertEqual(len(calls),2)
 
 if __name__=='__main__':unittest.main()

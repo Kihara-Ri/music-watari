@@ -9,6 +9,7 @@ import threading
 from contextlib import closing
 from datetime import date, timedelta
 from pathlib import Path
+from time import monotonic
 from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -29,10 +30,13 @@ class RateService:
         self.fetch = fetch or self._http_fetch
         self.lock = threading.Lock()
         self.mem = {}
+        # Successful lookups also cover weekends/holidays without their own quote.
+        self.warmed_days = {}
         if cache_path:
             Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
             with closing(sqlite3.connect(cache_path)) as db, db:
                 db.execute('CREATE TABLE IF NOT EXISTS rates(day TEXT PRIMARY KEY, per100 TEXT)')
+                self.mem.update(db.execute('SELECT day, per100 FROM rates'))
 
     def _http_fetch(self, start, end):
         """Return {iso-day: Decimal-per-100} for the window, trying both mirrors."""
@@ -71,6 +75,16 @@ class RateService:
             with closing(sqlite3.connect(self.cache_path)) as db, db:
                 db.executemany('INSERT OR REPLACE INTO rates VALUES(?,?)', [(d, str(v)) for d, v in found.items()])
 
+    def _warmed(self, day):
+        return self.warmed_days.get(day, 0) > monotonic()
+
+    def _remember_lookups(self, days, found):
+        today = date.today().isoformat()
+        retry_at = monotonic() + 300
+        for day in days:
+            # Today's quote may appear later; empty responses may also recover.
+            self.warmed_days[day] = float('inf') if found and day < today else retry_at
+
     def get(self, day):
         """Rate (str per-100) for the purchase date, or None when unavailable."""
         if not day:
@@ -82,7 +96,7 @@ class RateService:
             return None
         with self.lock:
             hit = self._cached(day)
-            if hit:
+            if hit or self._warmed(day):
                 return hit
             start = (date.fromisoformat(day) - timedelta(days=14)).isoformat()
             try:
@@ -90,19 +104,23 @@ class RateService:
             except RateUnavailable:
                 return None
             self._store(found)
+            self._remember_lookups([day], found)
             hit = self._cached(day)
             return hit
 
     def warm(self, days):
-        """Prefetch rates for many days with one request per distinct window."""
+        """Fetch uncovered dates; reuse exact quotes and successful holiday lookups."""
         days = sorted({str(d)[:10] for d in days if d})
-        for i in range(0, len(days), 60):
-            chunk = days[i:i + 60]
-            start = (date.fromisoformat(chunk[0]) - timedelta(days=14)).isoformat()
-            end = chunk[-1]
-            with self.lock:
+        with self.lock:
+            days = [d for d in days if d not in self.mem and not self._warmed(d)]
+            for i in range(0, len(days), 60):
+                chunk = days[i:i + 60]
+                start = (date.fromisoformat(chunk[0]) - timedelta(days=14)).isoformat()
+                end = chunk[-1]
                 try:
-                    self._store(self.fetch(start, end))
+                    found = self.fetch(start, end)
+                    self._store(found)
+                    self._remember_lookups(chunk, found)
                 except RateUnavailable:
                     pass
 
