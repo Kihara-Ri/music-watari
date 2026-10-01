@@ -5,11 +5,14 @@
 .drawer{position:absolute;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--surface);border-left:1px solid var(--border-strong);display:flex;flex-direction:column;box-shadow:-18px 0 50px var(--shadow-ink);animation:slide .22s ease}
 .drawer.wide{width:min(560px,100vw)}
 @keyframes slide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--border)}
+/* 关闭：桌面滑出右缘；手机断点内覆盖为下滑收回。pointer-events 防止动画期间误触 */
+.drawer.closing{animation:drawer-out .18s ease forwards;pointer-events:none}
+@keyframes drawer-out{to{transform:translateX(40px);opacity:0}}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--border);user-select:none;-webkit-user-select:none}
 .drawer-head h2{font-size:16px}
 .drawer-head button{padding:4px 12px;font-size:18px}
 .drawer>form{flex:1;display:flex;flex-direction:column;min-height:0}
-.drawer-body{flex:1;overflow-y:auto;padding:14px 18px}
+.drawer-body{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:14px 18px}
 /* 抽屉内紧凑排版：字段多，压缩空白让全屏高度一屏放得下 */
 #panel input,#panel select,#panel textarea{padding:7px 10px}
 #panel textarea{resize:none;overflow:hidden;min-height:76px;line-height:1.65}
@@ -19,10 +22,13 @@
 #panel .seg button{padding:5px 8px}
 .drawer-footer{display:flex;gap:9px;justify-content:flex-end;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface)}
 
-/* 字段栅格 */
-.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* 字段栅格：minmax(0,1fr) 允许轨道收缩——否则 iOS 日期输入的固有
+   最小宽度会把列撑出抽屉（售出日期超宽问题） */
+.form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.form-grid>*{min-width:0}
 .form-grid .full{grid-column:1/-1}
-.field{display:flex;flex-direction:column;gap:5px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field input[type=date]{min-width:0;width:100%}
 .field[hidden]{display:none}
 .field label{font-size:12px;color:var(--muted);font-weight:550}
 .field small{color:var(--faint)}
@@ -58,6 +64,37 @@ details.adv[open] summary{margin-bottom:8px}
 .amount-group .cur-static{flex:none;display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--muted)}
 #panel .amount-group input{flex:none;width:132px;text-align:right;border:none;background:none;border-radius:0;padding:7px 12px 7px 11px;border-left:1px solid var(--border);font-variant-numeric:tabular-nums;font-weight:600}
 .amount-group input:focus{outline:none;border:none;box-shadow:none;background:none}
+
+/* 分组列表行表单（iOS 式 inset group）：label 左、值右，行即输入面。
+   用于记录售出面板——手机上比「标签+整宽输入框」矮一半且免滚动 */
+.row-group{background:var(--inset);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:12px}
+.row-group .row{display:flex;align-items:center;gap:12px;min-height:46px;padding:6px 14px;transition:background .15s}
+.row-group .row+.row{border-top:1px solid var(--border)}
+.row-group .row:focus-within{background:var(--surface-2)}
+.row-group .row>label{flex:none;font-size:13px;color:var(--muted);font-weight:550}
+.row-group .row-value{flex:1;min-width:0;display:flex;align-items:center;justify-content:flex-end;gap:6px}
+#panel .row-value input{flex:1;min-width:0;text-align:right;background:none;border:none;border-radius:0;
+  padding:0;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+#panel .row-value input:focus{background:none;box-shadow:none;outline:none}
+#panel .row-value input::placeholder{font-weight:400}
+.row-group .unit{flex:none;font-size:12px;color:var(--muted)}
+.amount-row .row-value input{font-size:20px;font-weight:700}
+
+/* 行内快捷块：今天 / 昨天 / 渠道等点选块 */
+.row-group .chips{flex-wrap:wrap;gap:7px}
+.chip{position:relative;padding:5px 12px;min-height:30px;border-radius:99px;background:var(--surface-3);
+  border:1px solid var(--border);font-size:12.5px;font-weight:500;color:var(--text);transition:background .15s,border-color .15s}
+.chip:hover{background:var(--surface-2);border-color:var(--border-strong)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+/* 隐形日期输入铺满「选日期」块：点按即弹系统选择器（iOS/桌面一致） */
+#panel .chip .vh-date{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0}
+
+/* 售出预览：单行化（金额 + 利润 + 提示） */
+.sale-preview{display:flex;flex-direction:column;gap:3px;padding:9px 13px;margin-top:10px}
+.sale-preview .line{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.sale-preview .line b{font-size:17px;font-variant-numeric:tabular-nums}
+.sale-preview .line .hint{font-size:11.5px}
+.sale-preview p{margin:0;font-size:11.5px}
 
 /* 开关（侧标有无） */
 .switch-field{justify-content:flex-end;gap:0}
@@ -108,18 +145,25 @@ details.adv[open] summary{margin-bottom:8px}
 
 @media (max-width:840px){
   .form-grid{grid-template-columns:1fr}
-  /* 表单抽屉 → 底部上滑 sheet：顶部圆角 + 抓手，底部避开 Home 条 */
+  /* 表单抽屉 → 底部上滑 sheet：顶部圆角 + 抓手，底部避开 Home 条；
+     进入 = 整块自屏底滑入，关闭 = 跟手下滑收回（sheet-down + Drawer 拖拽） */
   .drawer{top:calc(10px + env(safe-area-inset-top));right:0;bottom:0;left:0;width:auto;
     border-left:none;border-top:1px solid var(--border-strong);border-radius:20px 20px 0 0;
-    box-shadow:0 -14px 44px var(--shadow-ink);animation:sheet-up .26s cubic-bezier(.2,.8,.3,1)}
+    box-shadow:0 -14px 44px var(--shadow-ink);animation:sheet-up .28s cubic-bezier(.2,.8,.3,1)}
   .drawer.wide{width:auto}
+  .drawer.closing{animation:sheet-down .24s ease-in forwards}
+  @keyframes sheet-up{from{transform:translateY(100%)}to{transform:none}}
+  @keyframes sheet-down{to{transform:translateY(100%)}}
   .drawer::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
     width:38px;height:4.5px;border-radius:99px;background:var(--grabber)}
-  .drawer-head{padding:24px 16px 10px}
+  .drawer-head{padding:24px 16px 10px;touch-action:none;cursor:grab}
   .drawer-head button{min-width:40px;min-height:40px}
   .drawer-body{padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
   .drawer-footer{gap:8px;flex-wrap:wrap;padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
   .drawer-footer button{flex:1 1 calc((100% - 16px)/3);min-height:42px}
+  /* 分组列表行：输入 16px 防 iOS 聚焦放大；快捷块加高到可点 */
+  #panel .row-group input{font-size:16px}
+  .chip{min-height:34px}
 
   /* 批量录入行重排：专辑名整行，艺人+金额+照片+删除一行，碟盒整行 */
   .batch-row{grid-template-columns:minmax(0,1fr) 96px 44px 34px;gap:7px}

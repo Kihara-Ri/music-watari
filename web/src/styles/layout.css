@@ -30,9 +30,8 @@
 .page-head p{color:var(--muted);font-size:13px}
 .head-actions{display:flex;gap:9px;flex-wrap:wrap}
 
-/* 手机外壳：吸顶页头，库存 / 在途 / 售出中 / 更多底栏。 */
+/* 手机外壳：吸顶页头，库存 / 在途 / 售出中 / 更多底栏。（sheet 上拉/收回关键帧在 drawer.css） */
 .mobile-nav{display:none}
-@keyframes sheet-up{from{transform:translateY(60px);opacity:.5}to{transform:none;opacity:1}}
 @media (max-width:840px){
   .sidebar{display:none}
   #main{padding:20px 16px 120px}

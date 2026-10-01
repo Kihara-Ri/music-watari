@@ -26,7 +26,9 @@ export function ShippingPage() {
         {modules.acquisition && items.length - ks.length ? <span className="hint">{items.length - ks.length} 条成本待补</span> : null}
       </div>
       {rs.length ? (
-        <CardGrid records={rs} renderCard={r => <ShippingCard key={r.id} r={r}/>}/>
+        <div className="ship-cards">
+          <CardGrid records={rs} renderCard={r => <ShippingCard key={r.id} r={r}/>}/>
+        </div>
       ) : (
         <div className="empty">
           <div className="empty-symbol">◨</div>

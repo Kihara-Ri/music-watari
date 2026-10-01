@@ -60,6 +60,7 @@ export default function App() {
   const [theme, setThemeState] = useState<ThemePref>(() => themePref());
   const setTheme = useCallback((v: ThemePref) => { applyThemePref(v); setThemeState(v); }, []);
   const [drawer, setDrawer] = useState<DrawerSpec | null>(null);
+  const [drawerClosing, setDrawerClosing] = useState(false);
   const drawerDirty = useRef(false);
   const [toastMsg, setToastMsg] = useState<{key: number; kind: ToastKind; text: string} | null>(null);
   const toastTimer = useRef(0);
@@ -88,11 +89,6 @@ export default function App() {
     setMobileSelecting(false);
     if (page === 'domestic' || page === 'overseas') setInventoryPage(page);
   }, [page, modules?.acquisition, modules?.trading, modules?.circulation]);
-
-  useEffect(() => {
-    try { localStorage.setItem('diedu-mobile-shelf-view', mobileShelfView); }
-    catch { /* 浏览器不允许存储时仍可切换视图 */ }
-  }, [mobileShelfView]);
 
   useEffect(() => {
     if (modules && page !== route) location.replace('#domestic');
@@ -124,15 +120,20 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [refresh]);
 
+  // 关闭分两步：closeDrawer 只置 closing（Drawer 播完收回动画后回调 drawerExited 才真正卸载）
   const openDrawer = useCallback((spec: DrawerSpec) => {
     drawerDirty.current = false;
+    setDrawerClosing(false);
     setDrawer(spec);
   }, []);
 
-  const closeDrawer = useCallback((force = false) => {
-    if (!force && drawerDirty.current && !confirm('还没有保存，确定放弃这次修改吗？')) return;
-    setDrawer(null);
+  const closeDrawer = useCallback((force = false): boolean => {
+    if (!force && drawerDirty.current && !confirm('还没有保存，确定放弃这次修改吗？')) return false;
+    setDrawerClosing(true);
+    return true;
   }, []);
+
+  const drawerExited = useCallback(() => { setDrawer(null); setDrawerClosing(false); }, []);
 
   const setDrawerDirty = useCallback((v: boolean) => { drawerDirty.current = v; }, []);
 
@@ -256,7 +257,8 @@ export default function App() {
           <span className="tab-label">更多</span>
         </a>
       </nav>
-      {drawer ? <Drawer spec={drawer} onClose={() => closeDrawer()}/> : null}
+      {drawer ? <Drawer spec={drawer} closing={drawerClosing}
+                        onClose={() => closeDrawer()} onClosed={drawerExited}/> : null}
       {toastMsg ? <Toast key={toastMsg.key} kind={toastMsg.kind} text={toastMsg.text} onDone={() => setToastMsg(null)}/> : null}
       <Lightbox/>
     </AppContext.Provider>
