@@ -1,12 +1,51 @@
-/* 设计变量：颜色 / 圆角 / 阴影 / 字体 —— 全站唯一写 :root 的文件 */
+/* 设计变量：颜色 / 圆角 / 阴影 / 字体 —— 全站唯一写 :root 的文件。
+   双主题：基础声明 = 深色（现状值，不支持 light-dark() 的旧浏览器保持原样）；
+   @supports 内对随主题变化的 token 改写为 light-dark(浅色, 深色) 双值，
+   由 color-scheme 决定取哪支（跟随系统时由系统外观决定）。
+   主题三态：<html> 不带 data-theme = 跟随系统；设置页经 static/theme.js
+   （CSP 禁内联，阻塞式外链脚本）写 data-theme="light|dark" 覆盖，
+   theme.js 同时负责把 theme-color meta 与所选主题对齐。 */
 :root{
-  --bg:#0e1014; --bg-glow:rgba(91,141,239,.05);
+  color-scheme:dark;
+  --bg:#0e1014; --bg-glow:rgba(91,141,239,.05); --bg-glow-2:rgba(110,168,254,.045);
   --surface:#161920; --surface-2:#1c2029; --surface-3:#232834;
   --border:#262c38; --border-strong:#333b4b;
   --text:#e8ebf1; --muted:#98a2b3; --faint:#5f6b7e;
   --accent:#5b8def; --accent-strong:#8ab2f8; --accent-ink:#0a1a30;
-  --green:#5dd39e; --blue:#6ea8fe; --red:#ff7a7a; --amber:#8ab2f8; --yellow:#f0c35e;
+  --green:#5dd39e; --blue:#6ea8fe; --red:#ff7a7a; --amber:#8ab2f8; --yellow:#f0c35e; --purple:#c9adff;
+  --chrome:rgba(18,21,27,.72); --chrome-head:rgba(14,16,20,.88); --chrome-nav:rgba(18,21,27,.92);
+  --chrome-line:rgba(38,44,56,.6); --hairline:rgba(255,255,255,.09);
+  --scrim:rgba(6,8,12,.6); --grabber:rgba(255,255,255,.16); --inset:rgba(255,255,255,.015);
+  --seg-thumb:#3d4658; --vinyl-hole:#0e1014; --shadow-ink:rgba(0,0,0,.5);
   --radius:14px; --radius-sm:10px;
   --shadow:0 8px 28px rgba(0,0,0,.42);
+  --shadow-sm:0 4px 14px rgba(0,0,0,.35);
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+@supports (color:light-dark(#fff,#000)){
+  :root{
+    color-scheme:light dark;
+    --bg:light-dark(#f4f5f7,#0e1014); --bg-glow:light-dark(rgba(91,141,239,.08),rgba(91,141,239,.05));
+    --bg-glow-2:light-dark(rgba(91,141,239,.06),rgba(110,168,254,.045));
+    --surface:light-dark(#ffffff,#161920); --surface-2:light-dark(#f1f2f6,#1c2029); --surface-3:light-dark(#e8eaef,#232834);
+    --border:light-dark(#e3e6eb,#262c38); --border-strong:light-dark(#c9ced8,#333b4b);
+    --text:light-dark(#1e2430,#e8ebf1); --muted:light-dark(#5e6a7d,#98a2b3); --faint:light-dark(#98a2b3,#5f6b7e);
+    --accent-strong:light-dark(#2f66dd,#8ab2f8);
+    --green:light-dark(#178a56,#5dd39e); --blue:light-dark(#2f6cd8,#6ea8fe); --red:light-dark(#d64550,#ff7a7a);
+    --amber:light-dark(#3565d6,#8ab2f8); --yellow:light-dark(#c49225,#f0c35e); --purple:light-dark(#8250d8,#c9adff);
+    --chrome:light-dark(rgba(250,251,253,.78),rgba(18,21,27,.72));
+    --chrome-head:light-dark(rgba(247,248,250,.88),rgba(14,16,20,.88));
+    --chrome-nav:light-dark(rgba(248,249,251,.92),rgba(18,21,27,.92));
+    --chrome-line:light-dark(rgba(205,211,221,.7),rgba(38,44,56,.6));
+    --hairline:light-dark(rgba(23,32,58,.08),rgba(255,255,255,.09));
+    --scrim:light-dark(rgba(21,28,45,.35),rgba(6,8,12,.6));
+    --grabber:light-dark(rgba(28,35,54,.18),rgba(255,255,255,.16));
+    --inset:light-dark(rgba(23,32,58,.025),rgba(255,255,255,.015));
+    --seg-thumb:light-dark(#ffffff,#3d4658); --vinyl-hole:light-dark(#ffffff,#0e1014);
+    --shadow-ink:light-dark(rgba(23,32,58,.18),rgba(0,0,0,.5));
+    --shadow:light-dark(0 8px 28px rgba(23,32,58,.10),0 8px 28px rgba(0,0,0,.42));
+    --shadow-sm:light-dark(0 4px 14px rgba(23,32,58,.14),0 4px 14px rgba(0,0,0,.35));
+  }
+  :root[data-theme="light"]{color-scheme:light}
+  :root[data-theme="dark"]{color-scheme:dark}
 }

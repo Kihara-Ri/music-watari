@@ -44,7 +44,7 @@ button:disabled:hover{background:var(--surface-2)}
 .pill.transit{background:rgba(138,178,248,.15);color:var(--amber);border:1px solid rgba(138,178,248,.3)}
 .pill.domestic{background:rgba(93,211,158,.13);color:var(--green);border:1px solid rgba(93,211,158,.3)}
 .pill.listed{background:rgba(93,211,158,.13);color:var(--green);border:1px solid rgba(93,211,158,.3)}
-.pill.shipping{background:rgba(198,160,255,.15);color:#c9adff;border:1px solid rgba(198,160,255,.3)}
+.pill.shipping{background:rgba(198,160,255,.15);color:var(--purple);border:1px solid rgba(198,160,255,.3)}
 .pill.sold{background:var(--surface-3);color:var(--muted);border:1px solid var(--border-strong)}
 .pending-pill{background:rgba(138,178,248,.15);color:var(--amber);border:1px solid rgba(138,178,248,.3)}
 .ok-pill{background:rgba(93,211,158,.13);color:var(--green);border:1px solid rgba(93,211,158,.3)}

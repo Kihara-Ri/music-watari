@@ -101,7 +101,7 @@ class WebTests(unittest.TestCase):
  def test_pwa_assets_and_login_gate(self):
   status,_,body=self.req('/manifest.webmanifest');self.assertEqual(status,200);self.assertEqual(json.loads(body)['display'],'standalone')
   # 未登录：登录页自身、其渲染依赖与 PWA 壳元数据可取；其余一切路径 302 到登录页
-  for p in ['/login','/login.js','/assets/index.css','/favicon.svg','/sw.js','/offline.html','/icon-192.png','/icon-512.png']:self.assertEqual(self.req(p)[0],200,p)
+  for p in ['/login','/login.js','/theme.js','/assets/index.css','/favicon.svg','/sw.js','/offline.html','/icon-192.png','/icon-512.png']:self.assertEqual(self.req(p)[0],200,p)
   for p in ['/','/index.html','/assets/index.js','/vendor/heic2any.min.js','/data/albums.sqlite3','/no-such-file']:
    status,h,_=self.req(p);self.assertEqual(status,302,p);self.assertEqual(h['Location'],'/login',p)
   # 登录后：应用本体与 vendor 可访问

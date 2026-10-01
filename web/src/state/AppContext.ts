@@ -3,6 +3,7 @@
 
 import {createContext, useContext} from 'react';
 import type {ReactNode} from 'react';
+import type {ThemePref} from '../core/theme';
 import type {AlbumRecord, AppState, SortMode} from '../types';
 
 export interface DrawerSpec {
@@ -25,6 +26,7 @@ export interface AppCtx {
   tradeFilter: string; setTradeFilter(v: string): void;
   shelfFilter: string; setShelfFilter(v: string): void;
   selected: ReadonlySet<string>; setSelected(s: Set<string>): void;
+  theme: ThemePref; setTheme(v: ThemePref): void;
   rec(id: string): AlbumRecord | undefined;
   refresh(): Promise<void>;
   toast(msg: string, kind?: ToastKind): void;

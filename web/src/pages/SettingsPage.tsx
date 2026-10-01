@@ -5,6 +5,8 @@ import {useApp} from '../state/AppContext';
 import type {BackupFile} from '../types';
 import {PageHead} from '../components/PageHead';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
+import {Seg} from '../components/ui/Seg';
+import type {ThemePref} from '../core/theme';
 
 interface ImportPreview {
   count: number;
@@ -107,6 +109,13 @@ export function SettingsPage() {
   return (
     <>
       <PageHead title="设置与备份" label="KEEP IT IN ORDER"/>
+      <section className="settings-section">
+        <h3>外观</h3>
+        <p>浅色与深色主题可手动固定，跟随系统则随设备外观自动切换。</p>
+        <Seg ariaLabel="外观模式" className="theme-seg"
+             options={[{value: 'light', label: '浅色'}, {value: 'dark', label: '深色'}, {value: 'system', label: '跟随系统'}]}
+             value={app.theme} onValue={v => app.setTheme(v as ThemePref)}/>
+      </section>
       <section className="settings-section">
         <h3>自动化服务</h3>
         <p>封面从 iTunes / MusicBrainz 公开资料库自动抓取；日元成本按购买当天汇率自动折算，无需手动维护。</p>

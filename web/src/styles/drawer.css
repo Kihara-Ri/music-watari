@@ -1,8 +1,8 @@
 /* 抽屉面板与全部表单排版：字段栅格、分段控件、开关、金额组、
    成本/售出预览、封面搜索、详情、批量录入行 */
 #panel{position:fixed;inset:0;z-index:40}
-#panel::before{content:"";position:absolute;inset:0;background:rgba(6,8,12,.6);backdrop-filter:blur(3px)}
-.drawer{position:absolute;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--surface);border-left:1px solid var(--border-strong);display:flex;flex-direction:column;box-shadow:-18px 0 50px rgba(0,0,0,.5);animation:slide .22s ease}
+#panel::before{content:"";position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(3px)}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(460px,100vw);background:var(--surface);border-left:1px solid var(--border-strong);display:flex;flex-direction:column;box-shadow:-18px 0 50px var(--shadow-ink);animation:slide .22s ease}
 .drawer.wide{width:min(560px,100vw)}
 @keyframes slide{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
 .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 10px;border-bottom:1px solid var(--border)}
@@ -32,7 +32,7 @@
 
 /* 分段控件（iOS 式滑块） */
 .seg{display:flex;position:relative;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:3px}
-.seg-thumb{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:8px;background:#3d4658;box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),0 2px 6px rgba(0,0,0,.45);transition:transform .18s ease,width .18s ease,opacity .12s ease;pointer-events:none}
+.seg-thumb{position:absolute;top:3px;bottom:3px;left:0;width:0;border-radius:8px;background:var(--seg-thumb);box-shadow:inset 0 0 0 1px var(--hairline),0 2px 6px var(--shadow-ink);transition:transform .18s ease,width .18s ease,opacity .12s ease;pointer-events:none}
 .seg button{flex:1;position:relative;z-index:1;padding:6px 8px;border-radius:8px;font-size:12.5px;color:var(--muted);border:none;background:none;white-space:nowrap;transition:color .15s}
 .seg button.on{color:var(--text);font-weight:600}
 .seg button.primary{background:var(--accent);color:var(--accent-ink);border:none;box-shadow:none}
@@ -48,7 +48,7 @@ details.adv[open] summary{margin-bottom:8px}
 .check-line{display:flex;align-items:center;gap:10px;font-size:13px;margin:14px 0}
 
 /* 金额块（币种分段 + 金额输入） */
-.money-block{border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px 14px;background:rgba(255,255,255,.015)}
+.money-block{border:1px solid var(--border);border-radius:var(--radius);padding:13px 14px 14px;background:var(--inset)}
 .money-row{display:flex;gap:12px}
 .money-row>.field:last-child{flex:1}
 .amount-group{display:flex;align-items:stretch;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;transition:border-color .15s}
@@ -64,7 +64,7 @@ details.adv[open] summary{margin-bottom:8px}
 .switch-line{display:flex;align-items:center;gap:9px;height:40px}
 .switch-text{font-size:12px;color:var(--muted);font-weight:400}
 .switch{width:46px;height:28px;flex:none;border-radius:99px;background:var(--surface-3);border:1px solid var(--border-strong);position:relative;transition:background .18s ease}
-.switch .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:99px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .18s ease}
+.switch .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:99px;background:#fff;box-shadow:0 1px 3px var(--shadow-ink);transition:transform .18s ease}
 .switch.on{background:var(--accent);border-color:var(--accent)}
 .switch.on .knob{transform:translateX(18px)}
 

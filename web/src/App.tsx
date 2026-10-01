@@ -1,6 +1,8 @@
 // 应用外壳：状态装配、hash 路由、抽屉/toast/PWA 效果、侧栏与页面分发。
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api, ApiError} from './core/api';
+import {applyThemePref, themePref} from './core/theme';
+import type {ThemePref} from './core/theme';
 import {useHashRoute} from './hooks/useHashRoute';
 import {AppContext} from './state/AppContext';
 import type {AppCtx, DrawerSpec} from './state/AppContext';
@@ -41,6 +43,8 @@ export default function App() {
   const [tradeFilter, setTradeFilter] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [theme, setThemeState] = useState<ThemePref>(() => themePref());
+  const setTheme = useCallback((v: ThemePref) => { applyThemePref(v); setThemeState(v); }, []);
   const [drawer, setDrawer] = useState<DrawerSpec | null>(null);
   const drawerDirty = useRef(false);
   const [toastMsg, setToastMsg] = useState<{key: number; kind: ToastKind; text: string} | null>(null);
@@ -130,7 +134,12 @@ export default function App() {
         </div>
       );
     }
-    return <div className="loading">正在打开你的碟渡…</div>;
+    return (
+      <div className="loading">
+        <div className="vinyl vinyl-small" aria-hidden="true"><i className="vinyl-hole"/></div>
+        <p>加载中</p>
+      </div>
+    );
   }
 
   const ctx: AppCtx = {
@@ -141,6 +150,7 @@ export default function App() {
     tradeFilter, setTradeFilter,
     shelfFilter, setShelfFilter,
     selected, setSelected,
+    theme, setTheme,
     rec: id => state.records.find(r => r.id === id),
     refresh, toast,
     openDrawer, closeDrawer, setDrawerDirty,
