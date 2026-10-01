@@ -1,4 +1,4 @@
-// 照片槽管理：占位（处理中）→ 串行压缩回填；上限 30 张；删除任意位置。
+// 照片槽管理：占位（处理中）→ 并发池压缩回填；上限 30 张；删除任意位置。
 import {useRef, useState} from 'react';
 import {isPending, MAX_PHOTOS, PhotoQueue, PhotoSlot} from '../core/photos';
 
