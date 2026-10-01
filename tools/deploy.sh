@@ -130,7 +130,9 @@ fi
 PREV="$(remote "readlink '$BASE/current' || true")"
 say "停服务并快照数据库"
 remote "sudo -n systemctl stop '$SERVICE'"
-if ! remote "if [ -f '$BASE/data/albums.sqlite3' ]; then sudo -n cp '$BASE/data/albums.sqlite3' '$BASE/data/pre-deploy-$STAMP.sqlite3'; fi"; then
+# 快照的守卫与拷贝都要在 root 下执行：数据目录通常 0700（app umask 加固），
+# 以 ssh 登录用户判定 [ -f ] 会因无 x 权限误判「不存在」，静默跳过快照。
+if ! remote "sudo -n sh -c 'if [ -f \"$BASE/data/albums.sqlite3\" ]; then cp \"$BASE/data/albums.sqlite3\" \"$BASE/data/pre-deploy-$STAMP.sqlite3\"; fi'"; then
   restart_service || true
   die "发布前快照失败，保留原版本"
 fi
