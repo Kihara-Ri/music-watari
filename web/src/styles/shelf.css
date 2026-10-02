@@ -112,9 +112,10 @@
 .shelf-list .card-tags{gap:3px;margin-top:3px}
 .shelf-list .card-edt{font-size:10px;padding:0 5px}
 .shelf-list .card-storage{font-size:11px;margin-top:2px}
-.shelf-list .card-actions{padding:0;gap:0}
-.shelf-list .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 3px;font-size:12px;min-height:44px;color:var(--accent-deep)}
-/* 主操作（记录售出）保留实心按钮样式，与文字链操作区分 */
+.shelf-list .card-actions{padding:0;gap:10px}
+/* 次操作描边：与主操作同几何（实心黄），靠透明底+边框分主次，列表行里不再像裸文字链 */
+.shelf-list .card-actions button{background:transparent;border:1px solid var(--border-strong);color:var(--text);padding:7px 13px;min-height:38px;border-radius:9px;font-size:12.5px}
+/* 主操作（记录售出）保留实心按钮样式，与描边次按钮区分 */
 .shelf-list .card-actions button.primary{background:var(--accent);border:1px solid var(--accent);color:var(--accent-ink);padding:7px 13px;min-height:38px;border-radius:9px;font-weight:650}
 .shelf-list .card-actions button.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .shelf-list .card-check{top:9px;right:9px;padding:6px;background:var(--surface-3)}
