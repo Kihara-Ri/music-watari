@@ -1,4 +1,4 @@
-import unittest,tempfile,threading,json,hashlib,http.client,sqlite3
+import unittest,tempfile,threading,json,hashlib,http.client,sqlite3,gzip,base64
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from backups import Backups
@@ -14,11 +14,12 @@ class WebTests(unittest.TestCase):
   services=Services(store=self.store,auth=self.auth,backups=self.backups,covers=CoverService(self.root/'covers.sqlite3'),rates=RateService(self.root/'rates.sqlite3'),public_origin='https://albums.example.test')
   self.server=ThreadingHTTPServer(('127.0.0.1',0),make_handler(services));threading.Thread(target=self.server.serve_forever,daemon=True).start()
  def tearDown(self):self.server.shutdown();self.server.server_close();self.tmp.cleanup()
- def req(self,path,body=None,cookie=None,origin=None,host=None):
+ def req(self,path,body=None,cookie=None,origin=None,host=None,**extra):
   c=http.client.HTTPConnection('127.0.0.1',self.server.server_port);headers={}
   if cookie:headers['Cookie']=cookie
   if origin:headers['Origin']=origin
   if host:headers['Host']=host
+  if extra:headers.update(extra)
   if body is not None:headers['Content-Type']='application/json'
   c.request('GET' if body is None else 'POST',path,None if body is None else json.dumps(body),headers);r=c.getresponse();out=(r.status,dict(r.getheaders()),r.read());c.close();return out
  def test_protected_data_and_session(self):
@@ -109,7 +110,7 @@ class WebTests(unittest.TestCase):
   stamp=p.stat().st_mtime;self.backups.run();self.assertEqual(stamp,p.stat().st_mtime)
  def test_health_public_and_versioned(self):
   status,_,body=self.req('/api/health');self.assertEqual(status,200)
-  d=json.loads(body);self.assertTrue(d['ok']);self.assertIn('version',d);self.assertEqual(d['schema'],3)
+  d=json.loads(body);self.assertTrue(d['ok']);self.assertIn('version',d);self.assertEqual(d['schema'],4)
  def test_pwa_assets_and_login_gate(self):
   status,_,body=self.req('/manifest.webmanifest');self.assertEqual(status,200);self.assertEqual(json.loads(body)['display'],'standalone')
   # 未登录：登录页自身、其渲染依赖与 PWA 壳元数据可取；其余一切路径 302 到登录页
@@ -125,7 +126,34 @@ class WebTests(unittest.TestCase):
   s=ThreadingHTTPServer(('127.0.0.1',0),make_handler(services));threading.Thread(target=s.serve_forever,daemon=True).start()
   try:
    c=http.client.HTTPConnection('127.0.0.1',s.server_port)
-   c.request('GET','/',None,{'Host':f'127.0.0.1:{s.server_port}'});self.assertEqual(c.getresponse().status,200)
-   c.request('GET','/assets/index.js',None,{'Host':f'127.0.0.1:{s.server_port}'});self.assertEqual(c.getresponse().status,200)
+   # HTTP/1.1 keep-alive：同一连接复用前必须读完上一响应体
+   c.request('GET','/',None,{'Host':f'127.0.0.1:{s.server_port}'});self.assertEqual(c.getresponse().read()[:15],b'<!doctype html>')
+   c.request('GET','/assets/index.js',None,{'Host':f'127.0.0.1:{s.server_port}'});self.assertGreater(len(c.getresponse().read()),1000)
    c.close()
   finally:s.shutdown();s.server_close()
+
+ def test_cover_endpoint_auth_and_immutable_cache(self):
+  # 未登录取封面 → 401：封面虽已落盘仍属个人数据，走 API 鉴权
+  self.assertEqual(self.req('/api/cover/0123456789abcdef.png')[0],401)
+  status,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
+  png='data:image/png;base64,'+base64.b64encode(b'\x89PNGtestcoverbytes').decode()
+  self.assertEqual(self.req('/api/records',{'title':'T','artist':'A','date':'2026-09-07','price':'10','currency':'CNY','cover':png},cookie)[0],200)
+  _,_,body=self.req('/api/state',cookie=cookie);cover=json.loads(body)['records'][0]['cover']
+  self.assertTrue(cover.startswith('/api/cover/'))
+  status,h,img=self.req(cover,cookie=cookie)
+  self.assertEqual(status,200);self.assertEqual(img,b'\x89PNGtestcoverbytes')
+  self.assertEqual(h['Cache-Control'],'private, max-age=31536000, immutable')  # 内容寻址 → 可永久缓存
+  self.assertEqual(self.req('/api/cover/zzzzzzzzzzzzzzzz.png',cookie=cookie)[0],404)
+ def test_gzip_and_assets_etag(self):
+  status,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
+  # gzip：声明 Accept-Encoding 的客户端拿压缩流（解压与原文一致）；未声明的拿原文
+  status,h,body=self.req('/assets/index.js',cookie=cookie,**{'Accept-Encoding':'gzip'})
+  self.assertEqual(status,200);self.assertEqual(h['Content-Encoding'],'gzip')
+  status,h,raw=self.req('/assets/index.js',cookie=cookie)
+  self.assertEqual(status,200);self.assertNotIn('Content-Encoding',h);self.assertGreater(len(raw),300000)
+  self.assertEqual(gzip.decompress(body),raw)
+  # ETag/304：未变更的构建产物第二次请求免重传；壳文件保持 no-store
+  etag=h['ETag'];self.assertTrue(etag)
+  status,h,_=self.req('/assets/index.js',cookie=cookie,**{'If-None-Match':etag})
+  self.assertEqual(status,304);self.assertEqual(h['Cache-Control'],'no-cache')
+  self.assertEqual(self.req('/theme.js')[1]['Cache-Control'],'no-store')

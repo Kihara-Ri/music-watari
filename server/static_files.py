@@ -25,4 +25,13 @@ def serve(h, path):
     target = (STATIC / rel).resolve()
     if STATIC not in target.parents or not target.is_file():
         return h.send({'error': '页面不存在'}, 404)
-    h.send(target.read_bytes(), mime=mimetypes.guess_type(target)[0] or 'application/octet-stream')
+    mime = mimetypes.guess_type(target)[0] or 'application/octet-stream'
+    if rel.startswith('assets/'):
+        # 构建产物（几十万字节）：文件名稳定不带哈希 → ETag 协商缓存，未变更即 304 免重传；
+        # 改版重新构建后 mtime 变化自动失效，无需手动清缓存。
+        etag = f'"{target.stat().st_mtime_ns:x}-{target.stat().st_size:x}"'
+        if h.headers.get('If-None-Match') == etag:
+            return h.not_modified(etag, 'no-cache')
+        return h.send(target.read_bytes(), mime=mime, cache='no-cache', etag=etag)
+    # 壳文件（页面/图标/sw/theme）极小且可能原地替换，保持 no-store 立即生效
+    h.send(target.read_bytes(), mime=mime)

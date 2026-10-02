@@ -25,7 +25,7 @@ export interface AlbumRecord {
   fees: string;
   actual: string;
   cost: string | null;      // null = 成本待补
-  cover: string;            // data URL 或 ''
+  cover: string;            // 封面引用（/api/cover/<内容哈希>.<ext>）或 ''
   coverSource?: CoverSource;
   location: string;
   version: string;

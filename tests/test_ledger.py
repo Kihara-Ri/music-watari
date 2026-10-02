@@ -47,6 +47,50 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             self.store.save({'title':'x','artist':'y','date':'2026-09-07','price':'1','currency':'JPY','photos':['data:text/html;base64,AAAA']})
         self.assertEqual(self.record(self.buy())['photoCount'],0)
+    def test_cover_roundtrip(self):
+        png='data:image/png;base64,'+base64.b64encode(b'\x89PNGfakecover').decode()
+        rid=self.buy(cover=png)
+        r=self.record(rid)
+        self.assertTrue(r['cover'].startswith('/api/cover/'));self.assertTrue(r['cover'].endswith('.png'))
+        f=self.store.covers_dir/r['cover'].rsplit('/',1)[1]
+        self.assertEqual(f.read_bytes(),b'\x89PNGfakecover')
+        # 内容寻址：同一张图全库共用一个文件
+        rid2=self.buy(cover=png)
+        self.assertEqual(self.record(rid2)['cover'],r['cover'])
+        # 编辑不带封面 → 引用原样保留；审计快照里只有引用没有 base64
+        self.store.save({'id':rid,'revision':self.record(rid)['revision'],'note':'x'})
+        self.assertEqual(self.record(rid)['cover'],r['cover'])
+        with self.store.connect() as db:
+            rows=[row[0] for row in db.execute('SELECT data FROM audit ORDER BY id DESC LIMIT 2')]
+        self.assertFalse(any('base64' in row for row in rows))
+        # 换封面 → 新引用
+        png2='data:image/png;base64,'+base64.b64encode(b'\x89PNGothercover').decode()
+        self.store.save({'id':rid,'revision':self.record(rid)['revision'],'cover':png2})
+        self.assertNotEqual(self.record(rid)['cover'],r['cover'])
+        with self.assertRaises(ValidationError):
+            self.store.save({'title':'x','artist':'y','date':'2026-09-07','price':'1','currency':'JPY','cover':'data:image/gif;base64,AAAA'})
+    def test_schema4_migration_covers_and_audit(self):
+        # 直接入库旧 schema-3 形态（data URL 封面 + 审计整图快照），重开库触发一次性迁移
+        png='data:image/png;base64,'+base64.b64encode(b'\x89PNGlegacy'+b'0'*4096).decode()
+        legacy={'id':'legacy1','title':'旧','artist':'数据','cover':png,'revision':1,'createdAt':'2026-01-01',
+                'status':'domestic','currency':'CNY','price':'','fees':'0.00','actual':'','date':''}
+        path=Path(self.tmp.name)/'db.sqlite3'
+        with self.store.connect() as db:
+            db.execute("INSERT OR REPLACE INTO meta VALUES('schema','3')")
+            db.execute('INSERT INTO records(id,data) VALUES(?,?)',('legacy1',json.dumps(legacy)))
+            db.execute('INSERT INTO audit(at,action,data) VALUES(?,?,?)',
+                       ('2026-01-01','修改专辑',json.dumps({'id':'legacy1','before':legacy})))
+        before=path.stat().st_size
+        store=Store(path)
+        r=next(x for x in store.state()['records'] if x['id']=='legacy1')
+        self.assertTrue(r['cover'].startswith('/api/cover/'))
+        f=store.covers_dir/r['cover'].rsplit('/',1)[1]
+        self.assertEqual(f.read_bytes(),b'\x89PNGlegacy'+b'0'*4096)
+        with store.connect() as db:
+            self.assertEqual(db.execute("SELECT data FROM meta WHERE key='schema'").fetchone()[0],'4')
+            audit=json.loads(db.execute('SELECT data FROM audit').fetchone()[0])
+        self.assertNotIn('cover',audit['before'])
+        self.assertLess(path.stat().st_size,before)  # VACUUM 收回了被剔除的体积
     def test_new_jpy_overseas_cny_domestic(self):
         j=self.buy();c=self.buy(currency='CNY',price='100',date='2026-09-07')
         self.assertEqual(self.record(j)['status'],'overseas');self.assertEqual(self.record(c)['status'],'domestic')

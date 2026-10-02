@@ -125,8 +125,15 @@ export default function App() {
     seenRym.current = names;
   }, [state, toast]);
 
+  // 回到页签时刷新：拾取书签从 RYM 回传的艺人绑定，并提示新增绑定。
+  // 30 秒内跳过重复拉取——页签频繁切换不应每次都全量下载状态。
+  const lastRefreshAt = useRef(0);
   useEffect(() => {
-    const onVis = () => { if (!document.hidden) refresh().catch(() => { /* 离线时静默 */ }); };
+    const onVis = () => {
+      if (document.hidden || Date.now() - lastRefreshAt.current < 30000) return;
+      lastRefreshAt.current = Date.now();
+      refresh().catch(() => { /* 离线时静默 */ });
+    };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
   }, [refresh]);

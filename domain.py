@@ -6,7 +6,11 @@ A record without price or without a rate has unknown cost (None, never 0).
 """
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import date
+import re
 from urllib.parse import urlsplit
+
+# 落盘后的封面引用（storage.stash_cover 生成）；data URL 仅限备份恢复等旧数据通道
+COVER_URL_RE = re.compile(r'^/api/cover/[0-9a-f]{16}\.(jpg|png|webp)$')
 
 STATUSES = ('overseas', 'transit', 'domestic', 'shipping', 'sold', 'trash')
 MODULE_NAMES = ('acquisition', 'trading', 'circulation')
@@ -113,9 +117,10 @@ def clean_record(data):
         r[k] = str(r.get(k,'')).strip()
         if len(r[k]) > 50000: raise ValidationError('备注过长')
     cover = str(r.get('cover',''))
-    if cover and not (cover.startswith('data:image/jpeg;base64,') or cover.startswith('data:image/png;base64,') or cover.startswith('data:image/webp;base64,')):
+    if cover.startswith('data:image/') and len(cover) > 3000000: raise ValidationError('封面数据过大')
+    if cover and not (COVER_URL_RE.match(cover) or cover.startswith(
+            ('data:image/jpeg;base64,','data:image/png;base64,','data:image/webp;base64,'))):
         raise ValidationError('封面数据不正确')
-    if len(cover) > 3000000: raise ValidationError('封面数据过大')
     r['cover'] = cover
     if 'releaseInfo' in r: r['releaseInfo'] = clean_release_info(r['releaseInfo'])
     if 'listingDescription' in r:

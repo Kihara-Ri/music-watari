@@ -12,8 +12,17 @@ server {
     ssl_certificate /etc/letsencrypt/live/your.domain/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/your.domain/privkey.pem;
     client_max_body_size 50m;
+    # 应用自身已按 Accept-Encoding gzip；这里只作兜底（如旧版本未压缩的响应）
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_types application/json application/javascript text/css image/svg+xml;
     location / {
         proxy_pass http://127.0.0.1:8765;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto https;
         proxy_read_timeout 180s;

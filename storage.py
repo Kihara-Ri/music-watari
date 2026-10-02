@@ -9,7 +9,7 @@ share of the postage onto each album's fees (part of acquisition cost); it
 can be rolled back at any step while albums haven't moved on.
 Sales start at 'shipping'; only 确认收货 turns them into realized cash ('sold').
 """
-import json, sqlite3, uuid, base64, re, shutil, secrets, threading
+import json, sqlite3, uuid, base64, hashlib, re, shutil, secrets, threading
 from pathlib import Path
 from datetime import datetime
 from urllib.parse import urlsplit
@@ -17,7 +17,7 @@ from domain import ValidationError, clean_record, clean_release_info, clean_modu
 from covers import normalized, artist_variants
 from decimal import Decimal
 
-SCHEMA = 3
+SCHEMA = 4
 SHIPMENT_STATUSES = ('transit', 'arrived', 'cancelled')
 SALE_STATUSES = ('shipping', 'complete', 'cancelled', 'returned', 'refunded')
 PHOTO_RE = re.compile(r'^data:image/(jpeg|png|webp);base64,')
@@ -34,6 +34,17 @@ def rym_artist_url(url):
 PHOTO_MIME = {'jpeg': '.jpg', 'png': '.png', 'webp': '.webp'}
 MAX_PHOTOS = 30
 
+def _strip_cover_blobs(x):
+    """递归剔除 data-URL 形式的封面快照（audit 里的纯体积）；返回是否有剔除。"""
+    hit = False
+    if isinstance(x, dict):
+        for k in [k for k, v in x.items() if k == 'cover' and isinstance(v, str) and v.startswith('data:image/')]:
+            x.pop(k); hit = True
+        for v in x.values(): hit = _strip_cover_blobs(v) or hit
+    elif isinstance(x, list):
+        for v in x: hit = _strip_cover_blobs(v) or hit
+    return hit
+
 def uid(): return uuid.uuid4().hex
 
 def now(): return datetime.now().isoformat(timespec='seconds')
@@ -46,6 +57,7 @@ class Store:
     def __init__(self, path, rates=None):
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         self.photos_dir = self.path.parent / 'photos'
+        self.covers_dir = self.path.parent / 'covers'
         self.imports_dir = self.path.parent / 'imports'
         self.import_lock = threading.RLock()
         self.rates = rates
@@ -70,26 +82,45 @@ class Store:
     def audit(self, db, action, data):
         db.execute('INSERT INTO audit(at,action,data) VALUES(?,?,?)',(now(),action,dumps(data)))
     def migrate(self):
-        """One-way upgrades; idempotent. Schema 1: review/manual rates. Schema 3: shipments."""
+        """One-way upgrades; idempotent. Schema 3: shipments. Schema 4: covers to files."""
         with self.connect() as db:
             version = db.execute("SELECT data FROM meta WHERE key='schema'").fetchone()
             if version and json.loads(version[0]) >= SCHEMA: return
+            changed = False
             for r in self.rows(db,'records'):
-                changed = False
+                touched = False
                 if r.get('status') == 'review':
-                    r['status'] = 'domestic'; changed = True
+                    r['status'] = 'domestic'; touched = True
                 if r.get('previousStatus') == 'review':
-                    r['previousStatus'] = 'domestic'; changed = True
+                    r['previousStatus'] = 'domestic'; touched = True
                 for k in ('rate','rateSource'):
-                    if k in r: r.pop(k); changed = True
-                if changed: self.put(db,'records',r)
+                    if k in r: r.pop(k); touched = True
+                if isinstance(r.get('cover'),str) and r['cover'].startswith('data:image/'):
+                    self.stash_cover(r); touched = True
+                if touched: self.put(db,'records',r); changed = True
+            # 历史审计行里的封面快照是纯体积（base64 整图），只删数据 URL 形式的值
+            for aid,data in db.execute('SELECT id,data FROM audit').fetchall():
+                try: blob=json.loads(data)
+                except Exception: continue
+                if _strip_cover_blobs(blob):
+                    db.execute('UPDATE audit SET data=? WHERE id=?',(dumps(blob),aid)); changed = True
             db.execute("INSERT OR REPLACE INTO meta VALUES('schema',?)",(dumps(SCHEMA),))
-    def backup(self):
+        if changed: self.vacuum()
+    def vacuum(self):
+        db = sqlite3.connect(self.path, isolation_level=None)
+        db.execute('VACUUM'); db.close()
+    def backup(self, audit_limit=None):
+        """完整快照（checkpoint / 导出用）；audit_limit 给出时只取最近 N 条（state 专用）。"""
         with self.connect() as db:
+            if audit_limit:
+                rows=[dict(r) for r in db.execute('SELECT * FROM audit ORDER BY id DESC LIMIT ?',(audit_limit,))]
+                rows.reverse()  # 保持与全量一致的时间正序
+            else:
+                rows=[dict(r) for r in db.execute('SELECT * FROM audit')]
             return {'format':'album-ledger','schema':SCHEMA,'createdAt':now(),
                 'records':self.rows(db,'records'),'sales':self.rows(db,'sales'),
                 'shipments':self.rows(db,'shipments'),
-                'audit':[dict(r) for r in db.execute('SELECT * FROM audit')],
+                'audit':rows,
                 'settings':{r['key']:json.loads(r['data']) for r in db.execute('SELECT * FROM meta')}}
     def checkpoint(self):
         folder=self.path.parent/'backups';folder.mkdir(exist_ok=True)
@@ -103,7 +134,7 @@ class Store:
             out = {d: self.rates.get(d) for d in days}
         return out
     def state(self):
-        b=self.backup()
+        b=self.backup(audit_limit=100)  # audit 全量只服务备份/导出；state 只带最近 100 条
         enabled = b['settings'].get('modules-v1')
         b['modules'] = {'enabled': clean_modules(enabled) if enabled is not None else {k: True for k in MODULE_NAMES},
                         'configured': enabled is not None,
@@ -124,7 +155,6 @@ class Store:
                 # Returned stock retains its acquisition cost; sale shows only residual loss.
                 p=net if s['status']=='returned' else (net-c if c is not None else None)
                 item['profit']=money(p) if p is not None else None
-        b['audit']=b['audit'][-100:]
         if self.rates: b['rateService']=self.rates.status()
         return b
     def set_modules(self, enabled):
@@ -200,6 +230,26 @@ class Store:
         if plan:
             d.mkdir(parents=True, exist_ok=True)
             for i, (ext, raw) in enumerate(plan): (d / f'{i}{ext}').write_bytes(raw)
+    def stash_cover(self, r):
+        """封面 data URL → data/covers/<内容哈希>.<ext>，记录只留 /api/cover/ 引用。
+
+        内容寻址：同一张图全库共用一个文件，换封面自然得到新 URL，浏览器缓存随之失效。
+        非 data URL（空串或已是 /api/cover/ 引用）原样放行。
+        """
+        cover = r.get('cover')
+        if not isinstance(cover, str) or not cover.startswith('data:image/'): return r
+        m = PHOTO_RE.match(cover)
+        if not m: raise ValidationError('封面格式不正确，请使用 JPG/PNG/WebP 图片')
+        if len(cover) > 3000000: raise ValidationError('封面数据过大')
+        try: raw = base64.b64decode(cover[m.end():], validate=True)
+        except Exception: raise ValidationError('封面数据损坏，请重新选择图片')
+        if not raw: raise ValidationError('封面数据为空')
+        digest = hashlib.sha256(raw).hexdigest()[:16]
+        ext = PHOTO_MIME[m.group(1)]
+        self.covers_dir.mkdir(parents=True, exist_ok=True)
+        (self.covers_dir / (digest + ext)).write_bytes(raw)
+        r['cover'] = f'/api/cover/{digest}{ext}'
+        return r
     def save(self, data):
         items=data.get('items')
         if items is None: items=[data]
@@ -212,6 +262,7 @@ class Store:
             modules = self.meta_get(db, 'modules-v1')
             for item in items:
                 photos=item.pop('photos',None);item.pop('photoCount',None)
+                self.stash_cover(item)  # 封面 data URL 落盘换引用，base64 不进库也不进审计
                 if item.get('id'):
                     old=self.get(db,'records',item['id'])
                     if item.get('revision')!=old['revision']: raise ValidationError('记录已变更，请关闭详情并重新打开')
@@ -631,6 +682,7 @@ class Store:
                 want='complete' if r['status']=='sold' else 'shipping'
                 matches=[s for s in b['sales'] if s['id']==r.get('saleId') and s['status'] in (want,'refunded') and any(i['recordId']==r['id'] for i in s['items'])]
                 if len(matches)!=1: raise ValidationError('备份中的售出记录缺少有效销售单')
+        for r in b['records']: self.stash_cover(r)  # 旧备份里的 data URL 封面一并落盘
         self.checkpoint()
         with self.connect() as db:
             for table in ('records','sales','shipments','audit','meta'): db.execute(f'DELETE FROM {table}')

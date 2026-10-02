@@ -6,6 +6,7 @@ h 提供 send()/query；svc 是注入的服务集合（见 context.Services）�
 import hashlib
 import base64
 import mimetypes
+import re
 import threading
 from urllib.parse import parse_qs, urlsplit
 
@@ -55,6 +56,17 @@ def api_photo(h, svc):
     files = sorted(folder.glob(parts[4] + '.*')) if folder and folder.exists() else []
     if not files: return h.send({'error': '照片不存在'}, 404)
     return h.send(files[0].read_bytes(), mime=mimetypes.guess_type(files[0])[0] or 'image/jpeg')
+
+
+def api_cover(h, svc):
+    """封面文件 /api/cover/<16位内容哈希>.<jpg|png|webp>；内容寻址 → 可 immutable 长缓存。"""
+    name = urlsplit(h.path).path.split('/')[-1]
+    if not re.fullmatch(r'[0-9a-f]{16}\.(jpg|png|webp)', name):
+        return h.send({'error': '封面不存在'}, 404)
+    path = svc.store.covers_dir / name
+    if not path.is_file(): return h.send({'error': '封面不存在'}, 404)
+    mime = {'jpg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp'}[name.rsplit('.', 1)[1]]
+    return h.send(path.read_bytes(), mime=mime, cache='private, max-age=31536000, immutable')
 
 
 def api_backup(h, svc):
@@ -183,6 +195,7 @@ PUBLIC_GET = {  # 免登录（监控与部署探测）
 }
 GET_PREFIX = {  # 带路径参数的接口
     '/api/photo/': api_photo,
+    '/api/cover/': api_cover,
     '/api/import-photo/': api_import_photo,
 }
 POST = {
