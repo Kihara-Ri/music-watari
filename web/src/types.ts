@@ -100,6 +100,9 @@ export interface SaleItem {
   refund: string;
   net: string;
   profit: string | null;
+  grossOriginal?: string;   // 日元售出：原币金额（人民币折算后留存，同运费口径）
+  feesOriginal?: string;
+  postageOriginal?: string;
 }
 
 export interface Sale {
@@ -111,6 +114,10 @@ export interface Sale {
   gross: string;
   fees: string;
   postage: string;
+  currency?: Currency;
+  grossOriginal?: string;
+  feesOriginal?: string;
+  postageOriginal?: string;
   address: string;
   note: string;
   channel: string;

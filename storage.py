@@ -430,11 +430,11 @@ class Store:
                 r['revision']+=1;self.put(db,'records',r);self.audit(db,action,{'id':id,'before':old})
         return {'count':len(ids)}
     # ── shipments (打包运输) ──
-    def to_cny(self,amount,currency,date):
-        """运费折算为人民币；日元按当日每100円汇率。缺汇率时拒绝：运费要立即均摊进成本，不能挂起待定。"""
+    def to_cny(self,amount,currency,date,label='金额'):
+        """折算为人民币；日元按当日每100円汇率。缺汇率时拒绝：金额要立即入账，不能挂起待定。"""
         if currency=='CNY': return amount
         rate=self.rates.get(date) if self.rates else None
-        if rate in ('',None): raise ValidationError('暂无当日汇率，无法折算日元运费；可直接填人民币金额')
+        if rate in ('',None): raise ValidationError(f'暂无当日汇率，无法折算日元{label}；可直接填人民币金额')
         return Decimal(str(amount))*Decimal(str(rate))/100
     def ship(self,data):
         self.require_module('circulation')
@@ -446,7 +446,7 @@ class Store:
         method=str(data.get('method','')).strip()
         if not method or len(method)>50: raise ValidationError('请填写运输方式')
         date=day(data.get('date'),'发货日期')
-        cny=self.to_cny(cost_v,currency,date)
+        cny=self.to_cny(cost_v,currency,date,'运费')
         s={'id':uid(),'method':method,'cost':money(cny),'date':date,
             'currency':currency,'costOriginal':money(cost_v) if currency=='JPY' else '',
             'note':str(data.get('note','')),'status':'transit','arrivedDate':'','createdAt':now(),
@@ -508,7 +508,7 @@ class Store:
                 currency=data.get('currency') or s.get('currency') or 'CNY'
                 if currency not in ('CNY','JPY'): raise ValidationError('币种不支持')
                 orig=number(data['cost'],'运费') if 'cost' in data else Decimal(s.get('costOriginal') or s['cost'])
-                new=self.to_cny(orig,currency,s['date'])
+                new=self.to_cny(orig,currency,s['date'],'运费')
                 shares=allocate(new,[1]*len(s['items']))
                 orig_shares=allocate(orig,[1]*len(s['items'])) if currency=='JPY' else shares
                 for item,share,o_share in zip(s['items'],shares,orig_shares):
@@ -526,21 +526,32 @@ class Store:
         self.require_module('trading')
         ids=list(dict.fromkeys(data.get('ids',[])))
         if not ids: raise ValidationError('请选择要出售的专辑')
+        currency=data.get('currency') or 'CNY'
+        if currency not in ('CNY','JPY'): raise ValidationError('币种不支持')
         gross=number(data.get('gross'),'成交价')
         fees=number(data.get('fees',0),'平台扣费')
         postage=number(data.get('postage',0),'寄出运费')
+        date=day(data.get('date'),'售出日期')
         if data.get('status') not in (None,'shipping'): raise ValidationError('售出后需买家确认收货才到账')
         address=str(data.get('address','')).strip()
         if len(address)>500: raise ValidationError('地址过长')
+        # 日元按售出日汇率折算人民币入账，原币金额与分摊留存（同运费口径）
+        gross_cny=self.to_cny(gross,currency,date);fees_cny=self.to_cny(fees,currency,date);postage_cny=self.to_cny(postage,currency,date)
         with self.connect() as db:
             rs=[self.get(db,'records',id) for id in ids]
             if any(r['status'] not in ('overseas','domestic') for r in rs): raise ValidationError('其中有专辑不能出售，请刷新列表')
-            gs=allocate(gross,[1]*len(rs));fs=allocate(fees,[1]*len(rs));ps=allocate(postage,[1]*len(rs))
-            s={'id':uid(),'date':day(data.get('date'),'售出日期'),'status':'shipping','receivedDate':'',
-                'gross':money(gross),'fees':money(fees),'postage':money(postage),'address':address,
+            gs=allocate(gross_cny,[1]*len(rs));fs=allocate(fees_cny,[1]*len(rs));ps=allocate(postage_cny,[1]*len(rs))
+            og=allocate(gross,[1]*len(rs)) if currency=='JPY' else gs
+            of=allocate(fees,[1]*len(rs)) if currency=='JPY' else fs
+            op=allocate(postage,[1]*len(rs)) if currency=='JPY' else ps
+            s={'id':uid(),'date':date,'status':'shipping','receivedDate':'',
+                'currency':currency,'gross':money(gross_cny),'fees':money(fees_cny),'postage':money(postage_cny),'address':address,
+                **({'grossOriginal':money(gross),'feesOriginal':money(fees),'postageOriginal':money(postage)} if currency=='JPY' else {}),
                 'note':str(data.get('note','')),'channel':str(data.get('channel','闲鱼')),'orderId':str(data.get('orderId','')),
                 'createdAt':now(),
-                'items':[{'recordId':r['id'],'gross':g,'fees':f,'postage':p,'refund':'0.00'} for r,g,f,p in zip(rs,gs,fs,ps)]}
+                'items':[{'recordId':r['id'],'gross':g,'fees':f,'postage':p,'refund':'0.00',
+                          **({'grossOriginal':g0,'feesOriginal':f0,'postageOriginal':p0} if currency=='JPY' else {})}
+                         for r,g,f,p,g0,f0,p0 in zip(rs,gs,fs,ps,og,of,op)]}
             for r in rs:
                 r['previousStatus']=r['status'];r['status']='shipping';r['saleId']=s['id'];r['revision']+=1;self.put(db,'records',r)
             self.put(db,'sales',s);self.audit(db,'记录售出',s)

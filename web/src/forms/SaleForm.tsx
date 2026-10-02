@@ -1,14 +1,20 @@
 // 记录售出 / 合单售出表单：分组列表行（手机友好，label 左、值右）+ 实时预览到手
-// 与预估利润，多张按张数均摊。日期用「今天/昨天/选日期」快捷块，渠道用历史渠道块。
+// 与预估利润，多张按张数均摊。日期用「今天/昨天/选日期」快捷块，渠道用历史渠道块；
+// 日本平台渠道（メルカリ等）自动切日元，按售出日汇率折算人民币入账（同运费口径）。
 import {useState} from 'react';
 import {api} from '../core/api';
 import {prefs} from '../core/prefs';
 import {sum, today, yuan} from '../core/format';
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
+import type {Currency} from '../types';
 import {Field, TextareaField} from './fields';
+import {Seg} from '../components/ui/Seg';
 import {AlbumLine} from '../components/SaleCard';
-import {useFormSubmit} from './shared';
+import {useFormSubmit, useRate} from './shared';
+
+// 点这些渠道自动切日元；遇到新的日本平台就往这里加
+const JP_CHANNELS = new Set(['メルカリ']);
 
 export function openSaleForm(app: AppCtx, ids: string[]) {
   const rs = ids.map(app.rec).filter(Boolean);
@@ -34,17 +40,33 @@ function saleChannels(channels: string[]): string[] {
 function SaleForm({ids}: {ids: string[]}) {
   const app = useApp();
   const {error, saving, run} = useFormSubmit();
+  const savedChannel = prefs.get('saleChannel', '闲鱼');
   const [v, setV] = useState({
     gross: '', date: today(), fees: '0', postage: '0',
-    channel: prefs.get('saleChannel', '闲鱼'), address: '',
+    channel: savedChannel, address: '',
     orderId: '', note: '',
+    currency: (JP_CHANNELS.has(savedChannel) ? 'JPY' : 'CNY') as Currency,
   });
   const [customChannel, setCustomChannel] = useState(false);
   const set = (patch: Partial<typeof v>) => { setV(prev => ({...prev, ...patch})); app.setDrawerDirty(true); };
+  // 切日元时金额取整（与买入金额/运费的币种切换同款）
+  const switchCurrency = (c: Currency) => set(c === 'JPY' ? {
+    currency: c,
+    gross: v.gross === '' ? '' : String(Math.round(Number(v.gross))),
+    fees: v.fees === '' ? '' : String(Math.round(Number(v.fees))),
+    postage: v.postage === '' ? '' : String(Math.round(Number(v.postage))),
+  } : {currency: c});
   const rs = ids.map(app.rec).filter((r): r is NonNullable<typeof r> => !!r);
   const unknown = rs.some(r => r.cost === null);
   const csum = sum(rs, 'cost');
-  const net = v.gross === '' ? null : Number(v.gross) - Number(v.fees || 0) - Number(v.postage || 0);
+  const unit = v.currency === 'JPY' ? '円' : '元';
+  const rate = useRate(v.date);
+  const toCny = (x: string): number | null =>
+    v.currency === 'CNY' ? Number(x) : rate === null ? null : Number(x) * Number(rate) / 100;
+  const gc = v.gross === '' ? null : toCny(v.gross);
+  const fc = toCny(v.fees || '0');
+  const pc = toCny(v.postage || '0');
+  const net = gc === null || fc === null || pc === null ? null : gc - fc - pc;
 
   const hist = saleChannels(app.state.sales.map(s => s.channel));
   const channels = v.channel && !hist.includes(v.channel) ? [v.channel, ...hist] : hist;
@@ -52,6 +74,10 @@ function SaleForm({ids}: {ids: string[]}) {
   const dYesterday = yesterday();
   const datePreset = v.date === dToday ? 'today' : v.date === dYesterday ? 'yesterday' : 'custom';
   const profit = net === null ? null : Number((net - csum).toFixed(2));
+  const curLine = rate === null
+    ? '暂无当日汇率，无法折算；可直接填人民币或稍后再试'
+    : gc === null ? `100 円 = ¥${Number(rate).toFixed(2)}`
+      : `折合 ${yuan(Number(gc.toFixed(2)))} · 100 円 = ¥${Number(rate).toFixed(2)}`;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +92,8 @@ function SaleForm({ids}: {ids: string[]}) {
     if (!inp) return;
     try { inp.showPicker(); } catch { /* 旧浏览器退回 label 激活 */ }
   };
+  // 日元金额不设步进限制：成交价/扣费/运费常是非整十数（如 108 円＝成交价 10%）
+  const step = v.currency === 'JPY' ? 'any' : '0.01';
 
   return (
     <form id="sale-form" onSubmit={submit}>
@@ -76,10 +104,12 @@ function SaleForm({ids}: {ids: string[]}) {
           <div className="row amount-row">
             <label htmlFor="f-gross">成交价</label>
             <div className="row-value amount">
-              <input id="f-gross" name="gross" type="number" required min="0" step="0.01"
-                     inputMode="decimal" placeholder="0.00" value={v.gross}
+              <input id="f-gross" name="gross" type="number" required min="0" step={step}
+                     inputMode="decimal" placeholder={v.currency === 'JPY' ? '0' : '0.00'} value={v.gross}
                      onChange={e => set({gross: e.target.value})}/>
-              <span className="unit">元</span>
+              <Seg className="seg-cur" ariaLabel="币种"
+                   options={[{value: 'JPY', label: '円'}, {value: 'CNY', label: '元'}]}
+                   value={v.currency} onValue={c => switchCurrency(c as Currency)}/>
             </div>
           </div>
           <div className="row">
@@ -99,17 +129,17 @@ function SaleForm({ids}: {ids: string[]}) {
           <div className="row">
             <label htmlFor="f-fees">平台扣费</label>
             <div className="row-value">
-              <input id="f-fees" name="fees" type="number" min="0" step="0.01" inputMode="decimal"
+              <input id="f-fees" name="fees" type="number" min="0" step={step} inputMode="decimal"
                      placeholder="0" value={v.fees} onChange={e => set({fees: e.target.value})}/>
-              <span className="unit">元</span>
+              <span className="unit">{unit}</span>
             </div>
           </div>
           <div className="row">
             <label htmlFor="f-postage">寄出运费</label>
             <div className="row-value">
-              <input id="f-postage" name="postage" type="number" min="0" step="0.01" inputMode="decimal"
+              <input id="f-postage" name="postage" type="number" min="0" step={step} inputMode="decimal"
                      placeholder="0" value={v.postage} onChange={e => set({postage: e.target.value})}/>
-              <span className="unit">元</span>
+              <span className="unit">{unit}</span>
             </div>
           </div>
           <div className="row">
@@ -117,7 +147,7 @@ function SaleForm({ids}: {ids: string[]}) {
             <div className="row-value chips">
               {channels.map(c => (
                 <button type="button" key={c} className={`chip${v.channel === c && !customChannel ? ' on' : ''}`}
-                        onClick={() => { set({channel: c}); setCustomChannel(false); }}>{c}</button>
+                        onClick={() => { set({channel: c, currency: JP_CHANNELS.has(c) ? 'JPY' : 'CNY'}); setCustomChannel(false); }}>{c}</button>
               ))}
               <button type="button" className={`chip${customChannel ? ' on' : ''}`} aria-label="自定义渠道"
                       onClick={() => setCustomChannel(x => !x)}>＋</button>
@@ -128,11 +158,13 @@ function SaleForm({ids}: {ids: string[]}) {
               <label htmlFor="f-channel">自定义</label>
               <div className="row-value">
                 <input id="f-channel" name="channel" placeholder="输入渠道名称" value={v.channel}
-                       onChange={e => set({channel: e.target.value})}/>
+                       onChange={e => set({channel: e.target.value,
+                         ...(JP_CHANNELS.has(e.target.value.trim()) ? {currency: 'JPY' as Currency} : {})})}/>
               </div>
             </div>
           ) : null}
         </div>
+        {v.currency === 'JPY' ? <div className="cost-line">{curLine}</div> : null}
         <div className="preview sale-preview">
           <div className="line">
             <b>{net === null ? '—' : yuan(net)}</b><span>预计到手</span>

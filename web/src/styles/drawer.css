@@ -82,6 +82,9 @@ details.adv:not([open]) > :not(summary){display:none}
 #panel .row-value input::placeholder{font-weight:400}
 .row-group .unit{flex:none;font-size:12px;color:var(--muted)}
 .amount-row .row-value input{font-size:20px;font-weight:700}
+/* 售出行内币种分段：贴在成交价输入右侧，替代单位字（买入金额 seg-cur 同款剥皮） */
+.row-group .seg-cur{flex:none;background:none;border:none;border-radius:0;padding:0;gap:2px}
+.row-group .seg-cur button{padding:0 9px;font-size:12px;border-radius:7px}
 
 /* 行内快捷块：今天 / 昨天 / 渠道等点选块 */
 .row-group .chips{flex-wrap:wrap;gap:7px}

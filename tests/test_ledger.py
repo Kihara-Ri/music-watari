@@ -92,6 +92,34 @@ class LedgerTests(unittest.TestCase):
     def test_refund_only_while_shipping(self):
         id=self.buy();sid=self.sell([id]);self.store.sale_action({'id':sid,'action':'refund','refund':'160','date':'2026-09-08','returned':True})
         self.assertEqual(self.record(id)['status'],'domestic');self.assertEqual(self.sale(sid)['items'][0]['profit'],'-10.00')
+    # ── sale currency: 日元售出按售出日汇率折算人民币，原币留存 ──
+    def test_sell_jpy_converts_and_keeps_original(self):
+        id=self.buy()  # 成本 2000円@4.8+10 = 106.00
+        sid=self.sell([id],currency='JPY',gross='1000',fees='100',postage='50')
+        s=self.sale(sid)
+        self.assertEqual(s['currency'],'JPY')
+        self.assertEqual(s['grossOriginal'],'1000.00');self.assertEqual(s['gross'],'48.00')
+        self.assertEqual(s['feesOriginal'],'100.00');self.assertEqual(s['fees'],'4.80')
+        self.assertEqual(s['postageOriginal'],'50.00');self.assertEqual(s['postage'],'2.40')
+        it=s['items'][0]
+        self.assertEqual(it['grossOriginal'],'1000.00');self.assertEqual(it['gross'],'48.00')
+        self.assertEqual(it['net'],'40.80');self.assertEqual(it['profit'],'-65.20')
+    def test_sell_jpy_allocation_conserves_totals(self):
+        ids=[self.buy(),self.buy()]
+        sid=self.sell(ids,currency='JPY',gross='1001')
+        s=self.sale(sid)
+        self.assertEqual(s['gross'],'48.05')  # 1001×4.8/100 = 48.048 → 48.05
+        self.assertEqual(sum(Decimal(i['gross']) for i in s['items']),Decimal('48.05'))
+        self.assertEqual(sum(Decimal(i['grossOriginal']) for i in s['items']),Decimal('1001'))
+    def test_sell_jpy_requires_rate(self):
+        id=self.buy()
+        with self.assertRaises(ValidationError):self.sell([id],currency='JPY',gross='1000',date='1999-01-01')
+        self.assertEqual(self.record(id)['status'],'overseas')  # 失败不落任何写
+    def test_sell_cny_stores_no_originals(self):
+        id=self.buy(currency='CNY',price='100',date='2026-09-07')
+        sid=self.sell([id]);s=self.sale(sid)
+        self.assertEqual(s['currency'],'CNY')
+        self.assertNotIn('grossOriginal',s);self.assertNotIn('grossOriginal',s['items'][0])
     def test_allocation_conserves_cents(self):
         for cents in range(1,100):
             total=Decimal(cents)/100;parts=allocate(total,[1,2,3]);self.assertEqual(sum(map(Decimal,parts)),total)

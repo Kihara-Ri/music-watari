@@ -23,7 +23,7 @@ def _csv_bytes(rows):
 
 def sales_csv(state):
     rows = [['售出日期', '到账日期', '状态', '专辑', '艺人', '分摊成交价', '分摊平台扣费',
-             '分摊寄出运费', '退款', '到手金额', '利润', '渠道', '订单号', '买家地址']]
+             '分摊寄出运费', '退款', '到手金额', '利润', '渠道', '订单号', '买家地址', '币种', '原币成交价']]
     records = {r['id']: r for r in state['records']}
     for sale in state['sales']:
         for item in sale['items']:
@@ -34,7 +34,8 @@ def sales_csv(state):
                 r['title'], r['artist'], item['gross'], item['fees'],
                 item.get('postage', '0'), item.get('refund', '0'), item['net'],
                 item['profit'] if item['profit'] is not None else '成本待补',
-                sale.get('channel', ''), sale.get('orderId', ''), sale.get('address', '')]])
+                sale.get('channel', ''), sale.get('orderId', ''), sale.get('address', ''),
+                sale.get('currency', ''), item.get('grossOriginal', '')]])
     return _csv_bytes(rows)
 
 

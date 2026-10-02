@@ -3,7 +3,7 @@ import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
 import type {AlbumRecord, Sale} from '../types';
 import {SALE_NAMES, labelTags} from '../types';
-import {daysSince, sum, yuan} from '../core/format';
+import {daysSince, shipFeeText, sum, yuan} from '../core/format';
 import {Cover} from './Cover';
 import {openDetail} from '../forms/DetailDrawer';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
@@ -59,9 +59,9 @@ export function ShippingBar({s}: {s: Sale}) {
         <span className="when">{s.items.length} 张 · 到手 {yuan(sum(s.items, 'net'))}</span>
       </div>
       <div className="sale-foot">
-        <div className="cell"><span>成交价</span><b>{yuan(s.gross)}</b></div>
-        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{yuan(s.fees)}</b></div> : null}
-        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{yuan(s.postage)}</b></div> : null}
+        <div className="cell"><span>成交价</span><b>{shipFeeText(s.currency, s.grossOriginal, s.gross)}</b></div>
+        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div> : null}
+        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage)}</b></div> : null}
         <span className="spacer"/>
         <div className="actions">
           <button className="primary" onClick={() => openConfirm(app, 'receive', {id: s.id})}>确认收货</button>
@@ -122,9 +122,9 @@ export function SaleCard({s}: {s: Sale}) {
         })}
       </div>
       <div className="sale-foot">
-        <div className="cell"><span>成交价</span><b>{yuan(s.gross)}</b></div>
-        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{yuan(s.fees)}</b></div> : null}
-        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{yuan(s.postage)}</b></div> : null}
+        <div className="cell"><span>成交价</span><b>{shipFeeText(s.currency, s.grossOriginal, s.gross)}</b></div>
+        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div> : null}
+        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage)}</b></div> : null}
         <div className="cell"><span>{shipping ? '预计到手' : '到手'}</span><b>{yuan(net)}</b></div>
         {app.modules.acquisition ? <div className="cell">
           <span>{unknown ? (shipping ? '预估利润（待补）' : '利润（待补）') : shipping ? '预估利润' : '利润'}</span>
