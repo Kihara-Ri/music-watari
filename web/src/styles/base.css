@@ -24,6 +24,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
+/* 主题切换渐变：仅切换窗口期（static/theme.js 给 <html> 加 .theme-fade）启用全局颜色过渡，
+   平时无常驻过渡（避免性能开销、不拖慢组件自身交互动画）；!important 保证盖过各组件
+   自己的短过渡，让整页颜色同步渐变。窗口结束即移除。 */
+@media (prefers-reduced-motion:no-preference){
+  .theme-fade,.theme-fade *,.theme-fade *::before,.theme-fade *::after{
+    transition:background-color .3s ease,color .3s ease,border-color .3s ease,fill .3s ease,stroke .3s ease,box-shadow .3s ease,outline-color .3s ease!important}
+}
+
 /* 手机：输入控件 16px 起步 —— iOS Safari 对小于 16px 的输入框聚焦时会自动放大页面；
    overflow-x:clip 裁掉意外横向溢出，页面横向不许拖动 */
 @media (max-width:840px){

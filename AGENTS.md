@@ -60,7 +60,7 @@
 - **每张副本一条独立记录**（不做「一专辑多库存」）；`version`（碟盒）/`pressing`（版次）/`obi`（侧标，仅日版）三字段语义不得改。
 - 实物照片存文件系统（`data/photos/<id>/`）不进 DB；缩略图点开灯箱；Esc 只关最顶层（灯箱优先于抽屉）。
 - 表单抽屉默认一屏放完（`#panel` 紧凑压缩规则已调好，别放宽）。
-- 外观三态（浅色 / 深色 / 跟随系统，默认跟随系统）入口：桌面页头右上角循环切换，手机在「更多 · 管理」与设置与备份同层级（设置页不再有）。`static/theme.js` 是阻塞式引导脚本（CSP 禁内联）：首帧前写 `<html data-theme>` 并同步 theme-color meta，登录页与主应用共用；tokens.css 基础声明 = 深色兜底，`@supports (color:light-dark())` 内用 `light-dark()` 双值 + `color-scheme` 解析，新颜色一律走 token 不写死。
+- 外观三态（浅色 / 深色 / 跟随系统，默认跟随系统）入口：桌面页头右上角与手机「更多 · 管理」均为三段滑块（浅色/深色/跟随系统，点按直达不循环；复用 components/ui/Seg），手机行内展示当前生效外观（设置页不再有）。`static/theme.js` 是阻塞式引导脚本（CSP 禁内联）：首帧前写 `<html data-theme>` 并同步 theme-color meta，登录页与主应用共用；tokens.css 基础声明 = 深色兜底，`@supports (color:light-dark())` 内用 `light-dark()` 双值 + `color-scheme` 解析，新颜色一律走 token 不写死。
 
 ## 验证门槛（全部通过才算完成）
 

@@ -11,9 +11,9 @@ button.danger{color:var(--red)}
 button:disabled{opacity:.5;cursor:default}
 button:disabled:hover{background:var(--surface-2)}
 
-/* 外观切换（页头右上角图标按钮；手机端隐藏，走「更多」页的行） */
-.theme-toggle{font-size:16px;line-height:1;padding:8px 12px}
-.theme-toggle span{display:block;translate:0 -1px}
+/* 外观切换（三段滑块：浅色/深色/跟随系统；页头右上角，手机端收进「更多」页的行） */
+.theme-seg svg{display:block}
+.theme-seg button{padding:6px 9px}
 
 /* 汇总条 */
 .summary{display:flex;gap:22px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:18px;font-size:13px;color:var(--muted)}
@@ -146,6 +146,6 @@ button:disabled:hover{background:var(--surface-2)}
   #connection-status{top:calc(8px + env(safe-area-inset-top))}
   .empty{padding:48px 18px}
 
-  /* 外观切换在手机上收进「更多」页 */
-  .theme-toggle{display:none}
+  /* 外观切换在手机上收进「更多」页（仅隐藏页头这份，「更多」行内的照常显示） */
+  .head-actions .theme-seg{display:none}
 }

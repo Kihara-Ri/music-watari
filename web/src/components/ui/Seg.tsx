@@ -1,9 +1,12 @@
 // iOS 式分段控件：滑块随选中项左右滑动。受控组件。
 import {useLayoutEffect, useRef} from 'react';
+import type {ReactNode} from 'react';
 
 export interface SegOption {
   value: string;
-  label: string;
+  label: ReactNode;
+  /** 选项内容为纯图标时提供可访问名称 */
+  ariaLabel?: string;
 }
 
 export function Seg({options, value, onValue, className = '', ariaLabel}: {
@@ -34,7 +37,7 @@ export function Seg({options, value, onValue, className = '', ariaLabel}: {
       <span className="seg-thumb" aria-hidden="true"/>
       {options.map(o => (
         <button key={o.value} type="button" className={o.value === value ? 'on' : ''}
-                onClick={() => onValue(o.value)}>{o.label}</button>
+                aria-label={o.ariaLabel} onClick={() => onValue(o.value)}>{o.label}</button>
       ))}
     </div>
   );

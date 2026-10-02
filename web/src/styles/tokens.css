@@ -23,6 +23,8 @@
   --chrome-line:rgba(38,44,56,.6); --hairline:rgba(255,255,255,.09);
   --scrim:rgba(6,8,12,.6); --grabber:rgba(255,255,255,.16); --inset:rgba(255,255,255,.015);
   --seg-thumb:#3d4658; --vinyl-hole:#0e1014; --shadow-ink:rgba(0,0,0,.5);
+  /* 黑胶盘体本色：中性真黑（真实唱片是纯黑，不带界面主题的蓝灰调），不随主题变化 */
+  --vinyl-rim:#1f1f1f; --vinyl-ring:#111; --vinyl-body:#030303;
   --radius:14px; --radius-sm:10px;
   --shadow:0 8px 28px rgba(0,0,0,.42);
   --shadow-sm:0 4px 14px rgba(0,0,0,.35);

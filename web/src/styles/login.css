@@ -6,11 +6,13 @@
 
 /* 黑胶唱片：页面唯一品牌装饰；唱纹 + 弧面高光 + 黄色唱片标 + 中孔
    （渐变一律用 rgba(255,255,255,0) 不用 transparent：黑底上透明关键字插值会混入黑色出硬接缝）
+   盘体走 tokens.css 的中性真黑 token（--vinyl-rim/-ring/-body）：真实黑胶是纯黑，
+   不带界面的蓝灰调，也不随主题变化。
    光源固定：投影与定光高光留在不旋转的盘体上（阴影随盘面转 = 光源在绕场），
    旋转只作用于 ::before 反光层——弧面反光与一枚微小尘点随盘面扫过，符合真实黑胶的转动观感 */
-.vinyl{position:relative;width:104px;height:104px;margin:0 auto 20px;border-radius:50%;border:1px solid #1d2027;
+.vinyl{position:relative;width:104px;height:104px;margin:0 auto 20px;border-radius:50%;border:1px solid var(--vinyl-rim);
   background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.09),rgba(255,255,255,0) 44%),
-             repeating-radial-gradient(circle,#101116 0 2px,#0b0c10 2px 5px);
+             repeating-radial-gradient(circle,var(--vinyl-ring) 0 2px,var(--vinyl-body) 2px 5px);
   box-shadow:0 14px 34px rgba(0,0,0,.5),inset 0 0 22px rgba(0,0,0,.65)}
 .vinyl::before{content:"";position:absolute;inset:0;border-radius:50%;
   background:radial-gradient(circle at 68% 30%,rgba(255,255,255,.09),rgba(255,255,255,0) 4%),
@@ -18,7 +20,7 @@
   animation:vinyl-glint 24s linear infinite}
 .vinyl::after{content:"";position:absolute;inset:31%;border-radius:50%;
   background:radial-gradient(circle at 38% 32%,var(--accent-strong),var(--accent) 72%);
-  box-shadow:inset 0 0 0 1px rgba(30,36,48,.35)}
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
 .vinyl-hole{position:absolute;inset:47.2%;border-radius:50%;background:var(--vinyl-hole);box-shadow:0 0 0 1px rgba(255,255,255,.07)}
 @keyframes vinyl-glint{to{transform:rotate(1turn)}}
 @media (prefers-reduced-motion:reduce){.vinyl::before,.loading .vinyl-small,.loading .vinyl-small::before{animation:none}}
