@@ -10,7 +10,7 @@
 .sale-album .thumb{width:46px;height:46px;border-radius:9px;overflow:hidden;flex:none;background:var(--surface-2)}
 .sale-album .thumb img,.sale-album .thumb .cover-fallback{width:100%;height:100%;object-fit:cover}
 .sale-album .t{font-weight:600;font-size:13.5px;text-align:left;padding:0;background:none;border:none;min-height:0;white-space:normal;overflow-wrap:anywhere}
-.sale-album .t:hover{color:var(--accent-strong)}
+.sale-album .t:hover{color:var(--accent-deep)}
 .sale-album .a{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
 .sale-album .sa-price{flex:none;margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
 .sale-album .sa-price b{font-size:13.5px}
@@ -46,5 +46,5 @@
   .ship-cards .card-price{margin-top:0;padding-top:3px;gap:4px 10px}
   .ship-cards .card-price .p{font-size:13.5px}
   .ship-cards .card-actions{padding:0}
-  .ship-cards .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 12px;min-height:44px;font-size:13px;color:var(--accent-strong)}
+  .ship-cards .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 12px;min-height:44px;font-size:13px;color:var(--accent-deep)}
 }

@@ -15,7 +15,7 @@
 .badge.listed{color:#9fe6c6;border:1px solid rgba(93,211,158,.55)}
 .card-body{padding:10px 12px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
 .card-title{font-weight:600;font-size:13px;line-height:1.35;text-align:left;padding:0;word-break:break-word;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;background:none;border:none;color:var(--text);min-height:0}
-.card-title:hover{color:var(--accent-strong);background:none}
+.card-title:hover{color:var(--accent-deep);background:none}
 .card-artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-edt{font-size:10.5px;font-weight:600;color:var(--amber);background:var(--surface-3);border:1px solid var(--border-strong);border-radius:99px;padding:1px 8px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .card-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px;min-width:0}
@@ -43,20 +43,21 @@
 .tl-label span{display:block;font-size:11px;color:var(--faint);margin-top:2px;white-space:nowrap}
 .tl-rail{position:relative}
 .tl-rail::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--border);transform:translateX(-50%)}
-.tl-rail::after{content:"";position:absolute;left:50%;top:7px;width:9px;height:9px;border-radius:50%;background:var(--accent);transform:translateX(-50%);box-shadow:0 0 0 3px rgba(91,141,239,.16)}
+.tl-rail::after{content:"";position:absolute;left:50%;top:7px;width:9px;height:9px;border-radius:50%;background:var(--accent);transform:translateX(-50%);box-shadow:0 0 0 3px rgba(234,207,60,.26)}
 .tl-group:last-child .tl-rail::before{display:none}
 .tl-cards{padding-bottom:30px;min-width:0}
 .tl-group:last-child .tl-cards{padding-bottom:6px}
 .flip-btn{padding:8px 11px;background:var(--surface)}
-.flip-btn.on{border-color:rgba(91,141,239,.55);color:var(--accent-strong);background:rgba(91,141,239,.08)}
+.flip-btn.on{border-color:var(--accent-deep);color:var(--accent-deep);background:var(--accent-wash)}
 
 /* 按艺人分组 */
 .artist-group{margin-bottom:36px}
 .artist-head{display:flex;align-items:baseline;gap:12px;margin-bottom:13px;padding-bottom:9px;border-bottom:1px solid var(--border);flex-wrap:wrap}
 .artist-name{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--text);text-decoration:none;line-height:1.25}
-.artist-name:hover{color:var(--accent-strong)}
+/* 艺人名悬停 = 荧光笔高亮：浅色下正黄当文字不可读，用黄底扫过代替变色 */
+.artist-name:hover{color:var(--accent-text);background:linear-gradient(transparent 62%,var(--accent-hl) 62%)}
 .artist-name .ext{font-size:11.5px;color:var(--faint);margin-left:5px;font-weight:500;vertical-align:1px}
-.artist-name:hover .ext{color:var(--accent-strong)}
+.artist-name:hover .ext{color:var(--accent-text)}
 .artist-meta{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
 
 @media (max-width:840px){
@@ -95,7 +96,7 @@
 /* 库存显示方式切换：桌面与手机共用同一偏好（本浏览器记忆）。 */
 .view-switch{display:flex;gap:2px;align-items:center;border:1px solid var(--border);border-radius:10px;padding:2px}
 .view-switch button{padding:7px 8px;min-height:36px;font-size:12px;background:none;border-color:transparent}
-.view-switch button[aria-pressed=true]{background:var(--surface-3);color:var(--accent-strong)}
+.view-switch button[aria-pressed=true]{background:var(--surface-3);color:var(--accent-deep)}
 
 /* 列表视图（桌面 / 手机同一套行布局）：单列行 + 64px 封面，徽标移到行内。 */
 .shelf-list .grid{grid-template-columns:minmax(0,1fr);gap:0}
@@ -112,7 +113,7 @@
 .shelf-list .card-edt{font-size:10px;padding:0 5px}
 .shelf-list .card-storage{font-size:11px;margin-top:2px}
 .shelf-list .card-actions{padding:0;gap:0}
-.shelf-list .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 3px;font-size:12px;min-height:44px;color:var(--accent-strong)}
+.shelf-list .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 3px;font-size:12px;min-height:44px;color:var(--accent-deep)}
 /* 主操作（记录售出）保留实心按钮样式，与文字链操作区分 */
 .shelf-list .card-actions button.primary{background:var(--accent);border:1px solid var(--accent);color:var(--accent-ink);padding:7px 13px;min-height:38px;border-radius:9px;font-weight:650}
 .shelf-list .card-actions button.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
@@ -126,7 +127,7 @@
   .mobile-shelf-title{display:inline}
   .shelf-location{display:flex;gap:24px;margin:0 0 14px;border-bottom:1px solid var(--border)}
   .shelf-location a{display:flex;align-items:center;gap:8px;min-height:44px;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;font-size:14px}
-  .shelf-location a[aria-current=page]{color:var(--text);border-bottom-color:var(--accent)}
+  .shelf-location a[aria-current=page]{color:var(--text);border-bottom-color:var(--accent-deep)}
   .shelf-location b{font-size:12px;color:var(--faint);font-weight:500}
   .shelf-page .toolbar{gap:8px}
   .shelf-page .toolbar .search{order:-1;flex-basis:100%}

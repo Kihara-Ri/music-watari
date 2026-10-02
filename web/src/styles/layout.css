@@ -9,9 +9,9 @@
 .sidebar nav a b{margin-left:auto;font-weight:600;font-size:11.5px;background:var(--surface-3);border-radius:99px;padding:1px 8px;color:var(--muted)}
 .sidebar nav a:hover,.sidebar-bottom a:hover,.sidebar-bottom .install-nav:hover{background:var(--surface-2);color:var(--text)}
 .sidebar-bottom .install-nav{background:none;border:0;cursor:pointer;text-align:left;font-family:inherit}
-.sidebar nav a.active{background:linear-gradient(90deg,rgba(91,141,239,.14),rgba(91,141,239,.05));color:var(--accent-strong)}
-.sidebar nav a.active b{background:rgba(91,141,239,.16);color:var(--accent-strong)}
-.sidebar-bottom a.active{color:var(--accent-strong);background:rgba(91,141,239,.08)}
+.sidebar nav a.active{background:var(--nav-active-bg);color:var(--accent-text)}
+.sidebar nav a.active b{background:var(--nav-active-badge-bg);color:var(--accent-text)}
+.sidebar-bottom a.active{color:var(--accent-text);background:var(--nav-active-bg)}
 .nav-ico{width:18px;text-align:center;font-size:14px;opacity:.85}
 .sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:2px}
 .side-ledger{margin:0 2px 12px;padding:13px 15px;background:var(--surface);border:1px solid var(--border);border-radius:13px}
@@ -50,8 +50,8 @@
   .mobile-nav a,.mobile-nav button{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:3px;min-height:48px;padding:5px 2px 4px;border-radius:12px;
     text-decoration:none;color:var(--muted);font-size:10.5px;font-weight:550}
-  .mobile-nav a:active,.mobile-nav button:active{background:rgba(91,141,239,.08)}
-  .mobile-nav a.active,.mobile-nav button.active{color:var(--accent-strong)}
+  .mobile-nav a:active,.mobile-nav button:active{background:var(--accent-wash)}
+  .mobile-nav a.active,.mobile-nav button.active{color:var(--accent-text);background:var(--nav-active-bg)}
   .tab-ico{font-size:18px;line-height:1}
   .tab-badge{position:absolute;top:2px;left:calc(50% + 5px);min-width:15px;height:15px;padding:0 4px;
     border-radius:99px;background:var(--accent);color:var(--accent-ink);font-size:9.5px;font-weight:700;

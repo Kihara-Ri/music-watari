@@ -66,7 +66,7 @@ button:disabled:hover{background:var(--surface-2)}
    --toast-ms 只需和 App.tsx 的兜底定时器大致匹配） */
 #toast{--toast-c:var(--green);--toast-ms:2s;position:fixed;top:14px;left:50%;translate:-50% 0;z-index:60;background:var(--surface-3);border:1px solid var(--border-strong);color:var(--text);padding:12px 22px;border-radius:14px;box-shadow:var(--shadow);font-size:14px;font-weight:550;max-width:90vw;animation:toast-in .24s cubic-bezier(.2,.8,.3,1.15)}
 #toast.leaving{animation:toast-out .22s ease .25s forwards}
-#toast.warn{--toast-c:var(--yellow)}
+#toast.warn{--toast-c:var(--orange)}
 #toast.err{--toast-c:var(--red)}
 #toast .toast-ring{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 #toast .toast-ring path{fill:none;stroke:var(--toast-c);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:0 100;animation:toast-ring var(--toast-ms) linear forwards}

@@ -7,12 +7,18 @@
    theme.js 同时负责把 theme-color meta 与所选主题对齐。 */
 :root{
   color-scheme:dark;
-  --bg:#0e1014; --bg-glow:rgba(91,141,239,.05); --bg-glow-2:rgba(110,168,254,.045);
+  --bg:#0e1014; --bg-glow:rgba(236,216,74,.05); --bg-glow-2:rgba(251,231,79,.045);
   --surface:#161920; --surface-2:#1c2029; --surface-3:#232834;
   --border:#262c38; --border-strong:#333b4b;
   --text:#e8ebf1; --muted:#98a2b3; --faint:#5f6b7e;
-  --accent:#5b8def; --accent-strong:#8ab2f8; --accent-ink:#0a1a30;
-  --green:#5dd39e; --blue:#6ea8fe; --red:#ff7a7a; --amber:#8ab2f8; --yellow:#f0c35e; --purple:#c9adff;
+  /* 主色家族（闲鱼黄）：accent=填充（按钮/chip/开关/徽标）；strong=填充悬停；
+     ink=黄底上的文字；deep=浅底上的强调文字与细线（正黄在白卡上不可读）；
+     wash=聚焦/按压的暖色底；text=强调色文字（浅色=墨色、深色=黄）；
+     hl=荧光笔高亮（艺人链接悬停下划线）；nav-active=导航激活胶囊底/其内徽标底。 */
+  --accent:#ecd84a; --accent-strong:#f7e765; --accent-ink:#1e2430;
+  --accent-deep:#d8c227; --accent-wash:#2b2a1a; --accent-text:#ecd84a; --accent-hl:rgba(236,216,74,.32);
+  --nav-active-bg:rgba(236,216,74,.14); --nav-active-badge-bg:rgba(236,216,74,.16);
+  --green:#5dd39e; --blue:#6ea8fe; --red:#ff7a7a; --amber:#8ab2f8; --orange:#ffa94d; --purple:#c9adff;
   --chrome:rgba(18,21,27,.72); --chrome-head:rgba(14,16,20,.88); --chrome-nav:rgba(18,21,27,.92);
   --chrome-line:rgba(38,44,56,.6); --hairline:rgba(255,255,255,.09);
   --scrim:rgba(6,8,12,.6); --grabber:rgba(255,255,255,.16); --inset:rgba(255,255,255,.015);
@@ -25,14 +31,17 @@
 @supports (color:light-dark(#fff,#000)){
   :root{
     color-scheme:light dark;
-    --bg:light-dark(#f4f5f7,#0e1014); --bg-glow:light-dark(rgba(91,141,239,.08),rgba(91,141,239,.05));
-    --bg-glow-2:light-dark(rgba(91,141,239,.06),rgba(110,168,254,.045));
+    --bg:light-dark(#f4f5f7,#0e1014); --bg-glow:light-dark(rgba(251,231,79,.09),rgba(236,216,74,.05));
+    --bg-glow-2:light-dark(rgba(251,231,79,.07),rgba(251,231,79,.045));
     --surface:light-dark(#ffffff,#161920); --surface-2:light-dark(#f1f2f6,#1c2029); --surface-3:light-dark(#e8eaef,#232834);
     --border:light-dark(#e3e6eb,#262c38); --border-strong:light-dark(#c9ced8,#333b4b);
     --text:light-dark(#1e2430,#e8ebf1); --muted:light-dark(#5e6a7d,#98a2b3); --faint:light-dark(#98a2b3,#5f6b7e);
-    --accent-strong:light-dark(#2f66dd,#8ab2f8);
+    --accent:light-dark(#fbe74f,#ecd84a); --accent-strong:light-dark(#f0d92e,#f7e765);
+    --accent-deep:light-dark(#82740a,#d8c227); --accent-wash:light-dark(#faf6d8,#2b2a1a);
+    --accent-text:light-dark(#1e2430,#ecd84a); --accent-hl:light-dark(rgba(251,231,79,.85),rgba(236,216,74,.32));
+    --nav-active-bg:light-dark(#fbe74f,rgba(236,216,74,.14)); --nav-active-badge-bg:light-dark(rgba(35,31,4,.12),rgba(236,216,74,.16));
     --green:light-dark(#178a56,#5dd39e); --blue:light-dark(#2f6cd8,#6ea8fe); --red:light-dark(#d64550,#ff7a7a);
-    --amber:light-dark(#3565d6,#8ab2f8); --yellow:light-dark(#c49225,#f0c35e); --purple:light-dark(#8250d8,#c9adff);
+    --amber:light-dark(#3565d6,#8ab2f8); --orange:light-dark(#b45309,#ffa94d); --purple:light-dark(#8250d8,#c9adff);
     --chrome:light-dark(rgba(250,251,253,.78),rgba(18,21,27,.72));
     --chrome-head:light-dark(rgba(247,248,250,.88),rgba(14,16,20,.88));
     --chrome-nav:light-dark(rgba(248,249,251,.92),rgba(18,21,27,.92));

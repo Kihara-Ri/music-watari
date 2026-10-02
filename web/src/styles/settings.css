@@ -10,7 +10,7 @@
 .module-preset{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:12px;gap:5px;white-space:normal}
 .module-preset strong{font-size:14px}
 .module-preset span{font-size:12px;line-height:1.5;color:var(--muted)}
-.module-preset[aria-pressed=true]{border-color:var(--accent);background:var(--surface-2)}
+.module-preset[aria-pressed=true]{border-color:var(--accent-deep);background:var(--surface-2)}
 .module-options{display:grid;gap:12px;margin:15px 0}
 .module-option{display:flex;align-items:center;gap:12px;cursor:pointer}
 .module-option input{width:18px;height:18px;flex:none;accent-color:var(--accent)}
