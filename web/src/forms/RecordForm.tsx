@@ -412,7 +412,8 @@ export function RecordForm({id}: {id?: string}) {
                        price: c === 'JPY' && v.price !== '' ? String(Math.round(Number(v.price))) : v.price,
                      })}/>
                 <input id="f-price" name="price" type="number" min="0"
-                       step={v.currency === 'JPY' ? '10' : '1'} inputMode="decimal"
+                       /* 日元不设步进限制：step 会把 1145 円这类非整十金额判为无效，编辑历史数据时保存被静默拦截 */
+                       step={v.currency === 'JPY' ? 'any' : '0.01'} inputMode="decimal"
                        placeholder="按币种填写" value={v.price}
                        onChange={e => { set({price: e.target.value}); dirty(); }}/>
               </div>

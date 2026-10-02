@@ -30,7 +30,8 @@ export function MoneyField({label, name, currency, value, onCurrency, onChange}:
              onValue={c => onCurrency(c as Currency,
                c === 'JPY' && value !== '' ? String(Math.round(Number(value))) : value)}/>
         <input id={`f-${name}`} name={name} type="number" required min="0"
-               step={currency === 'JPY' ? '10' : '0.01'} inputMode="decimal"
+               /* 日元不设步进限制：step=10 会把 1145 円这类非整十金额判为无效，表单提交被浏览器静默拦截 */
+               step={currency === 'JPY' ? 'any' : '0.01'} inputMode="decimal"
                placeholder="按币种填写" value={value} onChange={e => onChange(e.target.value)}/>
       </div>
     </div>
