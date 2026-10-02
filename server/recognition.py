@@ -87,8 +87,8 @@ def description(fields):
 
 
 class VisionService:
-    def __init__(self, store, covers=None):
-        self.store = store; self.covers = covers
+    def __init__(self, store, covers=None, mb=None):
+        self.store = store; self.covers = covers; self.mb = mb
         self.config_path = store.path.parent / 'vision-config.json'
         self.config_lock = threading.RLock()
         self.condition = threading.Condition(); self.active = 0
@@ -149,6 +149,21 @@ class VisionService:
         finally:
             with self.condition: self.active -= 1; self.condition.notify_all()
 
+    def _mb_json(self, url):
+        """MusicBrainz 查询走全应用共用客户端（统一节流与冷却）；未注入时保留旧行为。
+        调用方必须已持有 catalog_lock（旧路径的计时缓存也由它守护），这里不得重复加锁。"""
+        if self.mb is not None:
+            from musicbrainz import BadSource as MBBadSource, SourceUnavailable as MBUnavailable
+            try:
+                return self.mb.get_url(url)
+            except MBUnavailable as exc:
+                raise ValidationError('发行资料库暂时不可用，请稍后重试') from exc
+            except MBBadSource as exc:
+                raise ValidationError('发行资料库返回了无效数据') from exc
+        time.sleep(max(0, 1.1 - (time.monotonic() - self.catalog_at)))
+        self.catalog_at = time.monotonic()
+        return read_json(url)
+
     def catalog(self, fields):
         info = fields['releaseInfo']; barcode = info.get('barcode',''); catno = info.get('catalogNumber','')
         quote = lambda s:'"' + re.sub(r'([\\"+\-!():^\[\]{}~*?|&/])',r'\\\1',s) + '"'
@@ -158,9 +173,7 @@ class VisionService:
         else: return []
         with self.catalog_lock:
             if query in self.catalog_cache: return self.catalog_cache[query]
-            time.sleep(max(0, 1.1 - (time.monotonic() - self.catalog_at)))
-            self.catalog_at = time.monotonic()
-            data = read_json('https://musicbrainz.org/ws/2/release/?' + urlencode({'query':query,'fmt':'json','limit':15}))
+            data = self._mb_json('https://musicbrainz.org/ws/2/release/?' + urlencode({'query':query,'fmt':'json','limit':15}))
             candidates = []
             for r in data.get('releases',[]):
                 if not re.fullmatch(r'[0-9a-f-]{36}', str(r.get('id',''))): continue
@@ -234,8 +247,7 @@ class VisionService:
             raise ValidationError('发行版本编号不正确')
         with self.catalog_lock:
             if ident in self.release_cache: return self.release_cache[ident]
-            time.sleep(max(0, 1.1-(time.monotonic()-self.catalog_at))); self.catalog_at=time.monotonic()
-            r=read_json('https://musicbrainz.org/ws/2/release/'+ident+'?'+urlencode({'fmt':'json','inc':'artist-credits+labels+recordings'}))
+            r=self._mb_json('https://musicbrainz.org/ws/2/release/'+ident+'?'+urlencode({'fmt':'json','inc':'artist-credits+labels+recordings'}))
             media=r.get('media',[])
             if not any('CD' in str(m.get('format','')) for m in media): raise ValidationError('这一发行版本没有 CD 介质，请选择正确版本')
             labels=r.get('label-info',[])

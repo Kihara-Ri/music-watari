@@ -11,4 +11,5 @@ class Services:
     covers: Optional[Any] = None     # covers.CoverService —— /api/covers/*
     rates: Optional[Any] = None      # rates.RateService —— /api/rate
     vision: Optional[Any] = None     # recognition.VisionService —— 视觉识别与照片草稿
+    artists: Optional[Any] = None    # artists.ArtistService —— 艺人资料与作品目录
     public_origin: Optional[str] = None  # 反向代理场景下放行的 HTTPS 根地址

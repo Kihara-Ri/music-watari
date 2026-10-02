@@ -7,7 +7,7 @@ import json
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import urlsplit
 
-from domain import ValidationError
+from domain import ValidationError, ConflictError
 from . import routes, static_files
 
 CSP = ("default-src 'self'; img-src 'self' data: https://*.mzstatic.com https://archive.org "
@@ -115,8 +115,16 @@ def make_handler(svc):
             if path.startswith('/api/'):
                 if path not in routes.PUBLIC_GET and not self.authorized(): return
                 fn = routes.resolve_get(path)
-                if fn: return fn(self, svc)
-                return self.send({'error': '接口不存在'}, 404)
+                if not fn: return self.send({'error': '接口不存在'}, 404)
+                try:
+                    return fn(self, svc)
+                except ConflictError as e:
+                    return self.send({'error': str(e)}, 409)
+                except (ValidationError, ValueError, TypeError, KeyError) as e:
+                    return self.send({'error': str(e)}, 400)
+                except Exception:
+                    import traceback; traceback.print_exc()
+                    return self.send({'error': '读取失败，请重试'}, 500)
             # 服务端登录门：未登录只放行登录页及其依赖（static_files.PUBLIC）
             if not self.logged_in() and path not in static_files.PUBLIC:
                 return self.redirect_login()
@@ -140,12 +148,15 @@ def make_handler(svc):
                 if raw is None: raise ValidationError('请求内容为空或超过 50 MB')
                 body = json.loads(raw)
                 if not isinstance(body, dict): raise ValidationError('请求格式不正确')
-                fn, needs_auth, needs_lock = routes.resolve_post(urlsplit(self.path).path)
-                if not fn: return self.send({'error': '接口不存在'}, 404)
+                found = routes.resolve_post(urlsplit(self.path).path)
+                if not found: return self.send({'error': '接口不存在'}, 404)
+                fn, needs_auth, needs_lock = found
                 if needs_auth and not self.authorized(): return
                 if needs_lock:
                     with routes.WRITE_LOCK: fn(self, svc, body)
                 else: fn(self, svc, body)
+            except ConflictError as e:
+                self.send({'error': str(e)}, 409)
             except (ValidationError, json.JSONDecodeError, ValueError, TypeError, KeyError) as e:
                 self.send({'error': str(e)}, 400)
             except Exception:

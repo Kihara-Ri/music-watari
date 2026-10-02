@@ -13,6 +13,7 @@ import {openSaleForm} from '../forms/SaleForm';
 import {openShipForm} from '../forms/ShipForm';
 import {openBatchForm} from '../forms/BatchForm';
 import {openDetail} from '../forms/DetailDrawer';
+import {openArtistDrawer} from '../forms/ArtistDrawer';
 import {bulkAction} from '../forms/shared';
 
 const SORTS = [
@@ -48,7 +49,6 @@ export function ShelfPage() {
   const app = useApp();
   const {state, modules, page, query, sort, flip, selected, shelfFilter} = app;
   const isTrash = page === 'trash';
-  const rymLinks = state.settings['rym-links'] as Record<string, string> | undefined;
   const all = state.records.filter(r => onShelf(r.status, page, modules));
   const known = all.filter(r => r.cost !== null);
   const listedCount = all.filter(r => r.listed).length;
@@ -134,16 +134,15 @@ export function ShelfPage() {
       const list = map.get(a)!;
       const knownList = list.filter(r => r.cost !== null);
       const total = knownList.length ? yuan(sum(knownList, 'cost')) : null;
-      const rymLink = rymLinks?.[a];
       return (
         <section className="artist-group" key={a}>
           <header className="artist-head">
-            <a className="artist-name" href={rymLink ?? `https://rateyourmusic.com/search?searchterm=${encodeURIComponent(a)}&searchtype=a`}
-               target="_blank" rel="noopener"
-               title={rymLink ? '已绑定 · 打开 RateYourMusic 艺人页'
-                              : '打开 RateYourMusic 搜索；选中艺人后可用设置页的绑定书签一键记住直达链接'}>
-              {a}<span className="ext" aria-hidden="true">↗</span>
-            </a>
+            {a === '未知艺人'
+              ? <span className="artist-name">{a}</span>
+              : <button type="button" className="artist-name"
+                        aria-haspopup="dialog"
+                        title={`查看 ${a} 的资料与作品`}
+                        onClick={() => openArtistDrawer(app, a)}>{a}</button>}
             <span className="artist-meta">
               {list.length} 张{modules.acquisition && total ? ` · 总成本 ${total}` : ''}
               {modules.acquisition && knownList.length < list.length ? ` · ${list.length - knownList.length} 张成本待补` : ''}

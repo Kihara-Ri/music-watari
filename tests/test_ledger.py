@@ -332,35 +332,22 @@ class LedgerTests(unittest.TestCase):
         r=self.store.import_data(json.loads(src.read_text()))
         self.assertGreater(r['count'],0)
         self.assertEqual(len(self.store.state()['records']),r['count'])
-    # ── RYM 艺人绑定 ──
-    def test_rym_bind_by_page_title(self):
-        self.buy(artist='米津玄師')
-        token=self.store.rym_token()
-        r=self.store.bind_artist(token,'米津玄師 Albums: songs, discography, biography, and more',
-                                 'https://rateyourmusic.com/artist/kenshi_yonezu')
-        self.assertEqual(r['artist'],'米津玄師')
-        self.assertEqual(self.store.artist_links(),{'米津玄師':'https://rateyourmusic.com/artist/kenshi_yonezu'})
-    def test_rym_bind_rejects_bad_token_and_url(self):
-        self.buy(artist='米津玄師');self.store.rym_token()
-        with self.assertRaises(ValidationError):self.store.bind_artist('nope','米津玄師','https://rateyourmusic.com/artist/x')
-        good=self.store.rym_token()
-        with self.assertRaises(ValidationError):self.store.bind_artist(good,'米津玄師','https://evil.test/artist/x')
-        with self.assertRaises(ValidationError):self.store.bind_artist(good,'米津玄師','https://rateyourmusic.com/search?searchterm=x')
-        with self.assertRaises(ValidationError):self.store.bind_artist(good,'','https://rateyourmusic.com/artist/x')
-        self.assertEqual(self.store.artist_links(),{})
-    def test_rym_bind_unknown_artist_is_noop(self):
-        self.buy(artist='米津玄師');self.store.rym_token()
-        r=self.store.bind_artist(self.store.rym_token(),'Bump of Chicken albums and songs',
-                                 'https://rateyourmusic.com/artist/bump-of-chicken')
-        self.assertIsNone(r['artist']);self.assertEqual(self.store.artist_links(),{})
-    def test_rym_rebind_ignored_and_settings_exported(self):
-        self.buy(artist='米津玄師')
-        token=self.store.rym_token()
-        self.store.bind_artist(token,'米津玄師 music | Rate Your Music','https://rateyourmusic.com/artist/kenshi_yonezu')
-        r=self.store.bind_artist(token,'米津玄師 elsewhere','https://rateyourmusic.com/artist/somewhere-else')
-        self.assertIsNone(r['artist'])
-        self.assertEqual(self.store.artist_links()['米津玄師'],'https://rateyourmusic.com/artist/kenshi_yonezu')
-        self.assertEqual(self.store.state()['settings']['rym-links']['米津玄師'],'https://rateyourmusic.com/artist/kenshi_yonezu')
+    # ── 退役的 RYM 直达：历史数据保留，不再生成新绑定 ──
+    def test_rym_settings_preserved_and_roundtrip(self):
+        # meta 里的历史 rym 数据原样保留（只读通用路径），不删除、不覆盖、不迁移
+        with self.store.connect() as db:
+            db.execute("INSERT OR REPLACE INTO meta VALUES('rym-token',?)", ('"tok-123"',))
+            db.execute("INSERT OR REPLACE INTO meta VALUES('rym-links',?)",
+                       ('{"米津玄師": "https://rateyourmusic.com/artist/kenshi_yonezu"}',))
+        self.assertFalse(hasattr(self.store, 'bind_artist'))  # 旧绑定入口已退役
+        b = self.store.backup()
+        self.assertEqual(b['settings']['rym-links']['米津玄師'], 'https://rateyourmusic.com/artist/kenshi_yonezu')
+        self.assertEqual(b['settings']['rym-token'], 'tok-123')
+        other = Store(Path(self.tmp.name) / 'other.sqlite3')
+        other.restore_backup(b)  # 旧备份继续可恢复这些设置
+        with other.connect() as db:
+            links = json.loads(db.execute("SELECT data FROM meta WHERE key='rym-links'").fetchone()[0])
+        self.assertEqual(links['米津玄師'], 'https://rateyourmusic.com/artist/kenshi_yonezu')
 
 class RateServiceTests(unittest.TestCase):
     def test_weekend_rolls_back(self):

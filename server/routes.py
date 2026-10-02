@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 from domain import ValidationError
 from storage import SCHEMA
 from . import export_csv
+from .artists import SourceUnavailableError
 from .version import uptime, version
 
 # 所有改状态的 store 调用共用一把锁，串行化并发写
@@ -20,8 +21,17 @@ WRITE_LOCK = threading.Lock()
 
 
 def query(h):
-    """URL 查询串 → 首值字典。"""
-    return {k: v[0] for k, v in parse_qs(urlsplit(h.path).query).items()}
+    """URL 查询串 → 首值字典。浏览器 fetch 总是百分号编码；裸 UTF-8（如 curl 直连）按原字节recover。"""
+    out = {}
+    for key, values in parse_qs(urlsplit(h.path).query).items():
+        fixed = []
+        for v in values:
+            try:
+                fixed.append(v.encode('latin-1').decode('utf-8'))
+            except (UnicodeEncodeError, UnicodeDecodeError):
+                fixed.append(v)
+        out[key] = fixed[0]
+    return out
 
 
 # ── GET ──────────────────────────────────────────────────────────────
@@ -73,15 +83,6 @@ def api_backup(h, svc):
     h.send(svc.store.backup(), filename='album-ledger-backup.json')
 
 
-def api_artist_links(h, svc):
-    h.send({'links': svc.store.artist_links(), 'token': svc.store.rym_token()})
-
-
-def api_artist_bind(h, svc, body):
-    """书签从 RYM 艺人页跨站回传：无会话，凭 meta 里的令牌鉴权。"""
-    h.send(svc.store.bind_artist(body.get('token'), body.get('title', ''), body.get('url', '')))
-
-
 def api_export(h, svc):
     if query(h).get('scope') == 'sales':
         return h.send(export_csv.sales_csv(svc.store.state()), mime='text/csv; charset=utf-8', filename='sales.csv')
@@ -120,6 +121,75 @@ def api_covers_search(h, svc, body):
 
 def api_covers_download(h, svc, body):
     h.send(svc.covers.download(body.get('token')))
+
+
+# ── 艺人资料与作品目录：外网请求不持有写锁，storage 写入由服务内部短锁串行 ──
+def artists(svc):
+    if svc.artists is None: raise ValidationError('艺人资料服务未启动，请重启碟渡')
+    return svc.artists
+
+
+def _unavailable(h, exc):
+    h.send({'status': 'unavailable', 'error': str(exc)}, 503)
+
+
+def api_artists_resolve(h, svc, body):
+    try:
+        h.send(artists(svc).resolve(body.get('artist', ''), body.get('searchName'),
+                                    force=bool(body.get('force'))))
+    except SourceUnavailableError as exc:
+        _unavailable(h, exc)
+
+
+def api_artists_bind(h, svc, body):
+    try:
+        binding = artists(svc).bind(body.get('artist', ''), body.get('artistMbid'),
+                                    body.get('expectedArtistMbid'))
+        h.send({'ok': True, 'binding': binding})
+    except SourceUnavailableError as exc:
+        _unavailable(h, exc)
+
+
+def api_artists_profile(h, svc):
+    q = query(h)
+    try:
+        h.send(artists(svc).profile(q.get('artist', ''), refresh=q.get('refresh') == '1'))
+    except SourceUnavailableError as exc:
+        h.send({'artist': q.get('artist', ''), 'status': 'unavailable', 'error': str(exc)}, 503)
+
+
+def api_artists_catalog(h, svc):
+    q = query(h)
+    try:
+        h.send(artists(svc).catalog(q.get('artist', ''), q.get('offset', 0),
+                                    refresh=q.get('refresh') == '1', round_id=q.get('roundId')))
+    except SourceUnavailableError as exc:
+        h.send({'status': 'unavailable', 'error': str(exc)}, 503)
+
+
+def api_artists_work_link(h, svc, body):
+    try:
+        link = artists(svc).work_link(body.get('artist', ''), body.get('recordId'),
+                                      body.get('releaseGroupMbid'), body.get('expectedReleaseGroupMbid'),
+                                      body.get('recordArtist', ''), body.get('recordTitle', ''))
+        h.send({'ok': True, 'link': link})
+    except SourceUnavailableError as exc:
+        _unavailable(h, exc)
+
+
+def api_artists_work_unlink(h, svc, body):
+    h.send({'ok': True, **artists(svc).work_unlink(body.get('recordId'),
+                                                   body.get('expectedReleaseGroupMbid'))})
+
+
+def api_artists_artwork(h, svc):
+    """作品缩略封面：无图 404、临时失败 503；只有本地目录缓存里出现过的作品 ID 可取。"""
+    try:
+        result = artists(svc).artwork(urlsplit(h.path).path.split('/')[-1])
+    except SourceUnavailableError as exc:
+        return h.send({'error': str(exc)}, 503)
+    if result is None: return h.send({'error': '暂无封面'}, 404)
+    h.send(result['data'], mime=result['mime'], cache='private, max-age=2592000')
 
 
 # ── POST：账本写操作（全部走 WRITE_LOCK）────────────────────────────
@@ -183,7 +253,8 @@ GET = {
     '/api/state': api_state,
     '/api/rate': api_rate,
     '/api/backup': api_backup,
-    '/api/artist-links': api_artist_links,
+    '/api/artists/profile': api_artists_profile,
+    '/api/artists/catalog': api_artists_catalog,
     '/api/export': api_export,
     '/api/vision': api_vision,
     '/api/vision/release': api_release,
@@ -197,6 +268,7 @@ GET_PREFIX = {  # 带路径参数的接口
     '/api/photo/': api_photo,
     '/api/cover/': api_cover,
     '/api/import-photo/': api_import_photo,
+    '/api/artists/artwork/': api_artists_artwork,
 }
 POST = {
     # path: (处理函数, 需要登录, 需要 WRITE_LOCK)
@@ -205,6 +277,10 @@ POST = {
     '/api/password': (api_password, True, True),
     '/api/covers/search': (api_covers_search, True, False),
     '/api/covers/download': (api_covers_download, True, False),
+    '/api/artists/resolve': (api_artists_resolve, True, False),
+    '/api/artists/bind': (api_artists_bind, True, False),
+    '/api/artists/work-link': (api_artists_work_link, True, False),
+    '/api/artists/work-unlink': (api_artists_work_unlink, True, False),
     '/api/records': (api_records, True, True),
     '/api/bulk': (api_bulk, True, True),
     '/api/sales': (api_sales, True, True),
@@ -224,12 +300,10 @@ POST = {
     '/api/imports/start': (api_import_start, True, False),
     '/api/imports/commit': (api_import_commit, True, True),
     '/api/imports/delete': (api_import_delete, True, False),
-    # 书签回传绑定：来自 rateyourmusic.com 的跨站请求，凭令牌鉴权（见 api_artist_bind）
-    '/api/artist-bind': (api_artist_bind, False, True),
 }
 
-# 允许跨站（书签/外部页面）调用的写接口；trusted() 对这些路径豁免 Origin 检查
-CROSS_SITE_POST = {'/api/artist-bind'}
+# 允许跨站（外部页面）调用的写接口；当前为空，保留豁免管线供未来令牌鉴权回调使用
+CROSS_SITE_POST: set = set()
 
 
 def resolve_get(path):

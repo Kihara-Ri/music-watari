@@ -14,6 +14,7 @@ from urllib.parse import urlencode, urlsplit, quote
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 from domain import ValidationError
 from cjkvariants import T2S
+from musicbrainz import SourceUnavailable as MBSourceUnavailable, BadSource as MBBadSource
 
 
 def normalized(text):
@@ -74,8 +75,9 @@ class SafeRedirect(HTTPRedirectHandler):
 
 
 class CoverService:
-    def __init__(self, cache_path=None):
+    def __init__(self, cache_path=None, mb=None):
         self.cache_path = cache_path
+        self.mb = mb  # MusicBrainzClient：MusicBrainz HTTP 路径接入全应用共用节流
         self.catalog_lock = threading.Lock()
         self.network_lock = threading.Lock()
         self.responses = {}
@@ -159,16 +161,26 @@ class CoverService:
                     if row: hit = (row[0],json.loads(row[1]))
             if hit and time.time()-hit[0] < 7*86400: return hit[1]
             host=urlsplit(url).hostname
-            interval=3.1 if host=='itunes.apple.com' else 1.1
-            time.sleep(max(0,interval-(time.monotonic()-self.last_request.get(host,0))))
-            self.last_request[host]=time.monotonic()
-            try:
-                result=json.loads(self.read(url,4*1024*1024))
-                if not isinstance(result,dict): raise ValueError()
-            except ValidationError:
-                raise
-            except (ValueError,TypeError) as exc:
-                raise ValidationError('封面资料库返回了无效数据') from exc
+            if self.mb is not None and host == 'musicbrainz.org':
+                # MusicBrainz 的节流交给共用客户端（含 429/503 冷却），本服务不再自行计时
+                try:
+                    result = self.mb.get_url(url)
+                    if not isinstance(result, dict): raise MBBadSource('封面资料库返回了无效数据')
+                except MBSourceUnavailable as exc:
+                    raise ValidationError('封面资料库暂时不可用，请稍后重试') from exc
+                except MBBadSource as exc:
+                    raise ValidationError('封面资料库返回了无效数据') from exc
+            else:
+                interval=3.1 if host=='itunes.apple.com' else 1.1
+                time.sleep(max(0,interval-(time.monotonic()-self.last_request.get(host,0))))
+                self.last_request[host]=time.monotonic()
+                try:
+                    result=json.loads(self.read(url,4*1024*1024))
+                    if not isinstance(result,dict): raise ValueError()
+                except ValidationError:
+                    raise
+                except (ValueError,TypeError) as exc:
+                    raise ValidationError('封面资料库返回了无效数据') from exc
             self.responses[url]=(time.time(),result)
             if self.cache_path:
                 with closing(sqlite3.connect(self.cache_path)) as db, db:

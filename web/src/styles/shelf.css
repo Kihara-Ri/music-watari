@@ -53,11 +53,12 @@
 /* 按艺人分组 */
 .artist-group{margin-bottom:36px}
 .artist-head{display:flex;align-items:baseline;gap:12px;margin-bottom:13px;padding-bottom:9px;border-bottom:1px solid var(--border);flex-wrap:wrap}
-.artist-name{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--text);text-decoration:none;line-height:1.25}
+/* 艺人名 = 打开资料抽屉的按钮：沿用原链接的字体与视觉层级，不做外跳 */
+.artist-name{font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:var(--text);line-height:1.25;
+  background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:inherit}
 /* 艺人名悬停 = 荧光笔高亮：浅色下正黄当文字不可读，用黄底扫过代替变色 */
 .artist-name:hover{color:var(--accent-text);background:linear-gradient(transparent 62%,var(--accent-hl) 62%)}
-.artist-name .ext{font-size:11.5px;color:var(--faint);margin-left:5px;font-weight:500;vertical-align:1px}
-.artist-name:hover .ext{color:var(--accent-text)}
+.artist-name:focus-visible{outline:2px solid var(--accent-deep);outline-offset:2px;border-radius:3px}
 .artist-meta{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums}
 
 @media (max-width:840px){

@@ -1,5 +1,5 @@
 // 设置页：自动化服务状态、导入 albums.json、备份与恢复、回收站入口、最近操作、退出登录。
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 import {api} from '../core/api';
 import {useApp} from '../state/AppContext';
 import type {BackupFile} from '../types';
@@ -15,13 +15,6 @@ interface ImportPreview {
   titles: string[];
 }
 
-// 绑定书签：在 RYM 艺人页点击，把当前链接回传给碟渡（no-cors + 令牌鉴权）
-function rymBindlet(origin: string, token: string): string {
-  const endpoint = JSON.stringify(origin + '/api/artist-bind');
-  const tok = JSON.stringify(token);
-  return `javascript:(function(){if(!/^https:\\/\\/rateyourmusic\\.com\\/artist\\//.test(location.href)){alert('请在 RateYourMusic 的艺人页面上使用');return;}fetch(${endpoint},{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({token:${tok},title:document.title,url:location.href})}).then(function(){alert('已发送，回碟渡确认绑定结果');},function(){alert('发送失败：无法连接碟渡');});})()`;
-}
-
 export function SettingsPage() {
   const app = useApp();
   const {state} = app;
@@ -30,34 +23,8 @@ export function SettingsPage() {
   const [importData, setImportData] = useState<unknown[] | null>(null);
   const [importError, setImportError] = useState('');
   const [committing, setCommitting] = useState(false);
-  const [rym, setRym] = useState<{links: Record<string, string>; token: string} | null>(null);
   const [pw, setPw] = useState({current: '', next: '', confirm: ''});
   const [changing, setChanging] = useState(false);
-  const bindletAnchor = useRef<HTMLAnchorElement>(null);
-
-  // 拉取绑定与令牌（首次访问会在服务端生成令牌）
-  useEffect(() => {
-    api<{links: Record<string, string>; token: string}>('artist-links')
-      .then(setRym)
-      .catch(() => { /* 离线时隐藏本节功能 */ });
-  }, []);
-
-  useEffect(() => {
-    if (rym && bindletAnchor.current) {
-      // 不走 React 的 href 属性（javascript: URL），挂载后直接设置
-      bindletAnchor.current.setAttribute('href', rymBindlet(location.origin, rym.token));
-    }
-  }, [rym]);
-
-  const copyBindlet = async () => {
-    if (!rym) return;
-    try {
-      await navigator.clipboard.writeText(rymBindlet(location.origin, rym.token));
-      app.toast('书签代码已复制，粘贴到书签的网址栏即可');
-    } catch {
-      app.toast('复制失败，请手动选择代码复制', 'err');
-    }
-  };
 
   const onImportFile = async (file: File) => {
     setImportError('');
@@ -168,22 +135,6 @@ export function SettingsPage() {
             </div>
           )}
         </div>
-      </section>
-
-      <section className="settings-section">
-        <h3>RYM 艺人直达</h3>
-        <p>「按艺人」视图点艺人名默认打开 RateYourMusic 搜索。在搜索结果里选中艺人进入其页面后，点下面的书签，碟渡即记住该艺人的直达链接——之后点击艺人名直接进入艺人页，绑定随备份保存。</p>
-        {rym ? (
-          <div className="inline-actions">
-            <a ref={bindletAnchor} className="link-button" draggable
-               title="把这个按钮拖到浏览器书签栏" onClick={e => e.preventDefault()}>绑定到碟渡</a>
-            <button onClick={copyBindlet}>复制书签代码</button>
-            <span className="small-note">已绑定 {rym.links ? Object.keys(rym.links).length : 0} 位艺人</span>
-          </div>
-        ) : (
-          <p className="small-note">绑定服务不可用（离线或未登录）。</p>
-        )}
-        <p className="small-note">书签只认 rateyourmusic.com/artist/ 页面；发送的内容仅页面标题与网址，凭据仅存在于本机服务。</p>
       </section>
 
       <section className="settings-section">

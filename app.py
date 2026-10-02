@@ -15,9 +15,12 @@ from http.server import ThreadingHTTPServer
 
 from backups import Backups
 from covers import CoverService
+from musicbrainz import MusicBrainzClient
 from rates import RateService
 from security import Auth
 from server import Services, make_handler
+from server.artists import ArtistService
+from server.routes import WRITE_LOCK
 from server.version import version
 from server.recognition import VisionService
 from storage import Store
@@ -30,10 +33,12 @@ def build(data_dir, public_origin=None):
     data = Path(data_dir)
     rates = RateService(data / 'rates.sqlite3')
     store = Store(data / 'albums.sqlite3', rates)
-    covers = CoverService(data / 'cover-cache.sqlite3')
+    mb = MusicBrainzClient()
+    covers = CoverService(data / 'cover-cache.sqlite3', mb=mb)
     return Services(store=store,
                     auth=Auth(data / 'auth.sqlite3'),
-                    covers=covers, vision=VisionService(store, covers),
+                    covers=covers, vision=VisionService(store, covers, mb=mb),
+                    artists=ArtistService(store, mb, covers, write_lock=WRITE_LOCK),
                     rates=rates,
                     public_origin=public_origin)
 

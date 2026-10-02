@@ -52,21 +52,14 @@ class WebTests(unittest.TestCase):
   self.assertEqual(status,302);self.assertEqual(h['Location'],'/login')
   self.assertEqual(self.req('/api/login',{'password':'test-password-12345'},host='127.0.0.1:18765',origin='http://127.0.0.1:18765')[0],200)
   self.assertEqual(self.req('/api/login',{'password':'test-password-12345'},host='127.0.0.1:18765',origin='http://localhost:3000')[0],403)
- def test_artist_bind_cross_site_token(self):
+ def test_retired_rym_endpoints_gone(self):
+  # RYM 直达已退役：路由注销（登录后 404 才是证据），跨站豁免随之取消
   status,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
-  self.assertEqual(self.req('/api/records',{'title':'测试专辑','artist':'米津玄師','date':'2026-09-07','price':'2000','currency':'JPY','fees':'0'},cookie=cookie)[0],200)
-  status,_,body=self.req('/api/artist-links',cookie=cookie);self.assertEqual(status,200)
-  token=json.loads(body)['token']
-  self.assertEqual(self.req('/api/artist-links')[0],401)
-  # 书签的跨站 no-cors 形态：text/plain + 外站 Origin + Sec-Fetch-Site，凭令牌放行
-  c=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
-  payload=json.dumps({'token':token,'title':'米津玄師 Albums: songs, discography','url':'https://rateyourmusic.com/artist/kenshi_yonezu'})
-  c.request('POST','/api/artist-bind',payload,{'Content-Type':'text/plain','Origin':'https://rateyourmusic.com','Sec-Fetch-Site':'cross-site'})
-  r=c.getresponse();out=json.loads(r.read());c.close()
-  self.assertEqual(out['artist'],'米津玄師')
-  c=http.client.HTTPConnection('127.0.0.1',self.server.server_port)
-  c.request('POST','/api/artist-bind',json.dumps({'token':'bad','title':'米津玄師','url':'https://rateyourmusic.com/artist/kenshi_yonezu'}),{'Content-Type':'text/plain'})
-  self.assertEqual(c.getresponse().status,400);c.close()
+  self.assertEqual(self.req('/api/artist-links',cookie=cookie)[0],404)
+  self.assertEqual(self.req('/api/artist-bind',{'token':'x','title':'米津玄師','url':'https://rateyourmusic.com/artist/kenshi_yonezu'})[0],404)
+  # 新艺人接口沿用登录与 Origin 校验：跨站 Origin 必须拒绝，未登录一律 401
+  self.assertEqual(self.req('/api/artists/resolve',{'artist':'米津玄師'},cookie=cookie,origin='https://evil.test')[0],403)
+  self.assertEqual(self.req('/api/artists/profile?artist=x')[0],401)
  def test_throttle_and_expiry(self):
   for i in range(5):
    with self.assertRaises(ValueError):self.auth.login('wrong','ip')

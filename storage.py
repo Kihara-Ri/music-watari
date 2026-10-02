@@ -9,28 +9,57 @@ share of the postage onto each album's fees (part of acquisition cost); it
 can be rolled back at any step while albums haven't moved on.
 Sales start at 'shipping'; only 确认收货 turns them into realized cash ('sold').
 """
-import json, sqlite3, uuid, base64, hashlib, re, shutil, secrets, threading
+import json, sqlite3, uuid, base64, hashlib, re, shutil, threading
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urlsplit
-from domain import ValidationError, clean_record, clean_release_info, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
-from covers import normalized, artist_variants
+from domain import ValidationError, ConflictError, clean_record, clean_release_info, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
 from decimal import Decimal
 
 SCHEMA = 4
 SHIPMENT_STATUSES = ('transit', 'arrived', 'cancelled')
 SALE_STATUSES = ('shipping', 'complete', 'cancelled', 'returned', 'refunded')
 PHOTO_RE = re.compile(r'^data:image/(jpeg|png|webp);base64,')
+MBID_RE = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
+RECORD_ID_RE = re.compile(r'^[0-9a-f]{32}$')
+IDENTITY_METHODS = ('manual', 'corroborated')
 
-def rym_artist_url(url):
-    """校验并归一 RYM 艺人页链接；非艺人页返回 None。"""
-    p = urlsplit(str(url))
-    if p.scheme != 'https' or p.hostname not in ('rateyourmusic.com', 'www.rateyourmusic.com'): return None
-    parts = [s for s in p.path.split('/') if s]
-    if len(parts) != 2 or parts[0] != 'artist': return None
-    slug = parts[1]
-    if not slug or len(slug) > 120 or any(c in slug for c in '@?#&%. '): return None
-    return 'https://rateyourmusic.com/artist/' + slug
+def clean_artist_identities(value):
+    """备份恢复校验：artist-identities-v1 映射结构；字段不全或类型不对即拒绝。"""
+    if not isinstance(value, dict): raise ValidationError('备份的艺人绑定无效')
+    out = {}
+    for name, ident in value.items():
+        if not isinstance(name, str) or not 1 <= len(name) <= 500: raise ValidationError('备份的艺人绑定无效')
+        if not isinstance(ident, dict) or not isinstance(ident.get('artistMbid'), str) or not MBID_RE.match(ident['artistMbid']):
+            raise ValidationError('备份的艺人绑定无效')
+        if not isinstance(ident.get('sourceName'), str) or not 1 <= len(ident['sourceName']) <= 500:
+            raise ValidationError('备份的艺人绑定无效')
+        if ident.get('method') not in IDENTITY_METHODS: raise ValidationError('备份的艺人绑定无效')
+        if not isinstance(ident.get('confirmedAt'), str) or not 1 <= len(ident['confirmedAt']) <= 40:
+            raise ValidationError('备份的艺人绑定无效')
+        out[name] = {'artistMbid': ident['artistMbid'], 'sourceName': ident['sourceName'],
+                     'method': ident['method'], 'confirmedAt': ident['confirmedAt']}
+    return out
+
+def clean_work_links(value):
+    """备份恢复校验：record-work-links-v1 映射结构；不存在的记录 ID 在读取时忽略。"""
+    if not isinstance(value, dict): raise ValidationError('备份的作品关联无效')
+    out = {}
+    for rid, link in value.items():
+        if not isinstance(rid, str) or not RECORD_ID_RE.match(rid): raise ValidationError('备份的作品关联无效')
+        if not isinstance(link, dict) or not isinstance(link.get('artistMbid'), str) or not MBID_RE.match(link['artistMbid']):
+            raise ValidationError('备份的作品关联无效')
+        if not isinstance(link.get('releaseGroupMbid'), str) or not MBID_RE.match(link['releaseGroupMbid']):
+            raise ValidationError('备份的作品关联无效')
+        for k in ('recordArtist', 'recordTitle'):
+            if not isinstance(link.get(k), str) or not 1 <= len(link[k]) <= 500:
+                raise ValidationError('备份的作品关联无效')
+        if link.get('method') not in IDENTITY_METHODS: raise ValidationError('备份的作品关联无效')
+        if not isinstance(link.get('confirmedAt'), str) or not 1 <= len(link['confirmedAt']) <= 40:
+            raise ValidationError('备份的作品关联无效')
+        out[rid] = {k: link[k] for k in ('artistMbid', 'releaseGroupMbid', 'recordArtist',
+                                         'recordTitle', 'method', 'confirmedAt')}
+    return out
+
 PHOTO_MIME = {'jpeg': '.jpg', 'png': '.png', 'webp': '.webp'}
 MAX_PHOTOS = 30
 
@@ -639,6 +668,11 @@ class Store:
         if not isinstance(b.get('records'),list) or not isinstance(b.get('sales'),list): raise ValidationError('备份内容不完整')
         if not isinstance(b.get('settings', {}), dict): raise ValidationError('备份的设置无效')
         if 'modules-v1' in b.get('settings', {}): clean_modules(b['settings']['modules-v1'])
+        # 新键只验结构与类型；恢复可能带来不存在的记录 ID / 过期关联，读取时再忽略或标待核对。
+        if 'artist-identities-v1' in b.get('settings', {}):
+            clean_artist_identities(b['settings']['artist-identities-v1'])
+        if 'record-work-links-v1' in b.get('settings', {}):
+            clean_work_links(b['settings']['record-work-links-v1'])
         # Old (schema-1/2) backups are upgraded on the fly so they stay restorable.
         for r in b['records']:
             if r.get('status')=='review': r['status']='domestic'
@@ -696,50 +730,78 @@ class Store:
             self.audit(db,'恢复完整备份',{'from':b.get('createdAt')})
         return {'ok':True}
 
-    # ── RYM 艺人直达链接：绑定一次（书签从 RYM 艺人页回传），此后点击直达 ──
+    # ── 通用 meta 读取：模块开关与艺人绑定/作品关联等都走这里 ──
     def meta_get(self, db, key):
         row = db.execute('SELECT data FROM meta WHERE key=?',(key,)).fetchone()
         return json.loads(row['data']) if row else None
 
-    def rym_token(self):
-        """书签回传绑定的凭据；首次访问时生成，随备份走。"""
+    # ── 艺人身份绑定与副本-作品关联（meta 持久化；调用方先完成外部核验，
+    #    这里在单事务内重读当前值并校验预期，竞争失败抛 ConflictError → 409）──
+    def artist_identities(self):
         with self.connect() as db:
-            token = self.meta_get(db, 'rym-token')
-            if token: return token
-            token = secrets.token_hex(16)
-            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',('rym-token',dumps(token)))
-            return token
+            return self.meta_get(db, 'artist-identities-v1') or {}
 
-    def artist_links(self):
+    def bind_artist_identity(self, artist, mbid, source_name, method, expected_mbid):
+        """保存确认过的 MusicBrainz 艺人身份；expected_mbid 为调用方读到的当前绑定（未绑定为 None）。"""
+        if not isinstance(artist, str) or not 1 <= len(artist.strip()) <= 500: raise ValidationError('艺人名不正确')
+        artist = artist.strip()
+        if not isinstance(mbid, str) or not MBID_RE.match(mbid): raise ValidationError('艺人编号不正确')
+        if method not in IDENTITY_METHODS: raise ValidationError('绑定方式不正确')
+        if not isinstance(source_name, str) or not 1 <= len(source_name.strip()) <= 500: raise ValidationError('资料名称不正确')
+        source_name = source_name.strip()
+        if expected_mbid is not None and (not isinstance(expected_mbid, str) or not MBID_RE.match(expected_mbid)):
+            raise ValidationError('预期绑定不正确')
         with self.connect() as db:
-            return self.meta_get(db, 'rym-links') or {}
+            identities = self.meta_get(db, 'artist-identities-v1') or {}
+            current = identities.get(artist)
+            current_mbid = current.get('artistMbid') if isinstance(current, dict) else None
+            if current_mbid != expected_mbid: raise ConflictError('当前绑定已被修改，请刷新后重新确认')
+            identities[artist] = {'artistMbid': mbid, 'sourceName': source_name,
+                                  'method': method, 'confirmedAt': now()}
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('artist-identities-v1', dumps(identities)))
+            self.audit(db, '更换艺人' if current_mbid and current_mbid != mbid else '确认艺人',
+                       {'artist': artist, 'artistMbid': mbid, 'method': method})
+        return identities[artist]
 
-    def bind_artist(self, token, title, url):
-        """凭书签令牌把一个 RYM 艺人页绑定到库内同名艺人；认不出艺人则不绑定。"""
+    def record_work_links(self):
         with self.connect() as db:
-            if not isinstance(token, str) or token != self.meta_get(db, 'rym-token'):
-                raise ValidationError('绑定凭据不正确，请到设置页重新复制书签')
-            link = rym_artist_url(url)
-            if not link: raise ValidationError('这不是 RateYourMusic 的艺人页链接')
-            t = normalized(str(title))
-            if not t: raise ValidationError('未能读取艺人页标题')
-            links = self.meta_get(db, 'rym-links') or {}
-            pending = sorted({r['artist'] for r in self.rows(db,'records') if r.get('artist')} - set(links))
-            hits = []
-            for a in pending:
-                for v in artist_variants(a):
-                    nv = normalized(v)
-                    if not nv: continue
-                    if nv == t: hits.append((3, a)); break
-                    if len(nv) >= 2 and t.startswith(nv): hits.append((2, a)); break
-                    if len(nv) >= 4 and nv in t: hits.append((1, a)); break
-            artist = None
-            if hits:
-                best = max(s for s, _ in hits)
-                names = {a for s, a in hits if s == best}
-                if len(names) == 1:
-                    artist = names.pop()
-                    links[artist] = link
-                    db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)',('rym-links',dumps(links)))
-                    self.audit(db,'绑定RYM艺人',{'artist':artist,'url':link})
-            return {'ok':True,'artist':artist,'bound':len(links)}
+            return self.meta_get(db, 'record-work-links-v1') or {}
+
+    def link_record_work(self, record_id, artist_mbid, rg_mbid, expected_rg, record_artist, record_title):
+        """把一张实物副本关联到一个作品（release-group）；快照与预期不符时拒绝。"""
+        if not isinstance(record_id, str) or not RECORD_ID_RE.match(record_id): raise ValidationError('记录编号不正确')
+        if not isinstance(artist_mbid, str) or not MBID_RE.match(artist_mbid): raise ValidationError('艺人编号不正确')
+        if not isinstance(rg_mbid, str) or not MBID_RE.match(rg_mbid): raise ValidationError('作品编号不正确')
+        if expected_rg is not None and (not isinstance(expected_rg, str) or not MBID_RE.match(expected_rg)):
+            raise ValidationError('预期关联不正确')
+        for value, label in ((record_artist, '副本艺人'), (record_title, '副本标题')):
+            if not isinstance(value, str) or not 1 <= len(value.strip()) <= 500: raise ValidationError(label + '不正确')
+        record_artist, record_title = record_artist.strip(), record_title.strip()
+        with self.connect() as db:
+            r = self.get(db, 'records', record_id)  # 记录必须存在；同时读取快照核对
+            if r['artist'] != record_artist or r['title'] != record_title:
+                raise ConflictError('这张副本刚被修改，请刷新后重新关联')
+            links = self.meta_get(db, 'record-work-links-v1') or {}
+            current = links.get(record_id)
+            current_rg = current.get('releaseGroupMbid') if isinstance(current, dict) else None
+            if current_rg != expected_rg: raise ConflictError('关联已被修改，请刷新后重试')
+            links[record_id] = {'artistMbid': artist_mbid, 'releaseGroupMbid': rg_mbid,
+                                'recordArtist': record_artist, 'recordTitle': record_title,
+                                'method': 'manual', 'confirmedAt': now()}
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('record-work-links-v1', dumps(links)))
+            self.audit(db, '关联作品', {'recordId': record_id, 'releaseGroupMbid': rg_mbid})
+        return links[record_id]
+
+    def unlink_record_work(self, record_id, expected_rg):
+        """只删除该条关联，不动副本本身；预期不符拒绝。"""
+        if not isinstance(record_id, str) or not RECORD_ID_RE.match(record_id): raise ValidationError('记录编号不正确')
+        if not isinstance(expected_rg, str) or not MBID_RE.match(expected_rg): raise ValidationError('预期关联不正确')
+        with self.connect() as db:
+            links = self.meta_get(db, 'record-work-links-v1') or {}
+            current = links.get(record_id)
+            current_rg = current.get('releaseGroupMbid') if isinstance(current, dict) else None
+            if current_rg != expected_rg: raise ConflictError('关联已被修改，请刷新后重试')
+            links.pop(record_id, None)
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('record-work-links-v1', dumps(links)))
+            self.audit(db, '取消作品关联', {'recordId': record_id, 'releaseGroupMbid': expected_rg})
+        return {'ok': True}

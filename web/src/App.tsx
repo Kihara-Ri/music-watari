@@ -112,20 +112,7 @@ export default function App() {
     toastTimer.current = window.setTimeout(() => setToastMsg(null), 3000);
   }, []);
 
-  // 回到页签时刷新：拾取书签从 RYM 回传的艺人绑定，并提示新增绑定
-  const seenRym = useRef<Set<string> | null>(null);
-  useEffect(() => {
-    const links = state?.settings?.['rym-links'] as Record<string, string> | undefined;
-    if (!links) return;
-    const names = new Set(Object.keys(links));
-    if (seenRym.current) {
-      const fresh = [...names].filter(n => !seenRym.current!.has(n));
-      if (fresh.length) toast(fresh.length === 1 ? `已绑定 RYM 艺人：${fresh[0]}` : `已绑定 ${fresh.length} 个 RYM 艺人链接`);
-    }
-    seenRym.current = names;
-  }, [state, toast]);
-
-  // 回到页签时刷新：拾取书签从 RYM 回传的艺人绑定，并提示新增绑定。
+  // 回到页签时刷新：拾取其他设备/实例的改动，保持全量状态一致。
   // 30 秒内跳过重复拉取——页签频繁切换不应每次都全量下载状态。
   const lastRefreshAt = useRef(0);
   useEffect(() => {

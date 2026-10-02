@@ -12,6 +12,7 @@ import './styles/more.css';
 import './styles/drawer.css';
 import './styles/photos.css';
 import './styles/recognition.css';
+import './styles/artists.css';
 import './styles/login.css';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';

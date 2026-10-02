@@ -20,6 +20,10 @@ class ValidationError(ValueError):
     pass
 
 
+class ConflictError(ValidationError):
+    """预期状态与当前不一致（其他端已修改）；路由层映射为 HTTP 409。"""
+
+
 RELEASE_FIELDS = ('catalogNumber', 'barcode', 'label', 'country', 'releaseDate',
                   'edition', 'format', 'discCount', 'matrix', 'extras', 'observations')
 

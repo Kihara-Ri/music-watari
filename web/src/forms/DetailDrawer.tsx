@@ -11,10 +11,15 @@ import {openListingForm} from './ListingForm';
 import {bulkAction} from './shared';
 import {releaseLabels} from '../core/recognition';
 
-export function openDetail(app: AppCtx, id: string) {
+export interface DetailBack {
+  label?: string;
+  run: () => void;
+}
+
+export function openDetail(app: AppCtx, id: string, back?: DetailBack) {
   const r = app.rec(id);
   if (!r) { app.toast('记录不存在，请刷新页面', 'err'); return; }
-  app.openDrawer({title: '专辑详情', content: <DetailBody id={id}/>, footer: <DetailFooter id={id}/>});
+  app.openDrawer({title: '专辑详情', content: <DetailBody id={id}/>, footer: <DetailFooter id={id} back={back}/>});
 }
 
 function DetailBody({id}: {id: string}) {
@@ -128,12 +133,13 @@ function DetailBody({id}: {id: string}) {
   );
 }
 
-function DetailFooter({id}: {id: string}) {
+function DetailFooter({id, back}: {id: string; back?: DetailBack}) {
   const app = useApp();
   const r = app.rec(id);
   if (!r) return null;
   return (
     <>
+      {back ? <button className="quiet" onClick={back.run}>{back.label ?? '返回'}</button> : null}
       <button onClick={() => openRecordForm(app, id)}>编辑</button>
       {app.modules.trading && ['overseas', 'domestic'].includes(r.status)
         ? <button className="quiet" onClick={() => openListingForm(app, id)}>上架资料</button> : null}
