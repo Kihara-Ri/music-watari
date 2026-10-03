@@ -21,6 +21,7 @@ from storage import uid, now
 PROFILE_TTL = 7 * 86400      # 艺人资料 / 目录页缓存有效期
 ROUND_TTL = 3600             # 刷新轮次时效；过期后分页请求 409，重新开始
 MISS_TTL = 3600              # 名称未命中缓存
+AMBIGUOUS_TTL = 600          # 同名候选解析结果缓存：后台预取的成果，打开时直接呈现
 ARTWORK_TTL = 30 * 86400     # 封面成功缓存
 ARTWORK_MISS_TTL = 86400     # 来源无图负缓存
 FAIL_SUPPRESS = 60           # 临时失败请求抑制（内存）
@@ -123,6 +124,17 @@ class ArtistService:
         # 本地目录缓存中出现过的作品 ID（懒构建；快照写入后失效）
         self._known_lock = threading.Lock()
         self._known = None
+        # ── 后台预取：库内出现未绑定艺人时自动解析/缓存，用户打开抽屉即有所需资料 ──
+        # 队列只存名字；重试节奏在内存（重启后由「未绑定名单」扫描自然重建）
+        self.prewarm_enabled = True          # 测试可整体关掉
+        self.prewarm_retry = 900.0           # 单个艺人失败后的最早重试间隔（秒）
+        self.prewarm_gap = 2.0               # 艺人之间的额外间隔（配合客户端 1.1s 节流）
+        self._prewarm_lock = threading.Lock()
+        self._prewarm_queue = []
+        self._prewarm_queued = set()
+        self._prewarm_next = {}              # artist → 最早重试时刻（clock 口径）
+        self._prewarm_wake = threading.Event()
+        self._prewarm_thread = None
 
     # ── 基础工具 ──
     def _records_of(self, name):
@@ -206,9 +218,15 @@ class ArtistService:
         query = query.strip()
         miss_path = self.cache_dir / 'miss' / (hashlib.sha256(strict_key(query).encode()).hexdigest()[:20] + '.json')
         miss = self._read_json_file(miss_path)
-        if miss and self._fresh(miss, MISS_TTL):
-            return {'status': 'not_found', 'artist': name, 'candidates': [],
-                    'evidenceComplete': True, 'searchCount': 0}
+        if miss and not self._binding(name):
+            # 未命中/同名候选的解析成果短期复用（后台预取的热身成果）；一有绑定立即失效
+            if miss.get('status') == 'not_found' and self._fresh(miss, MISS_TTL):
+                return {'status': 'not_found', 'artist': name, 'candidates': [],
+                        'evidenceComplete': True, 'searchCount': 0}
+            if miss.get('status') == 'ambiguous' and self._fresh(miss, AMBIGUOUS_TTL):
+                cached = dict(miss.get('result') or {}, artist=name)
+                if cached.get('candidates') is not None:
+                    return cached
         deadline = self._clock() + self.resolve_budget
         try:
             search = self._single('search:' + strict_key(query),
@@ -266,7 +284,7 @@ class ArtistService:
                 k = strict_key(r.get('title', ''))
                 if k and k not in titles: titles.append(k)
             for c in strict:
-                evidence[c['mbid']] = self._title_evidence(c['mbid'], titles, deadline)
+                evidence[c['mbid']] = self._title_evidence(c['mbid'], c['name'], titles, deadline)
                 if evidence[c['mbid']] is None: complete = False
         if len(strict) == 1 and complete and evidence.get(strict[0]['mbid']) is True:
             # 唯一严格候选 + 本地作品标题严格一致 + artist-credit 包含该候选 → 自动确认
@@ -287,14 +305,20 @@ class ArtistService:
                     'evidenceComplete': complete, 'searchCount': search_count}
         for c in candidates:
             c['hasEvidence'] = evidence.get(c['mbid'])
-        return {'status': 'ambiguous', 'artist': name, 'candidates': candidates,
-                'evidenceComplete': complete, 'searchCount': search_count}
+        result = {'status': 'ambiguous', 'artist': name, 'candidates': candidates,
+                  'evidenceComplete': complete, 'searchCount': search_count}
+        # 短缓存（不含 searchCount 之外的易变上下文）；绑定后由绑定短路覆盖
+        self._write_json_file(miss_path, {'query': query, 'ts': self._wall(),
+                                          'status': 'ambiguous', 'result': result})
+        return result
 
-    def _title_evidence(self, mbid, titles, deadline):
-        """本地标题检索 release-group，客户端核对返回的 artist-credit。"""
+    def _title_evidence(self, mbid, artist_hint, titles, deadline):
+        """本地标题（+候选艺人名提高召回）检索 release-group，客户端核对返回的
+        artist-credit——查询带 artist 词只影响召回，证据仍以返回的 credit 为准。"""
         for title in titles[:MAX_TITLE_PROBES]:
             try:
-                data = self.mb.get('release-group', {'query': 'releasegroup:' + lucene_quote(title),
+                data = self.mb.get('release-group', {'query': 'releasegroup:' + lucene_quote(title)
+                                                     + ' AND artist:' + lucene_quote(artist_hint),
                                                      'fmt': 'json', 'limit': 10},
                                    budget=deadline - self._clock())
             except BudgetExceeded:
@@ -610,3 +634,85 @@ class ArtistService:
         except ValidationError:
             self._mark_suppress(key)
             raise SourceUnavailableError('封面暂时读取失败，请稍后重试') from None
+
+    # ── 后台预取 ──
+    def _unbound_artists(self):
+        with self.store.connect() as db:
+            artists = {r['artist'] for r in self.store.rows(db, 'records') if r.get('artist')}
+        return sorted(artists - set(self.store.artist_identities()))
+
+    def enqueue_prewarm(self, artists=None):
+        """把未绑定艺人排入后台预取队列；artists=None 表示按账本全量扫描。
+
+        由路由在账本写入后（保存/导入/恢复）与服务启动时调用；同步扫描、
+        异步取数，绝不阻塞请求。已在队列或处于重试等待期的艺人不重复入队。
+        """
+        if not self.prewarm_enabled: return 0
+        names = list(artists) if artists is not None else self._unbound_artists()
+        added = 0
+        with self._prewarm_lock:
+            now = self._clock()
+            for name in names:
+                if not isinstance(name, str) or not 1 <= len(name.strip()) <= 500: continue
+                name = name.strip()
+                if (name in self._prewarm_queued
+                        or self._prewarm_next.get(name, 0) > now): continue
+                self._prewarm_queued.add(name)
+                self._prewarm_queue.append(name)
+                added += 1
+        if added: self._prewarm_wake.set()
+        return added
+
+    def start_prewarm(self):
+        """启动后台工作线程（服务入口调用一次；测试直接驱动 _prewarm_step）。"""
+        if self._prewarm_thread is not None: return
+        self.enqueue_prewarm()  # 启动即补齐存量未绑定艺人
+        thread = threading.Thread(target=self._prewarm_loop,
+                                  name='artist-prewarm', daemon=True)
+        self._prewarm_thread = thread
+        thread.start()
+
+    def _prewarm_loop(self):
+        while True:
+            self._prewarm_wake.wait()
+            worked = False
+            while self._prewarm_step():
+                worked = True
+                self._sleep(self.prewarm_gap)
+            if not worked: self._prewarm_wake.clear()
+
+    def _prewarm_step(self):
+        """处理一个排队项（线程循环与测试共用）；返回是否处理了。"""
+        with self._prewarm_lock:
+            name = self._prewarm_queue.pop(0) if self._prewarm_queue else None
+        if name is None: return False
+        try:
+            self._prewarm_job(name)
+            print(f'[艺人预取] {name}：完成', flush=True)
+        except Exception as exc:
+            print(f'[艺人预取] {name}：暂未完成（{exc}），稍后重试', flush=True)  # 只记重试时间，不影响队列与其余艺人
+        finally:
+            with self._prewarm_lock:
+                self._prewarm_queued.discard(name)
+                self._prewarm_next[name] = self._clock() + self.prewarm_retry
+        return True
+
+    def _prewarm_job(self, name):
+        if self._binding(name): return  # 用户已先确认（或上轮已绑定）
+        result = self.resolve(name)     # 证据充分时这里会自动绑定
+        print(f'[艺人预取] {name}：解析 → {result["status"]}（候选 {len(result.get("candidates") or [])}）', flush=True)
+        if result['status'] == 'unavailable':
+            raise SourceUnavailableError(result.get('error') or 'unavailable')
+        if not self._binding(name): return  # ambiguous/not_found：等用户确认，不自动补资料
+        self.profile(name)          # 资料缓存（fresh 即零网络）
+        self._prefetch_catalog(name)  # 完整目录快照（已完整即零网络）
+
+    def _prefetch_catalog(self, name):
+        """按轮次把目录读到完整为止；已有完整快照时一次网络都不发。"""
+        offset, round_id = 0, None
+        for _ in range(64):  # 来源异常时由 roundError/409 终止，不无限追页
+            page = self.catalog(name, offset, refresh=False, round_id=round_id)
+            if page.get('status') == 'needs_resolution' or page.get('complete'): return
+            round_id = page.get('roundId') or round_id
+            offset = page.get('nextOffset')
+            if offset is None: return

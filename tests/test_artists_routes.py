@@ -162,5 +162,22 @@ class ArtistRouteTests(unittest.TestCase):
         self.opener.routes = real_routes
 
 
+    def test_records_write_enqueues_prewarm(self):
+        # 账本写入后自动把未绑定艺人排入后台预取；响应先返回、入队紧随其后（不拖慢请求）
+        self.assertEqual(self.req('/api/records', {'title': '新专辑', 'artist': '新艺人'},
+                                  cookie=self.cookie)[0], 200)
+        for _ in range(50):
+            if '新艺人' in self.artists._prewarm_queued: break
+            threading.Event().wait(0.05)
+        self.assertIn('新艺人', self.artists._prewarm_queued)
+        self.assertIn('新艺人', self.artists._prewarm_queue)
+        # 已绑定/已入队的不再重复
+        self.store.bind_artist_identity('新艺人', MBID_A, '新艺人', 'manual', None)
+        self.assertEqual(self.req('/api/records', {'title': '再来一张', 'artist': '新艺人'},
+                                  cookie=self.cookie)[0], 200)
+        threading.Event().wait(0.2)
+        self.assertEqual(self.artists._prewarm_queue.count('新艺人'), 1)
+
+
 if __name__ == '__main__':
     unittest.main()

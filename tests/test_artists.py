@@ -618,3 +618,75 @@ class ThrottleTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class PrewarmTests(unittest.TestCase):
+    """后台预取：账本出现未绑定艺人时自动解析与缓存；证据不足退避给用户。"""
+
+    def setUp(self):
+        self._h = None
+        self.addCleanup(lambda: self._h and self._h.close())
+
+    def harness(self, routes):
+        self._h = h = Harness(routes).start()
+        return h
+
+    def test_binds_and_caches_profile_and_catalog(self):
+        groups = [rg_entry(f'{i:08x}-1111-1111-1111-111111111111', f'作品 {i}',
+                           f'{2000 + i // 12}-{(i % 12) + 1:02d}-01') for i in range(3)]
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 1, 'artists': [artist_entry(MBID_A, 'Radiohead')]}),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', '2026-01-01')]}),
+            (lambda u: BROWSE_RG in u, lambda u: {'release-group-count': len(groups), 'release-groups': groups}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Radiohead')),
+        ])
+        h.buy(artist='Radiohead', title='测试专辑')
+        self.assertEqual(h.service.enqueue_prewarm(['Radiohead']), 1)
+        self.assertTrue(h.service._prewarm_step())
+        self.assertEqual(h.store.artist_identities()['Radiohead']['method'], 'corroborated')
+        self.assertTrue((h.service.cache_dir / 'artist' / (MBID_A + '.json')).exists())
+        snap = h.service._read_json_file(h.service.cache_dir / 'catalog' / (MBID_A + '.json'))
+        self.assertEqual(len(snap['works']), 3)
+        # 已绑定：再次入队处理零网络
+        calls = len(h.opener.calls)
+        h.service.enqueue_prewarm(['Radiohead'])
+        h.service._prewarm_step()
+        self.assertEqual(len(h.opener.calls), calls)
+
+    def test_ambiguous_backs_off_until_retry_window(self):
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 1, 'artists': [artist_entry(MBID_A, 'Nirvana')]}),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 0, 'release-groups': []}),
+        ])
+        h.buy(artist='Nirvana', title='测试专辑')
+        self.assertEqual(h.service.enqueue_prewarm(['Nirvana']), 1)
+        self.assertTrue(h.service._prewarm_step())
+        self.assertNotIn('Nirvana', h.store.artist_identities())  # 证据不足不自动绑定
+        self.assertEqual(h.service.enqueue_prewarm(['Nirvana']), 0)  # 重试等待期内不再入队
+        h.clock.now += h.service.prewarm_retry + 1
+        self.assertEqual(h.service.enqueue_prewarm(['Nirvana']), 1)
+
+    def test_unavailable_swallows_and_recovers(self):
+        def boom(url): raise OSError('down')
+        h = self.harness([(lambda u: SEARCH_ARTIST in u, boom)])
+        h.buy(artist='Radiohead', title='测试专辑')
+        h.service.enqueue_prewarm(['Radiohead'])
+        self.assertTrue(h.service._prewarm_step())  # 失败被吞掉，不影响后续队列
+        self.assertNotIn('Radiohead', h.store.artist_identities())
+        h.opener.routes = [
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 1, 'artists': [artist_entry(MBID_A, 'Radiohead')]}),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', '2026-01-01')]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Radiohead')),
+        ]
+        h.clock.now += h.service.prewarm_retry + 1
+        h.service.enqueue_prewarm(['Radiohead'])
+        h.service._prewarm_step()
+        self.assertIn('Radiohead', h.store.artist_identities())  # 恢复后自动补齐
+
+    def test_full_scan_skips_bound_artists(self):
+        h = self.harness([])
+        h.buy(artist='已绑定', title='A')
+        h.buy(artist='未绑定', title='B')
+        h.bind(MBID_A, artist='已绑定')
+        self.assertEqual(h.service.enqueue_prewarm(), 1)  # 全量扫描只入队未绑定那位
+        self.assertEqual(h.service._prewarm_queue, ['未绑定'])

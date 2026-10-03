@@ -129,6 +129,15 @@ def artists(svc):
     return svc.artists
 
 
+def prewarm(svc):
+    """账本写入后台预取新艺人：同步扫描入队、异步取数，失败静默（不影响写请求）。"""
+    if svc.artists is None: return
+    try:
+        svc.artists.enqueue_prewarm()
+    except Exception:
+        pass
+
+
 def _unavailable(h, exc):
     h.send({'status': 'unavailable', 'error': str(exc)}, 503)
 
@@ -193,15 +202,23 @@ def api_artists_artwork(h, svc):
 
 
 # ── POST：账本写操作（全部走 WRITE_LOCK）────────────────────────────
-def api_records(h, svc, body): h.send(svc.store.save(body))
-def api_bulk(h, svc, body): h.send(svc.store.bulk(body))
+def api_records(h, svc, body):
+    h.send(svc.store.save(body))
+    prewarm(svc)
+def api_bulk(h, svc, body):
+    h.send(svc.store.bulk(body))
+    prewarm(svc)
 def api_sales(h, svc, body): h.send(svc.store.sell(body))
 def api_sale_action(h, svc, body): h.send(svc.store.sale_action(body))
 def api_shipments(h, svc, body): h.send(svc.store.ship(body))
 def api_shipment_action(h, svc, body): h.send(svc.store.shipment_action(body))
 def api_shipment_update(h, svc, body): h.send(svc.store.update_shipment(body))
-def api_import(h, svc, body): h.send(svc.store.import_data(body.get('albums')))
-def api_restore(h, svc, body): h.send(svc.store.restore_backup(body))
+def api_import(h, svc, body):
+    h.send(svc.store.import_data(body.get('albums')))
+    prewarm(svc)
+def api_restore(h, svc, body):
+    h.send(svc.store.restore_backup(body))
+    prewarm(svc)
 def api_modules(h, svc, body): h.send(svc.store.set_modules(body.get('enabled')))
 
 
@@ -219,7 +236,9 @@ def api_import_create(h, svc, body): h.send(svc.store.create_import(body.get('co
 def api_import_upload(h, svc, body): h.send(svc.store.upload_import_photo(body.get('id'),body.get('name',''),body.get('data')))
 def api_import_update(h, svc, body): h.send(svc.store.update_import(body))
 def api_import_start(h, svc, body): h.send(vision(svc).start(body))
-def api_import_commit(h, svc, body): h.send(svc.store.commit_import(body))
+def api_import_commit(h, svc, body):
+    h.send(svc.store.commit_import(body))
+    prewarm(svc)
 def api_import_delete(h, svc, body): h.send(svc.store.delete_import(body.get('id')))
 
 

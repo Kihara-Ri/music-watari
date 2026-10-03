@@ -84,6 +84,7 @@ def main():
     if not svc.auth.configured(): svc.auth = None  # 本机模式不启用登录
     if not args.no_seed: seed_from_json(svc.store)
     svc.backups = Backups(svc.store.path); svc.backups.start()
+    svc.artists.start_prewarm()  # 后台预取存量未绑定艺人（账本写入后的增量由路由触发）
     server = ThreadingHTTPServer((args.host, args.port), make_handler(svc))
     print(f'碟渡已启动：http://{args.host}:{args.port}（版本 {version()}）', flush=True)
 
