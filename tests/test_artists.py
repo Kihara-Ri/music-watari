@@ -174,30 +174,74 @@ class ResolveTests(unittest.TestCase):
         self.assertIs(r['candidates'][0]['hasEvidence'], False)
         self.assertNotIn('Radiohead', h.store.artist_identities())
 
-    def test_homonyms_ambiguous_and_manual_bind(self):
+    def test_homonym_disambiguated_by_local_titles(self):
+        # 多位同名候选：本地专辑标题只在一位名下核到 → 库内专辑反向确定身份
         h = self.harness([
             (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 2, 'artists': [
                 artist_entry(MBID_A, 'Nirvana', disambiguation='90s band'),
                 artist_entry(MBID_B, 'Nirvana', disambiguation='60s band')]}),
             (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Nirvana')),
-            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑')]}),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', credit=(MBID_A,))]}),
+        ], artist='Nirvana', title='测试专辑')
+        r = h.service.resolve('Nirvana')
+        self.assertEqual(r['status'], 'resolved')
+        self.assertEqual(r['binding']['artistMbid'], MBID_A)
+        self.assertEqual(r['binding']['method'], 'corroborated')
+
+    def test_same_name_equal_evidence_stays_manual(self):
+        # 真同名且本地标题在多位候选名下都核到（同等证据）→ 不代用户决定
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 2, 'artists': [
+                artist_entry(MBID_A, 'Nirvana', disambiguation='90s band'),
+                artist_entry(MBID_B, 'Nirvana', disambiguation='60s band')]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Nirvana')),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [
+                rg_entry(RG_1, '测试专辑', credit=(MBID_A, MBID_B))]}),
         ], artist='Nirvana', title='测试专辑')
         r = h.service.resolve('Nirvana')
         self.assertEqual(r['status'], 'ambiguous')
-        self.assertEqual(len(r['candidates']), 2)
-        evidence = {c['mbid']: c['hasEvidence'] for c in r['candidates']}
-        self.assertIs(evidence[MBID_A], True)   # 同名候选：各自核对证据
-        self.assertIs(evidence[MBID_B], False)
-        self.assertNotIn('Nirvana', h.store.artist_identities())  # 同名不自动选第一项
+        self.assertNotIn('Nirvana', h.store.artist_identities())
         self.assertEqual(h.service.bind('Nirvana', MBID_B, None)['method'], 'manual')
         with self.assertRaises(ConflictError):
             h.service.bind('Nirvana', MBID_A, None)  # 预期不符 → 409
         self.assertEqual(h.service.bind('Nirvana', MBID_A, MBID_B)['artistMbid'], MBID_A)
 
-    def test_incomplete_count_blocks_auto_confirm(self):
+    def test_many_strict_homonyms_disambiguated_within_cap(self):
+        # 4 位严格同名（上限 6 内全部核对），只有一位有作品证据 → 自动确认
+        ids = [MBID_A, MBID_B, '66666666-6666-6666-6666-666666666666', '77777777-7777-7777-7777-777777777777']
         h = self.harness([
-            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 5, 'artists': [artist_entry(MBID_A, 'Radiohead')]}),
-            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, 'OK Computer')]}),
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 4, 'artists': [
+                artist_entry(m, 'Adele', disambiguation=d) for m, d in
+                zip(ids, ('UK singer', 'Norwegian', 'hardcore band', 'trance vocalist'))]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Adele')),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', credit=(MBID_A,))]}),
+        ])
+        h.buy(artist='Adele', title='测试专辑')
+        r = h.service.resolve('Adele')
+        self.assertEqual(r['status'], 'resolved')
+        self.assertEqual(r['binding']['artistMbid'], MBID_A)
+
+    def test_source_truncation_still_confirms_on_unique_evidence(self):
+        # 来源 count 超过搜索页（大众艺名翻不完页）：库内专辑证据唯一即确认，
+        # evidenceComplete 如实为 False
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 42, 'artists': [
+                artist_entry(MBID_A, 'Adele', disambiguation='UK singer'),
+                artist_entry(MBID_B, 'Adele', disambiguation='Norwegian')]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Adele')),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', credit=(MBID_A,))]}),
+        ], artist='Adele', title='测试专辑')
+        r = h.service.resolve('Adele')
+        self.assertEqual(r['status'], 'resolved')
+        self.assertEqual(r['binding']['artistMbid'], MBID_A)
+        self.assertFalse(r['evidenceComplete'])
+
+    def test_probe_failure_blocks_auto_confirm(self):
+        # 证据探测本身失败（网络异常）：不得确认，也不得缓存成「无此艺人」
+        def boom(url): raise OSError('down')
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 1, 'artists': [artist_entry(MBID_A, 'Radiohead')]}),
+            (lambda u: SEARCH_RG in u, boom),
         ])
         r = h.service.resolve('Radiohead')
         self.assertEqual(r['status'], 'ambiguous')
@@ -690,3 +734,46 @@ class PrewarmTests(unittest.TestCase):
         h.bind(MBID_A, artist='已绑定')
         self.assertEqual(h.service.enqueue_prewarm(), 1)  # 全量扫描只入队未绑定那位
         self.assertEqual(h.service._prewarm_queue, ['未绑定'])
+
+    def test_same_name_candidates_share_probe_call(self):
+        # 4 位严格同名：探测查询相同 → 一次网络调用服务全部候选，各自核对 MBID
+        ids = [MBID_A, MBID_B, '66666666-6666-6666-6666-666666666666', '77777777-7777-7777-7777-777777777777']
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, lambda u: {'count': 4, 'artists': [
+                artist_entry(m, 'Adele', disambiguation=d) for m, d in
+                zip(ids, ('UK singer', 'Norwegian', 'hardcore band', 'trance vocalist'))]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Adele')),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', credit=(MBID_A,))]}),
+        ])
+        h.buy(artist='Adele', title='测试专辑')
+        r = h.service.resolve('Adele')
+        self.assertEqual(r['status'], 'resolved')
+        rg_calls = [u for u in h.opener.calls if 'release-group?query=' in u]
+        self.assertEqual(len(rg_calls), 1)  # 同名共享探测调用
+        # 互不相同名的候选不共享查询（各查各的）
+        self.assertTrue(all(u.count('%22') >= 4 for u in rg_calls))
+
+    def test_prewarm_defers_while_source_in_cooldown(self):
+        headers = {'Retry-After': '60'}
+        state = {'n': 0}
+        def respond(url):
+            state['n'] += 1
+            if state['n'] == 1: return (429, headers, b'limited')
+            return {'count': 1, 'artists': [artist_entry(MBID_A, 'Radiohead')]}
+        h = self.harness([
+            (lambda u: SEARCH_ARTIST in u, respond),
+            (lambda u: SEARCH_RG in u, lambda u: {'count': 1, 'release-groups': [rg_entry(RG_1, '测试专辑', '2026-01-01')]}),
+            (lambda u: '/ws/2/artist/' in u, lambda u: artist_lookup(MBID_A, 'Radiohead')),
+        ])
+        h.buy(artist='Radiohead', title='测试专辑')
+        h.service.enqueue_prewarm(['Radiohead'])
+        self.assertTrue(h.service._prewarm_step())   # 第一次解析撞 429：进入冷却
+        self.assertNotIn('Radiohead', h.store.artist_identities())
+        self.assertEqual(h.service._prewarm_next['Radiohead'] - h.clock.now,
+                         h.service.prewarm_retry_short)  # 冷却跟随退避：短重试
+        h.clock.now += h.service.prewarm_retry_short + 1
+        h.service.enqueue_prewarm(['Radiohead'])
+        # 冷却尚未结束（429 的 Retry-After=60 只走了 76-60=16s……直接把冷却拨完）
+        h.clock.now += 60
+        self.assertTrue(h.service._prewarm_step())
+        self.assertEqual(h.store.artist_identities()['Radiohead']['method'], 'corroborated')

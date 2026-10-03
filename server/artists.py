@@ -25,11 +25,11 @@ AMBIGUOUS_TTL = 600          # 同名候选解析结果缓存：后台预取的�
 ARTWORK_TTL = 30 * 86400     # 封面成功缓存
 ARTWORK_MISS_TTL = 86400     # 来源无图负缓存
 FAIL_SUPPRESS = 60           # 临时失败请求抑制（内存）
-RESOLVE_BUDGET = 35.0        # 证据核对总预算（秒，含节流等候）
-MAX_STRICT = 3               # 每次解析最多核对的严格候选
+RESOLVE_BUDGET = 35.0        # 证据核对总预算（秒，含节流等候）    # 严格候选核对上限＝搜索上限：同名候选靠库内专辑反向消歧，35s 预算是真护栏
 MAX_TITLE_PROBES = 2         # 每次解析最多使用的去重本地标题
 SEARCH_LIMIT = 10
 PAGE_LIMIT = 100
+MAX_STRICT = SEARCH_LIMIT    # 严格候选核对上限＝搜索上限：同名候选靠库内专辑反向消歧，35s 预算是真护栏
 
 HOLDING_STATUSES = ('domestic', 'overseas', 'transit')
 
@@ -128,6 +128,7 @@ class ArtistService:
         # 队列只存名字；重试节奏在内存（重启后由「未绑定名单」扫描自然重建）
         self.prewarm_enabled = True          # 测试可整体关掉
         self.prewarm_retry = 900.0           # 单个艺人失败后的最早重试间隔（秒）
+        self.prewarm_retry_short = 75.0      # 限流冷却跟随退避：冷却结束即重试
         self.prewarm_gap = 2.0               # 艺人之间的额外间隔（配合客户端 1.1s 节流）
         self._prewarm_lock = threading.Lock()
         self._prewarm_queue = []
@@ -218,7 +219,7 @@ class ArtistService:
         query = query.strip()
         miss_path = self.cache_dir / 'miss' / (hashlib.sha256(strict_key(query).encode()).hexdigest()[:20] + '.json')
         miss = self._read_json_file(miss_path)
-        if miss and not self._binding(name):
+        if miss and not force and not self._binding(name):  # force=更换艺人：始终重新解析
             # 未命中/同名候选的解析成果短期复用（后台预取的热身成果）；一有绑定立即失效
             if miss.get('status') == 'not_found' and self._fresh(miss, MISS_TTL):
                 return {'status': 'not_found', 'artist': name, 'candidates': [],
@@ -238,6 +239,8 @@ class ArtistService:
         raw = [a for a in search.get('artists', []) if isinstance(a, dict)]
         search_count = search.get('count')
         complete = isinstance(search_count, int) and search_count <= len(raw)
+        import os as _os
+        _dbg = _os.environ.get('ARTIST_DEBUG')
         target = strict_key(name)
         candidates = []
         seen_ids = set()
@@ -246,57 +249,76 @@ class ArtistService:
             if not is_uuid(gid) or gid in seen_ids: continue
             seen_ids.add(gid)
             names = [a.get('name', '')] + [al.get('name', '') for al in a.get('aliases', []) if isinstance(al, dict)]
-            entry = {'mbid': gid, 'name': str(a.get('name', '')), 'aliases': [], 'type': a.get('type') or None,
-                     'area': (a.get('area') or {}).get('name') or a.get('country') or None,
-                     'disambiguation': a.get('disambiguation') or None, 'score': a.get('score'),
-                     'hasEvidence': None,
-                     'strict': any(n and strict_key(n) == target for n in names)}
-            candidates.append(entry)
-            # 官方别名参与严格核对：召回候选逐一补 lookup（结果兼作候选展示资料）；
-            # 预算内核对不完就承认 evidenceComplete=false，不宣称唯一。
-            if not entry['strict']:
-                try:
-                    detail = self._single('artist:' + gid,
-                                          lambda gid=gid: self.mb.get('artist/' + gid,
-                                                                      {'inc': 'aliases+genres', 'fmt': 'json'},
-                                                                      budget=deadline - self._clock()))
-                    entry['aliases'] = [str(al.get('name')) for al in detail.get('aliases', [])
-                                        if isinstance(al, dict) and al.get('name')]
-                    entry['type'] = entry['type'] or detail.get('type') or None
-                    entry['area'] = entry['area'] or (detail.get('area') or {}).get('name') or None
-                    if any(strict_key(al) == target for al in entry['aliases']):
-                        entry['strict'] = True
-                except BudgetExceeded:
-                    complete = False
-                    break
-                except (SourceUnavailable, BadSource):
-                    complete = False
+            candidates.append({'mbid': gid, 'name': str(a.get('name', '')), 'aliases': [],
+                               'type': a.get('type') or None,
+                               'area': (a.get('area') or {}).get('name') or a.get('country') or None,
+                               'disambiguation': a.get('disambiguation') or None, 'score': a.get('score'),
+                               'hasEvidence': None,
+                               'strict': any(n and strict_key(n) == target for n in names)})
+        titles = []
+        for r in self._records_of(name):
+            k = strict_key(r.get('title', ''))
+            if k and k not in titles: titles.append(k)
+
+        # 顺序即预算策略：先做决定性的证据探测（同名候选共享调用），再逐个做非严格
+        # 候选的官方别名核对（防「改名后其实同名」漏判）。预算不够就承认不完整。
+        probe_cache = {}
         strict_all = [c for c in candidates if c['strict']]
         strict = strict_all[:MAX_STRICT]
         if len(strict_all) > MAX_STRICT:
             complete = False  # 严格候选超出核对上限：不宣称唯一
+            if _dbg: print(f'[resolve-debug] {name}: strict {len(strict_all)} > cap {MAX_STRICT}', flush=True)
         evidence = {}
         for c in strict:
-            evidence[c['mbid']] = None
-        if strict:
-            titles = []
-            for r in self._records_of(name):
-                k = strict_key(r.get('title', ''))
-                if k and k not in titles: titles.append(k)
+            evidence[c['mbid']] = None if titles else False
+        if titles and strict:
             for c in strict:
-                evidence[c['mbid']] = self._title_evidence(c['mbid'], c['name'], titles, deadline)
-                if evidence[c['mbid']] is None: complete = False
-        if len(strict) == 1 and complete and evidence.get(strict[0]['mbid']) is True:
-            # 唯一严格候选 + 本地作品标题严格一致 + artist-credit 包含该候选 → 自动确认
-            source_name = strict[0]['name'] or name
+                evidence[c['mbid']] = self._title_evidence(c['mbid'], c['name'], titles,
+                                                           deadline, probe_cache)
+                if evidence[c['mbid']] is None:
+                    complete = False
+                    if _dbg: print(f'[resolve-debug] {name}: probe incomplete for {c["name"]}', flush=True)
+        for c in candidates:
+            if c['strict']: continue
+            try:
+                detail = self._single('artist:' + c['mbid'],
+                                      lambda c=c: self.mb.get('artist/' + c['mbid'],
+                                                              {'inc': 'aliases+genres', 'fmt': 'json'},
+                                                              budget=deadline - self._clock()))
+                c['aliases'] = [str(al.get('name')) for al in detail.get('aliases', [])
+                                if isinstance(al, dict) and al.get('name')]
+                c['type'] = c['type'] or detail.get('type') or None
+                c['area'] = c['area'] or (detail.get('area') or {}).get('name') or None
+                if any(strict_key(al) == target for al in c['aliases']):
+                    # 官方别名命中：补进严格集合，预算内补证据探测
+                    c['strict'] = True
+                    if len(strict_all) < MAX_STRICT:
+                        strict_all.append(c); strict.append(c)
+                        evidence[c['mbid']] = None if not titles else self._title_evidence(
+                            c['mbid'], c['name'], titles, deadline, probe_cache)
+                        if evidence.get(c['mbid']) is None and titles: complete = False
+            except BudgetExceeded:
+                complete = False
+                if _dbg: print(f'[resolve-debug] {name}: alias lookup budget exceeded', flush=True)
+                break
+            except (SourceUnavailable, BadSource) as exc:
+                complete = False
+                if _dbg: print(f'[resolve-debug] {name}: alias lookup failed: {exc}', flush=True)
+        winners = [c for c in strict if evidence.get(c['mbid']) is True]  # 别名核对后定胜负
+        probed = [c for c in strict if evidence.get(c['mbid']) is not None]
+        if strict and len(winners) == 1 and len(probed) == len(strict):
+            # 库内专辑反向确定身份：本地作品标题只在一位严格候选名下核到，其余同名者
+            # 探测为无证据，且探测本身没有失败。严格名+标题+credit 三重验证是强证据，
+            # 来源截断/别名核对不全不阻断确认，只如实压低 evidenceComplete。
+            source_name = winners[0]['name'] or name
             try:
                 with self.write_lock:
-                    binding = self.store.bind_artist_identity(name, strict[0]['mbid'],
+                    binding = self.store.bind_artist_identity(name, winners[0]['mbid'],
                                                               source_name, 'corroborated', None)
             except ConflictError:
                 binding = self._binding(name)  # 人工绑定先到：不覆盖
             return {'status': 'resolved', 'artist': name, 'binding': binding,
-                    'candidates': [], 'evidenceComplete': True, 'searchCount': search_count}
+                    'candidates': [], 'evidenceComplete': complete, 'searchCount': search_count}
         if not candidates:
             # 名称未命中只缓存 1 小时；证据核对不完整时不缓存，避免把失败当「无此艺人」
             if complete:
@@ -312,25 +334,31 @@ class ArtistService:
                                           'status': 'ambiguous', 'result': result})
         return result
 
-    def _title_evidence(self, mbid, artist_hint, titles, deadline):
+    def _title_evidence(self, mbid, artist_hint, titles, deadline, cache):
         """本地标题（+候选艺人名提高召回）检索 release-group，客户端核对返回的
-        artist-credit——查询带 artist 词只影响召回，证据仍以返回的 credit 为准。"""
+        artist-credit——查询带 artist 词只影响召回，证据仍以返回的 credit 为准。
+        同名候选的探测查询相同：结果按 (艺人名, 标题) 共享，各自核对自己的 MBID。"""
         for title in titles[:MAX_TITLE_PROBES]:
-            try:
-                data = self.mb.get('release-group', {'query': 'releasegroup:' + lucene_quote(title)
-                                                     + ' AND artist:' + lucene_quote(artist_hint),
-                                                     'fmt': 'json', 'limit': 10},
-                                   budget=deadline - self._clock())
-            except BudgetExceeded:
-                return None
-            except (SourceUnavailable, BadSource):
-                return None
-            groups = data.get('release-groups', []) if isinstance(data, dict) else []
-            for g in groups:
-                if not isinstance(g, dict) or strict_key(g.get('title', '')) != title: continue
-                credit = [c for c in g.get('artist-credit', []) if isinstance(c, dict)]
-                if any(isinstance(c.get('artist'), dict) and c['artist'].get('id') == mbid for c in credit):
-                    return True
+            key = (strict_key(artist_hint), title)
+            if key not in cache:
+                try:
+                    data = self.mb.get('release-group', {'query': 'releasegroup:' + lucene_quote(title)
+                                                         + ' AND artist:' + lucene_quote(artist_hint),
+                                                         'fmt': 'json', 'limit': 10},
+                                       budget=deadline - self._clock())
+                    groups = data.get('release-groups', []) if isinstance(data, dict) else []
+                    cache[key] = [(strict_key(g.get('title', '')),
+                                   [c['artist']['id'] for c in g.get('artist-credit', [])
+                                    if isinstance(c, dict) and isinstance(c.get('artist'), dict)])
+                                  for g in groups if isinstance(g, dict)]
+                except BudgetExceeded:
+                    cache[key] = None
+                except (SourceUnavailable, BadSource):
+                    cache[key] = None
+            rows = cache[key]
+            if rows is None: return None
+            for t, credit_ids in rows:
+                if t == title and mbid in credit_ids: return True
         return False
 
     # ── 人工绑定 ──
@@ -674,7 +702,7 @@ class ArtistService:
 
     def _prewarm_loop(self):
         while True:
-            self._prewarm_wake.wait()
+            self._prewarm_wake.wait(30)  # 周期唤醒：冷却结束或重试期到的项能被继续处理
             worked = False
             while self._prewarm_step():
                 worked = True
@@ -682,19 +710,26 @@ class ArtistService:
             if not worked: self._prewarm_wake.clear()
 
     def _prewarm_step(self):
-        """处理一个排队项（线程循环与测试共用）；返回是否处理了。"""
+        """处理一个排队项（线程循环与测试共用）；返回是否处理了。
+        来源限流冷却中不消耗队列（推迟到冷却后），失败按来源状态分级退避。"""
         with self._prewarm_lock:
             name = self._prewarm_queue.pop(0) if self._prewarm_queue else None
         if name is None: return False
+        if self.mb.in_cooldown():
+            with self._prewarm_lock:
+                self._prewarm_queue.insert(0, name)  # 冷却中：原样放回，稍后再来
+            return False
         try:
             self._prewarm_job(name)
             print(f'[艺人预取] {name}：完成', flush=True)
         except Exception as exc:
-            print(f'[艺人预取] {name}：暂未完成（{exc}），稍后重试', flush=True)  # 只记重试时间，不影响队列与其余艺人
+            print(f'[艺人预取] {name}：暂未完成（{exc}），稍后重试', flush=True)
         finally:
+            # 限流刚发生（冷却中）说明来源正挤：短退避紧跟冷却结束；其余失败按常规退避
+            retry = self.prewarm_retry_short if self.mb.in_cooldown() else self.prewarm_retry
             with self._prewarm_lock:
                 self._prewarm_queued.discard(name)
-                self._prewarm_next[name] = self._clock() + self.prewarm_retry
+                self._prewarm_next[name] = self._clock() + retry
         return True
 
     def _prewarm_job(self, name):
