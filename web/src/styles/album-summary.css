@@ -1,0 +1,54 @@
+/* 库存列表、包裹与销售单共用的副本摘要。按可用宽度适配，月份栏也计入空间。 */
+.album-row{container-type:inline-size;container-name:album-row;min-width:0}
+.album-summary{display:grid;grid-template-columns:64px minmax(0,260px) minmax(0,280px) max-content;grid-template-areas:"cover info artist money";align-items:center;gap:14px;min-width:0;justify-content:start}
+.album-summary.has-actions{grid-template-columns:64px minmax(0,260px) minmax(0,280px) max-content max-content;grid-template-areas:"cover info artist money actions"}
+.album-cover{grid-area:cover;width:64px;height:64px;position:relative;align-self:center}
+.album-cover-button{display:block;width:100%;height:100%;padding:0;border:0;border-radius:8px;background:var(--surface-2);overflow:hidden}
+.album-cover-button img,.album-cover-button .cover-fallback{display:block;width:100%;height:100%;object-fit:cover}
+.album-info{grid-area:info;min-width:0}
+.album-title{display:flex;align-items:center;justify-content:flex-start;width:100%;overflow-wrap:anywhere;white-space:normal;padding:0;background:none;border:0;text-align:left;font-size:14px;font-weight:600;line-height:1.4;max-width:100%}
+.album-title>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.album-title:hover{color:var(--accent-text);background:none}
+.album-meta{margin-top:4px;color:var(--muted);font-size:11px;min-width:0}
+.album-version{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.album-artist{grid-area:artist;min-width:0;border-left:1px solid var(--border);padding-left:14px}
+.album-artist .artist-entry{margin:0;padding:0;border:0}
+.album-artist .artist-button>span:first-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.album-money{grid-area:money;max-width:180px;min-width:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;font-variant-numeric:tabular-nums}
+.album-money small{font-size:11px;color:var(--muted);line-height:1.4}
+.album-money .positive{color:var(--green)}
+.album-money .negative{color:var(--red)}
+.album-money b,.album-money .p{font-size:14px;font-weight:700;line-height:1.4}
+.album-money .p small{font-weight:400;margin-left:2px}
+.album-money-main{display:flex;flex-direction:column;align-items:flex-end}
+.album-money .rmb{font-size:11px;color:var(--muted)}
+.album-aside{display:contents}
+.album-purchase{display:flex;flex-direction:column;align-items:flex-end}
+.album-actions{grid-area:actions;display:flex;align-items:center;gap:8px}
+.album-actions button{white-space:nowrap;font-size:12.5px;padding:7px 11px;min-height:38px;border-radius:9px}
+
+/* 摘要内的左右分区只在空间足够时使用；窄桌面列表与手机均复用此排列。 */
+@container album-row (max-width:740px){
+  .album-summary,.album-summary.has-actions{grid-template-columns:64px minmax(0,1fr) max-content;grid-template-areas:"cover title aside" "cover artist aside" "cover meta aside";column-gap:10px;row-gap:0;justify-content:stretch}
+  .album-info{display:contents}
+  .album-title{grid-area:title;align-self:end}
+  .album-meta{grid-area:meta;margin-top:2px}
+  .album-artist{border:0;padding:0}
+  .album-artist .artist-entry-label{display:none}
+  .album-artist .artist-button{font-size:13px;min-height:36px}
+  .album-money{max-width:140px}
+  .album-aside{grid-area:aside;display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0}
+  .album-actions{justify-content:flex-end}
+}
+/* 极窄屏/放大字体时整组金额换行，数字不裁切、不挤成竖排。 */
+@container album-row (max-width:18.5rem){
+  .album-summary,.album-summary.has-actions{grid-template-columns:64px minmax(0,1fr);grid-template-areas:"cover title" "cover artist" "cover meta" ". aside"}
+  .album-aside{margin-top:6px;align-items:flex-start;max-width:100%}
+  .album-money{max-width:100%;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:flex-start;text-align:left;gap:4px 12px}
+  .album-money-main,.album-purchase{align-items:flex-start}
+}
+@media (max-width:840px){
+  .album-summary .album-title{font-size:13.5px;min-height:44px}
+  .album-summary .artist-button{min-height:44px}
+  .album-actions button{min-height:44px}
+}

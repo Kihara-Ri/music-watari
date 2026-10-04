@@ -4,7 +4,8 @@
 .shipment-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .shipment-head .method{font-weight:650;font-size:14px}
 .shipment-head .meta{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
-.shipment-head .spacer{flex:1}
+.shipment-head .spacer{display:none}
+.shipment-head .actions{display:flex;gap:7px;flex-wrap:wrap}
 .shipment-items{display:flex;flex-direction:column;gap:8px;margin-bottom:13px}
 .shipment-items .sale-album .sa-price small{color:var(--faint)}
 

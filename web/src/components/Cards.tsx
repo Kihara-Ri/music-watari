@@ -5,6 +5,7 @@ import type {ReactNode} from 'react';
 import type {AlbumRecord} from '../types';
 import {norm} from '../core/search';
 import {ArtistButton} from './ArtistButton';
+import {AlbumSummary} from './AlbumSummary';
 import {CamIco} from './icons';
 import {Cover, PriceCell} from './Cover';
 import {useApp} from '../state/AppContext';
@@ -16,13 +17,29 @@ export function AlbumCard({r, page, checked, onSelect, onDetail, onArtist, actio
   onArtist?: (artist: string) => void;
   actions: ReactNode;
 }) {
-  const {modules} = useApp();
+  const {modules, shelfView} = useApp();
   const tags = [r.pressing ? (r.pressing === '日版' && r.obi ? `${r.pressing}·${r.obi}` : r.pressing) : '', r.version].filter(Boolean);
   const badges = <>
     {modules.trading && r.listed && page !== 'trash' ? <span className="badge listed">已上架</span> : null}
     {!modules.circulation && r.status === 'transit' ? <span className="badge transit">历史在途</span> : null}
     {r.cover ? null : <span className="badge nocover">待抓取</span>}
   </>;
+  if (shelfView === 'list') return <article className="card album-list-card" data-id={r.id}>
+    <AlbumSummary r={r} onDetail={() => onDetail(r.id)} onArtist={onArtist}
+      coverOverlay={<>
+        {page !== 'trash' && onSelect ? <label className="card-check">
+          <input type="checkbox" checked={checked} aria-label={`选择 ${r.title}`}
+            onChange={e => onSelect(r.id, e.target.checked)}/>
+        </label> : null}
+        {r.photoCount ? <span className="photo-flag" title={`有 ${r.photoCount} 张实物照片`}>{CamIco}{r.photoCount}</span> : null}
+      </>}
+      metadata={<>
+        <div className="list-badges">{badges}</div>
+        {r.storage ? <div className="album-storage">{r.storage}</div> : null}
+      </>}
+      money={modules.acquisition ? <><small>买入</small><div className="album-purchase"><PriceCell r={r}/></div></> : undefined}
+      actions={<div className="card-actions">{actions}</div>}/>
+  </article>;
   return (
     <article className="card" data-id={r.id}>
       <div className="cover-wrap">

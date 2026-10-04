@@ -2,7 +2,7 @@
 export function ArtistButton({artist, onOpen}: {artist: string; onOpen: (artist: string) => void}) {
   return <div className="artist-entry">
     <span className="artist-entry-label">艺人</span>
-    <button type="button" className="artist-button" aria-label={`查看 ${artist} 的资料与作品`}
+    <button type="button" className="artist-button" title={artist} aria-haspopup="dialog" aria-label={`查看 ${artist} 的资料与作品`}
             onClick={() => onOpen(artist)}>
       <span>{artist}</span><span className="artist-entry-arrow" aria-hidden="true">›</span>
     </button>

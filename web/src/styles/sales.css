@@ -6,7 +6,7 @@
 .sale-items{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 .sale-album{display:flex;gap:12px;align-items:center}
 /* 中间列（标题/艺人）必须可收缩：长标题否则把行撑出卡片 */
-.sale-album>div:not(.thumb){flex:1;min-width:0}
+.sale-album>div:not(.thumb):not(.sa-price){flex:1;min-width:0}
 .sale-album .thumb{width:46px;height:46px;border-radius:9px;overflow:hidden;flex:none;background:var(--surface-2)}
 .sale-album .thumb img,.sale-album .thumb .cover-fallback{width:100%;height:100%;object-fit:cover}
 .sale-album .t{font-weight:600;font-size:13.5px;text-align:left;padding:0;background:none;border:none;min-height:0;white-space:normal;overflow-wrap:anywhere}
@@ -15,12 +15,12 @@
 .sale-album .sa-price{flex:none;margin-left:auto;text-align:right;font-variant-numeric:tabular-nums}
 .sale-album .sa-price b{font-size:13.5px}
 .sale-album .sa-price small{display:block;color:var(--faint);font-size:11px}
-.sale-foot{display:flex;align-items:center;gap:18px;border-top:1px solid var(--border);padding-top:12px;flex-wrap:wrap}
+.sale-foot{display:flex;align-items:center;gap:12px 18px;border-top:1px solid var(--border);padding-top:12px;flex-wrap:wrap}
 .sale-foot .cell{display:flex;flex-direction:column;gap:1px}
 .sale-foot .cell span{font-size:11px;color:var(--faint)}
 .sale-foot .cell b{font-size:14px;font-variant-numeric:tabular-nums}
-.sale-foot .spacer{flex:1}
-.sale-foot .actions{display:flex;gap:7px;flex-wrap:wrap}
+.sale-foot .spacer{display:none}
+.sale-foot .actions{display:flex;gap:7px;flex-wrap:wrap;margin-left:6px}
 
 @media (max-width:840px){
   .sale-card{padding:13px 14px}
@@ -30,7 +30,7 @@
   .sale-foot{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;padding-top:11px}
   .sale-foot .spacer{display:none}
   .sale-foot .cell b{font-size:14px}
-  .sale-foot .actions{grid-column:1/-1;margin-top:2px}
+  .sale-foot .actions{grid-column:1/-1;margin-top:2px;margin-left:0}
   .sale-foot .actions button{flex:1;min-height:42px}
 
 }

@@ -102,17 +102,8 @@
 /* 列表视图（桌面 / 手机同一套行布局）：单列行 + 64px 封面，徽标移到行内。 */
 .shelf-list .grid{grid-template-columns:minmax(0,1fr);gap:0}
 .shelf-list .copy-group{grid-column:span 1;margin:18px 0 12px;outline-offset:4px;padding:8px 0 0}
-.shelf-list .card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
-.shelf-list .card .cover-wrap{width:64px;height:64px;aspect-ratio:1;border-radius:8px;overflow:hidden}
-.shelf-list .cover-wrap .card-badges{display:none}
-.shelf-list .card-body{padding:0;gap:2px;min-width:0}
-.shelf-list .card-title{font-size:14px;line-height:1.4}
-.shelf-list .card-artist{font-size:12px}
-.shelf-list .card-price{margin-top:0;padding-top:3px;gap:4px}
-.shelf-list .card-price .p{font-size:13px}
-.shelf-list .card-tags{gap:3px;margin-top:3px}
-.shelf-list .card-edt{font-size:10px;padding:0 5px}
-.shelf-list .card-storage{font-size:11px;margin-top:2px}
+.shelf-list .card{display:block;padding:10px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
+.shelf-list .album-storage{margin-top:2px;overflow-wrap:anywhere}
 .shelf-list .card-actions{padding:0;gap:10px}
 /* 次操作描边：与主操作同几何（实心黄），靠透明底+边框分主次，列表行里不再像裸文字链 */
 .shelf-list .card-actions button{background:transparent;border:1px solid var(--border-strong);color:var(--text);padding:7px 13px;min-height:38px;border-radius:9px;font-size:12.5px}
@@ -121,7 +112,7 @@
 .shelf-list .card-actions button.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
 .shelf-list .card-check{top:9px;right:9px;padding:6px;background:var(--surface-3)}
 .shelf-list .photo-flag{left:3px;bottom:3px;font-size:9px;padding:1px 4px}
-.shelf-list .list-badges{display:flex;gap:4px;flex-wrap:wrap}
+.shelf-list .list-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
 .shelf-list .list-badges:empty{display:none}
 .shelf-list .list-badges .badge{position:static;font-size:10px;padding:1px 6px;background:var(--surface-3);border-radius:99px;box-shadow:none}
 @media (max-width:840px){
@@ -143,7 +134,8 @@
      选择模式收起行内操作（桌面常驻勾选，选择时不隐藏操作）。 */
   .shelf-list .card-actions:has(> .card-edit:only-child){display:none}
   .shelf-list.is-selecting .card-actions{display:none}
-  .shelf-list.is-selecting .card{grid-template-columns:64px minmax(0,1fr)}
+  .shelf-list .album-actions .card-actions button{min-height:44px}
+  .shelf-list .album-actions:not(:has(button:not(.card-edit))),.shelf-list.is-selecting .album-actions{display:none}
   .shelf-list .tl-group{display:block}
   .shelf-list .tl-label{display:flex;align-items:baseline;gap:8px;padding:0 0 6px;text-align:left}
   .shelf-list .tl-rail{display:none}

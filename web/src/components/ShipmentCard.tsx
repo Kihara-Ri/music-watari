@@ -1,10 +1,8 @@
 // 海外在途：包裹卡片（在途 / 已签收可回滚）。
 import {daysSince, shipFeeText} from '../core/format';
-import {labelTags} from '../types';
 import type {Shipment} from '../types';
 import {useApp} from '../state/AppContext';
-import {ArtistButton} from './ArtistButton';
-import {Thumb} from './Cover';
+import {AlbumSummary} from './AlbumSummary';
 import {openDetail} from '../forms/DetailDrawer';
 import {openConfirm} from './SaleCard';
 import {openShipmentEdit} from '../forms/ShipForm';
@@ -23,7 +21,7 @@ export function ShipmentCard({s, arrived, onArtist}: {s: Shipment; arrived: bool
           {s.date} 发货 · {s.items.length} 张 · 运费 {shipFeeText(s.currency, s.costOriginal, s.cost)}{s.note ? ` · ${s.note}` : ''}
         </span>
         <span className="spacer"/>
-        <div className="actions" style={{display: 'flex', gap: 7}}>
+        <div className="actions">
           {arrived ? (
             <button onClick={() => openConfirm(app, 'undo_arrive', {id: s.id})}>回滚签收</button>
           ) : (
@@ -39,17 +37,9 @@ export function ShipmentCard({s, arrived, onArtist}: {s: Shipment; arrived: bool
         {s.items.map(i => {
           const r = app.rec(i.recordId);
           if (!r) return null;
-          const tags = labelTags(r);
           return (
-            <div className="sale-album" key={i.recordId}>
-              <Thumb r={r}/>
-              <div>
-                <button className="t" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-                <ArtistButton artist={r.artist} onOpen={onArtist}/>
-                {tags.length ? <div className="a">{tags.join(' · ')}</div> : null}
-              </div>
-              <div className="sa-price"><small>运费分摊 {shipFeeText(s.currency, i.feeOriginal, i.fee)}</small></div>
-            </div>
+            <AlbumSummary key={i.recordId} r={r} onDetail={() => openDetail(app, r.id)} onArtist={onArtist}
+              money={<><small>运费分摊</small><b>{shipFeeText(s.currency, i.feeOriginal, i.fee)}</b></>}/>
           );
         })}
       </div>

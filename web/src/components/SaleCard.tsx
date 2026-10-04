@@ -4,7 +4,7 @@ import type {AppCtx} from '../state/AppContext';
 import type {AlbumRecord, Sale} from '../types';
 import {SALE_NAMES, labelTags} from '../types';
 import {daysSince, shipFeeText, sum, yuan} from '../core/format';
-import {ArtistButton} from './ArtistButton';
+import {AlbumSummary} from './AlbumSummary';
 import {Cover} from './Cover';
 import {openDetail} from '../forms/DetailDrawer';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
@@ -43,14 +43,9 @@ export function SaleCard({s, onArtist, onEditCosts}: {s: Sale; onArtist: (artist
           const r = app.rec(i.recordId);
           if (!r) return null;
           return (
-            <div className="sale-album" key={i.recordId}>
-              <div className="thumb"><Cover r={r}/></div>
-              <div>
-                <button className="t" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-                <ArtistButton artist={r.artist} onOpen={onArtist}/>
-                {app.modules.acquisition ? <div className="a">{r.cost === null ? '成本待补' : `成本 ${yuan(r.cost)}`}</div> : null}
-              </div>
-              <div className="sa-price">
+            <AlbumSummary key={i.recordId} r={r} onDetail={() => openDetail(app, r.id)} onArtist={onArtist} money={<>
+              {app.modules.acquisition ? <small>{r.cost === null ? '成本待补' : `成本 ${yuan(r.cost)}`}</small> : null}
+              <div className="album-money-main">
                 <small>{shipping ? '预计到手' : '到手'}</small>
                 <b>{yuan(i.net)}</b>
                 {app.modules.acquisition ? i.profit !== null
@@ -59,7 +54,7 @@ export function SaleCard({s, onArtist, onEditCosts}: {s: Sale; onArtist: (artist
                   </small>
                   : <small>利润待补</small> : null}
               </div>
-            </div>
+            </>}/>
           );
         })}
       </div>
@@ -67,8 +62,8 @@ export function SaleCard({s, onArtist, onEditCosts}: {s: Sale; onArtist: (artist
         <div className="cell"><span>成交价</span><b>{shipFeeText(s.currency, s.grossOriginal, s.gross)}</b></div>
         <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div>
         <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage || '0')}</b></div>
-        <div className="cell"><span>{shipping ? '预计到手' : '到手'}</span><b>{yuan(net)}</b></div>
-        {app.modules.acquisition ? <div className="cell">
+        {s.items.length > 1 ? <div className="cell"><span>{shipping ? '预计到手合计' : '到手合计'}</span><b>{yuan(net)}</b></div> : null}
+        {s.items.length > 1 && app.modules.acquisition ? <div className="cell">
           <span>{unknown ? (shipping ? '预估利润（待补）' : '利润（待补）') : shipping ? '预估利润' : '利润'}</span>
           <b className={unknown ? '' : Number(profit) < 0 ? 'negative' : 'positive'}>
             {unknown ? '待补' : yuan(profit)}

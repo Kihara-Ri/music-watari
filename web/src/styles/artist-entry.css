@@ -1,7 +1,7 @@
 /* 独立艺人入口：库存、交易、运输与详情共用，无表单导航副作用。 */
 .artist-entry{display:flex;flex-direction:column;gap:2px;min-width:0;margin:8px 0 4px}
 .artist-entry-label{font-size:10px;letter-spacing:.06em;color:var(--muted)}
-.artist-button{white-space:normal;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:36px;padding:3px 0;border:0;border-radius:0;background:none;color:var(--text);text-align:left;font-size:13px;font-weight:550;line-height:1.45}
+.artist-button{white-space:normal;display:flex;align-items:center;justify-content:flex-start;gap:6px;width:fit-content;max-width:100%;min-height:36px;padding:3px 0;border:0;border-radius:0;background:none;color:var(--text);text-align:left;font-size:13px;font-weight:550;line-height:1.45}
 .artist-button>span:first-child{min-width:0;overflow-wrap:anywhere}
 .artist-button:hover{background:none;color:var(--accent-text)}
 .artist-button:hover>span:first-child{text-decoration:underline;text-decoration-color:var(--accent-deep);text-underline-offset:4px}
@@ -11,18 +11,9 @@
 .sale-album .artist-entry{margin-top:6px}
 .record-detail .artist-entry{margin:12px 0}
 .record-detail .artist-button{font-size:15px;min-height:44px}
-@media (min-width:841px){
-  .shelf-list .card-body:has(.artist-button){display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.8fr);column-gap:24px;align-items:start}
-  .shelf-list .card-body:has(.artist-button)>:not(.card-artist){grid-column:1}
-  .shelf-list .card-body:has(.artist-button)>.card-artist{grid-column:2;grid-row:1/span 6;align-self:center;font-size:13px}
-  .shelf-list .card-artist .artist-entry{border:0;border-left:1px solid var(--border);padding:0 0 0 20px;margin:0}
-}
 @media (max-width:840px){
-  .artist-button{min-height:44px;font-size:13px}
+  .artist-button{min-width:44px;min-height:44px;font-size:13px}
   .artist-entry{gap:0;margin:6px 0 0}
   .card .card-artist .artist-entry{padding-top:6px}
-  .shelf-list .card .card-artist .artist-entry{padding:0;border:0;margin-top:4px}
-  .shelf-list .artist-entry-label{display:none}
-  .shelf-list .artist-button{justify-content:flex-start;gap:10px}
   .sale-album .artist-button{font-size:12px}
 }
