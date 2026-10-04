@@ -4,6 +4,7 @@ import type {AppCtx} from '../state/AppContext';
 import type {AlbumRecord, Sale} from '../types';
 import {SALE_NAMES, labelTags} from '../types';
 import {daysSince, shipFeeText, sum, yuan} from '../core/format';
+import {ArtistButton} from './ArtistButton';
 import {Cover} from './Cover';
 import {openDetail} from '../forms/DetailDrawer';
 import {CONFIRM_TITLES, ConfirmForm} from '../forms/ConfirmForm';
@@ -15,7 +16,7 @@ function openConfirm(app: AppCtx, kind: keyof typeof CONFIRM_TITLES,
 }
 
 // 售出中的专辑卡（封面 + 预计到手 + 预估利润）
-export function ShippingCard({r}: {r: AlbumRecord}) {
+export function ShippingCard({r, onArtist}: {r: AlbumRecord; onArtist: (artist: string) => void}) {
   const app = useApp();
   const s = app.state.sales.find(x => x.id === r.saleId);
   const item = s?.items.find(i => i.recordId === r.id);
@@ -30,7 +31,7 @@ export function ShippingCard({r}: {r: AlbumRecord}) {
       </div>
       <div className="card-body">
         <button className="card-title" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-        <div className="card-artist">{r.artist}</div>
+        <div className="card-artist"><ArtistButton artist={r.artist} onOpen={onArtist}/></div>
         <div className="card-price">
           <span className="p">{item ? yuan(item.net) : '—'}<small>预计到手</small></span>
           {app.modules.acquisition && item && item.profit !== null
@@ -74,7 +75,7 @@ export function ShippingBar({s}: {s: Sale}) {
 }
 
 // 完整销售单（已交易页；也兼容售出中状态的展示分支）
-export function SaleCard({s}: {s: Sale}) {
+export function SaleCard({s, onArtist}: {s: Sale; onArtist: (artist: string) => void}) {
   const app = useApp();
   const unknown = s.items.some(i => i.profit === null);
   const net = sum(s.items, 'net');
@@ -105,9 +106,8 @@ export function SaleCard({s}: {s: Sale}) {
               <div className="thumb"><Cover r={r}/></div>
               <div>
                 <button className="t" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-                <div className="a">
-                  {r.artist}{app.modules.acquisition ? (r.cost === null ? ' · 成本待补' : ` · 成本 ${yuan(r.cost)}`) : ''}
-                </div>
+                <ArtistButton artist={r.artist} onOpen={onArtist}/>
+                {app.modules.acquisition ? <div className="a">{r.cost === null ? '成本待补' : `成本 ${yuan(r.cost)}`}</div> : null}
               </div>
               <div className="sa-price">
                 <b>{yuan(i.net)}</b>

@@ -25,11 +25,10 @@ AMBIGUOUS_TTL = 600          # 同名候选解析结果缓存：后台预取的�
 ARTWORK_TTL = 30 * 86400     # 封面成功缓存
 ARTWORK_MISS_TTL = 86400     # 来源无图负缓存
 FAIL_SUPPRESS = 60           # 临时失败请求抑制（内存）
-RESOLVE_BUDGET = 35.0        # 证据核对总预算（秒，含节流等候）    # 严格候选核对上限＝搜索上限：同名候选靠库内专辑反向消歧，35s 预算是真护栏
+RESOLVE_BUDGET = 35.0        # 证据核对总预算（秒，含节流等候）
 MAX_TITLE_PROBES = 2         # 每次解析最多使用的去重本地标题
 SEARCH_LIMIT = 10
 PAGE_LIMIT = 100
-MAX_STRICT = SEARCH_LIMIT    # 严格候选核对上限＝搜索上限：同名候选靠库内专辑反向消歧，35s 预算是真护栏
 
 HOLDING_STATUSES = ('domestic', 'overseas', 'transit')
 
@@ -217,6 +216,11 @@ class ArtistService:
         if not isinstance(query, str) or not 1 <= len(query.strip()) <= 500:
             raise ValidationError('搜索名称不正确')
         query = query.strip()
+        titles = []
+        for record in self._records_of(name):
+            title = strict_key(record.get('title', ''))
+            if title and title not in titles: titles.append(title)
+        title_context = hashlib.sha256(json.dumps(sorted(titles), ensure_ascii=False).encode()).hexdigest()
         miss_path = self.cache_dir / 'miss' / (hashlib.sha256(strict_key(query).encode()).hexdigest()[:20] + '.json')
         miss = self._read_json_file(miss_path)
         if miss and not force and not self._binding(name):  # force=更换艺人：始终重新解析
@@ -226,7 +230,11 @@ class ArtistService:
                         'evidenceComplete': True, 'searchCount': 0}
             if miss.get('status') == 'ambiguous' and self._fresh(miss, AMBIGUOUS_TTL):
                 cached = dict(miss.get('result') or {}, artist=name)
-                if cached.get('candidates') is not None:
+                rows = cached.get('candidates') or []
+                if isinstance(rows, list) and len(rows) == 1 and isinstance(rows[0], dict) and is_uuid(rows[0].get('mbid')):
+                    return self._resolve_candidate(name, rows[0], 'single',
+                                                   cached.get('evidenceComplete', False), cached.get('searchCount'))
+                if miss.get('policy') == 'single-or-work-v2' and miss.get('titleContext') == title_context and rows:
                     return cached
         deadline = self._clock() + self.resolve_budget
         try:
@@ -239,8 +247,6 @@ class ArtistService:
         raw = [a for a in search.get('artists', []) if isinstance(a, dict)]
         search_count = search.get('count')
         complete = isinstance(search_count, int) and search_count <= len(raw)
-        import os as _os
-        _dbg = _os.environ.get('ARTIST_DEBUG')
         target = strict_key(name)
         candidates = []
         seen_ids = set()
@@ -255,70 +261,23 @@ class ArtistService:
                                'disambiguation': a.get('disambiguation') or None, 'score': a.get('score'),
                                'hasEvidence': None,
                                'strict': any(n and strict_key(n) == target for n in names)})
-        titles = []
-        for r in self._records_of(name):
-            k = strict_key(r.get('title', ''))
-            if k and k not in titles: titles.append(k)
-
-        # 顺序即预算策略：先做决定性的证据探测（同名候选共享调用），再逐个做非严格
-        # 候选的官方别名核对（防「改名后其实同名」漏判）。预算不够就承认不完整。
+        expected = binding['artistMbid'] if binding and force else None
+        if len(candidates) == 1:
+            # 用户规则：唯一候选直接采用；本地艺人字段保持原样。
+            return self._resolve_candidate(name, candidates[0], 'single', complete,
+                                           search_count, expected)
+        # 多候选用本地专辑反查全部返回的身份，不依赖名字是否严格相同。
+        # 同名候选共享查询结果，但分别验证作品标题和 artist-credit 的 MBID。
         probe_cache = {}
-        strict_all = [c for c in candidates if c['strict']]
-        strict = strict_all[:MAX_STRICT]
-        if len(strict_all) > MAX_STRICT:
-            complete = False  # 严格候选超出核对上限：不宣称唯一
-            if _dbg: print(f'[resolve-debug] {name}: strict {len(strict_all)} > cap {MAX_STRICT}', flush=True)
         evidence = {}
-        for c in strict:
-            evidence[c['mbid']] = None if titles else False
-        if titles and strict:
-            for c in strict:
-                evidence[c['mbid']] = self._title_evidence(c['mbid'], c['name'], titles,
-                                                           deadline, probe_cache)
-                if evidence[c['mbid']] is None:
-                    complete = False
-                    if _dbg: print(f'[resolve-debug] {name}: probe incomplete for {c["name"]}', flush=True)
         for c in candidates:
-            if c['strict']: continue
-            try:
-                detail = self._single('artist:' + c['mbid'],
-                                      lambda c=c: self.mb.get('artist/' + c['mbid'],
-                                                              {'inc': 'aliases+genres', 'fmt': 'json'},
-                                                              budget=deadline - self._clock()))
-                c['aliases'] = [str(al.get('name')) for al in detail.get('aliases', [])
-                                if isinstance(al, dict) and al.get('name')]
-                c['type'] = c['type'] or detail.get('type') or None
-                c['area'] = c['area'] or (detail.get('area') or {}).get('name') or None
-                if any(strict_key(al) == target for al in c['aliases']):
-                    # 官方别名命中：补进严格集合，预算内补证据探测
-                    c['strict'] = True
-                    if len(strict_all) < MAX_STRICT:
-                        strict_all.append(c); strict.append(c)
-                        evidence[c['mbid']] = None if not titles else self._title_evidence(
-                            c['mbid'], c['name'], titles, deadline, probe_cache)
-                        if evidence.get(c['mbid']) is None and titles: complete = False
-            except BudgetExceeded:
-                complete = False
-                if _dbg: print(f'[resolve-debug] {name}: alias lookup budget exceeded', flush=True)
-                break
-            except (SourceUnavailable, BadSource) as exc:
-                complete = False
-                if _dbg: print(f'[resolve-debug] {name}: alias lookup failed: {exc}', flush=True)
-        winners = [c for c in strict if evidence.get(c['mbid']) is True]  # 别名核对后定胜负
-        probed = [c for c in strict if evidence.get(c['mbid']) is not None]
-        if strict and len(winners) == 1 and len(probed) == len(strict):
-            # 库内专辑反向确定身份：本地作品标题只在一位严格候选名下核到，其余同名者
-            # 探测为无证据，且探测本身没有失败。严格名+标题+credit 三重验证是强证据，
-            # 来源截断/别名核对不全不阻断确认，只如实压低 evidenceComplete。
-            source_name = winners[0]['name'] or name
-            try:
-                with self.write_lock:
-                    binding = self.store.bind_artist_identity(name, winners[0]['mbid'],
-                                                              source_name, 'corroborated', None)
-            except ConflictError:
-                binding = self._binding(name)  # 人工绑定先到：不覆盖
-            return {'status': 'resolved', 'artist': name, 'binding': binding,
-                    'candidates': [], 'evidenceComplete': complete, 'searchCount': search_count}
+            evidence[c['mbid']] = (self._title_evidence(c['mbid'], c['name'], titles,
+                                                      deadline, probe_cache) if titles else False)
+            if evidence[c['mbid']] is None: complete = False
+        winners = [c for c in candidates if evidence.get(c['mbid']) is True]
+        if len(winners) == 1 and all(v is not None for v in evidence.values()):
+            return self._resolve_candidate(name, winners[0], 'corroborated', complete,
+                                           search_count, expected)
         if not candidates:
             # 名称未命中只缓存 1 小时；证据核对不完整时不缓存，避免把失败当「无此艺人」
             if complete:
@@ -331,8 +290,19 @@ class ArtistService:
                   'evidenceComplete': complete, 'searchCount': search_count}
         # 短缓存（不含 searchCount 之外的易变上下文）；绑定后由绑定短路覆盖
         self._write_json_file(miss_path, {'query': query, 'ts': self._wall(),
-                                          'status': 'ambiguous', 'result': result})
+                                          'status': 'ambiguous', 'policy': 'single-or-work-v2',
+                                          'titleContext': title_context, 'result': result})
         return result
+
+    def _resolve_candidate(self, name, candidate, method, complete, search_count, expected=None):
+        try:
+            with self.write_lock:
+                binding = self.store.bind_artist_identity(name, candidate['mbid'],
+                                                          candidate['name'] or name, method, expected)
+        except ConflictError:
+            binding = self._binding(name)  # 搜索期间身份被修改：保留后来确认的结果
+        return {'status': 'resolved', 'artist': name, 'binding': binding,
+                'candidates': [], 'evidenceComplete': complete, 'searchCount': search_count}
 
     def _title_evidence(self, mbid, artist_hint, titles, deadline, cache):
         """本地标题（+候选艺人名提高召回）检索 release-group，客户端核对返回的

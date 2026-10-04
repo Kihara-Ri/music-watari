@@ -85,6 +85,7 @@ export function ShelfPage() {
     <AlbumCard key={r.id} r={r} page={page} checked={curSelected.has(r.id)}
                onSelect={isTrash || r.status === 'transit' ? undefined : toggleSelect}
                onDetail={id => openDetail(app, id)}
+               onArtist={page === 'trash' ? undefined : name => openArtistDrawer(app, name)}
                actions={cardActions(r)}/>
   );
 

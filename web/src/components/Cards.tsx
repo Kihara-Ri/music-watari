@@ -4,14 +4,16 @@ import {useLayoutEffect, useMemo, useRef} from 'react';
 import type {ReactNode} from 'react';
 import type {AlbumRecord} from '../types';
 import {norm} from '../core/search';
+import {ArtistButton} from './ArtistButton';
 import {CamIco} from './icons';
 import {Cover, PriceCell} from './Cover';
 import {useApp} from '../state/AppContext';
 
-export function AlbumCard({r, page, checked, onSelect, onDetail, actions}: {
+export function AlbumCard({r, page, checked, onSelect, onDetail, onArtist, actions}: {
   r: AlbumRecord; page: string; checked: boolean;
   onSelect?: (id: string, on: boolean) => void;
   onDetail: (id: string) => void;
+  onArtist?: (artist: string) => void;
   actions: ReactNode;
 }) {
   const {modules} = useApp();
@@ -41,7 +43,7 @@ export function AlbumCard({r, page, checked, onSelect, onDetail, actions}: {
       </div>
       <div className="card-body">
         <button className="card-title" onClick={() => onDetail(r.id)}>{r.title}</button>
-        <div className="card-artist">{r.artist}</div>
+        <div className="card-artist">{onArtist ? <ArtistButton artist={r.artist} onOpen={onArtist}/> : r.artist}</div>
         <div className="list-badges">{badges}</div>
         {tags.length ? (
           <div className="card-tags">{tags.map(t => <span key={t} className="card-edt">{t}</span>)}</div>

@@ -38,6 +38,13 @@ class ArtistStorageTests(unittest.TestCase):
         other.restore_backup(backup)
         self.assertEqual(other.artist_identities(), {'艺人': saved})
 
+    def test_single_default_identity_backup_restore(self):
+        saved = self.store.bind_artist_identity('艺人', MBID_A, '艺人', 'single', None)
+        other = Store(Path(self.tmp.name) / 'single-restore.sqlite3')
+        other.restore_backup(self.store.backup())
+        self.assertEqual(other.artist_identities()['艺人'], saved)
+        self.assertEqual(saved['method'], 'single')
+
     def test_bind_expected_conflict(self):
         self.bind()
         # 迟到的自动解析带着「未绑定」预期 → 拒绝，不覆盖人工绑定

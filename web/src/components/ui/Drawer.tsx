@@ -38,7 +38,7 @@ export function Drawer({spec, closing, onClose, onClosed}: {
       if (shell) shell.inert = false;
       if (lastFocus?.isConnected) lastFocus.focus();
     };
-  }, []);
+  }, [spec]);
 
   // 收回动画兜底：reduced-motion 下 animationend 永远不来
   useEffect(() => {
@@ -70,7 +70,7 @@ export function Drawer({spec, closing, onClose, onClosed}: {
 
   // —— 手机 sheet：按住头部跟手下拉 ——
   const onHeadPointerDown = (e: React.PointerEvent) => {
-    if (closing || dragRef.current || !window.matchMedia(SHEET_QUERY).matches) return;
+    if (spec.variant === 'artist' || closing || dragRef.current || !window.matchMedia(SHEET_QUERY).matches) return;
     if (e.target instanceof Element && e.target.closest('button')) return;
     if (!sheetRef.current) return;
     dragRef.current = {startY: e.clientY, dy: 0, v: 0, lastY: e.clientY, lastT: e.timeStamp};
@@ -107,15 +107,17 @@ export function Drawer({spec, closing, onClose, onClosed}: {
     <div id="panel" ref={panelRef} onKeyDown={onKeyDown}
          onClick={e => { if (e.target === e.currentTarget) requestClose(); }}>
       <section ref={sheetRef} onAnimationEnd={onAnimationEnd}
-               className={`drawer${spec.wide ? ' wide' : ''}${spec.workspace ? ' import-workspace' : ''}${closing ? ' closing' : ''}`}
+               className={`drawer${spec.wide ? ' wide' : ''}${spec.variant === 'artist' ? ' artist-drawer' : ''}${spec.workspace ? ' import-workspace' : ''}${closing ? ' closing' : ''}`}
                role="dialog" aria-modal="true" aria-labelledby="drawer-title">
         <div className="drawer-head" onPointerDown={onHeadPointerDown} onPointerMove={onHeadPointerMove}
              onPointerUp={endHeadDrag} onPointerCancel={endHeadDrag}>
+          {spec.variant === 'artist' ? <button type="button" className="quiet artist-back"
+            onClick={spec.back ? spec.back.run : requestClose} aria-label={spec.back?.label || '返回'}>← <span>{spec.back?.label || '返回'}</span></button> : null}
           <h2 id="drawer-title">{spec.title}</h2>
           <button type="button" className="quiet" data-action="close" onClick={requestClose} aria-label="关闭">×</button>
         </div>
         {spec.asForm ? spec.content : <div className="drawer-body">{spec.content}</div>}
-        {!spec.asForm && spec.footer ? <div className="drawer-footer">{spec.footer}</div> : null}
+        {!spec.asForm && (spec.footer || spec.variant === 'artist') ? <div className={`drawer-footer${spec.variant === 'artist' ? ' artist-footer' : ''}`}>{spec.footer}</div> : null}
       </section>
     </div>
   );

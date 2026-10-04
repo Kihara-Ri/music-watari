@@ -1,3 +1,4 @@
+import {openArtistDrawer} from '../forms/ArtistDrawer';
 // 海外在途页：在途包裹 + 最近签收（可回滚）。
 import {sum, yuan} from '../core/format';
 import {useApp} from '../state/AppContext';
@@ -5,7 +6,8 @@ import {PageHead} from '../components/PageHead';
 import {ShipmentCard} from '../components/ShipmentCard';
 
 export function TransitPage() {
-  const {state} = useApp();
+  const app = useApp();
+  const {state} = app;
   const shs = state.shipments.filter(s => s.status === 'transit');
   const arrived = state.shipments.filter(s => s.status === 'arrived')
     .sort((a, b) => (b.arrivedDate || '').localeCompare(a.arrivedDate || ''))
@@ -22,10 +24,10 @@ export function TransitPage() {
       </div>
       {(shs.length || arrived.length) ? (
         <>
-          {shs.map(s => <ShipmentCard key={s.id} s={s} arrived={false}/>)}
+          {shs.map(s => <ShipmentCard key={s.id} s={s} arrived={false} onArtist={name => openArtistDrawer(app, name)}/>)}
           <div className="section-sub">最近签收 · 可回滚</div>
           {arrived.length
-            ? arrived.map(s => <ShipmentCard key={s.id} s={s} arrived/>)
+            ? arrived.map(s => <ShipmentCard key={s.id} s={s} arrived onArtist={name => openArtistDrawer(app, name)}/>)
             : <p className="small-note">暂无已签收包裹。</p>}
         </>
       ) : (

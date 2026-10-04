@@ -21,7 +21,7 @@ SALE_STATUSES = ('shipping', 'complete', 'cancelled', 'returned', 'refunded')
 PHOTO_RE = re.compile(r'^data:image/(jpeg|png|webp);base64,')
 MBID_RE = re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$')
 RECORD_ID_RE = re.compile(r'^[0-9a-f]{32}$')
-IDENTITY_METHODS = ('manual', 'corroborated')
+IDENTITY_METHODS = ('manual', 'corroborated', 'single')
 
 def clean_artist_identities(value):
     """备份恢复校验：artist-identities-v1 映射结构；字段不全或类型不对即拒绝。"""
@@ -53,7 +53,7 @@ def clean_work_links(value):
         for k in ('recordArtist', 'recordTitle'):
             if not isinstance(link.get(k), str) or not 1 <= len(link[k]) <= 500:
                 raise ValidationError('备份的作品关联无效')
-        if link.get('method') not in IDENTITY_METHODS: raise ValidationError('备份的作品关联无效')
+        if link.get('method') not in ('manual', 'corroborated'): raise ValidationError('备份的作品关联无效')
         if not isinstance(link.get('confirmedAt'), str) or not 1 <= len(link['confirmedAt']) <= 40:
             raise ValidationError('备份的作品关联无效')
         out[rid] = {k: link[k] for k in ('artistMbid', 'releaseGroupMbid', 'recordArtist',

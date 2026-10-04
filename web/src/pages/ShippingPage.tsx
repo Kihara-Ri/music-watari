@@ -1,3 +1,4 @@
+import {openArtistDrawer} from '../forms/ArtistDrawer';
 // 售出中页：专辑卡（预计到手/预估利润）+ 销售单操作条（整单确认）。
 import {sum, yuan} from '../core/format';
 import {useApp} from '../state/AppContext';
@@ -6,7 +7,8 @@ import {ShippingCard, ShippingBar} from '../components/SaleCard';
 import {CardGrid} from '../components/Cards';
 
 export function ShippingPage() {
-  const {state, modules} = useApp();
+  const app = useApp();
+  const {state, modules} = app;
   const rs = state.records.filter(r => r.status === 'shipping');
   const sales = state.sales.filter(s => s.status === 'shipping');
   const items = sales.flatMap(s => s.items);
@@ -27,7 +29,7 @@ export function ShippingPage() {
       </div>
       {rs.length ? (
         <div className="ship-cards">
-          <CardGrid records={rs} renderCard={r => <ShippingCard key={r.id} r={r}/>}/>
+          <CardGrid records={rs} renderCard={r => <ShippingCard key={r.id} r={r} onArtist={name => openArtistDrawer(app, name)}/>}/>
         </div>
       ) : (
         <div className="empty">

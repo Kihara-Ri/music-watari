@@ -19,11 +19,16 @@ const EMPTY_SOURCE: SourceState = {fetchedAt: null, cache: 'missing', refreshSug
 export interface ArtistDrawerRestore {
   category?: CatalogCategory;
   scrollTop?: number;
+  expanded?: string | null;
+  unlinkedOpen?: boolean;
+  back?: {label: string; run: () => void};
 }
 
 export function openArtistDrawer(app: AppCtx, artist: string, restore?: ArtistDrawerRestore) {
   app.openDrawer({
-    title: artist,
+    title: '艺人',
+    variant: 'artist',
+    back: restore?.back,
     wide: true,
     // key：按艺人强制重挂载，杜绝任何复用路径下上一位的资料/目录状态残留
     content: <ArtistDrawerBody key={artist} artist={artist} restore={restore}/>,
@@ -36,6 +41,10 @@ type Resolution =
 
 function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDrawerRestore}) {
   const app = useApp();
+  const [footerTarget, setFooterTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setFooterTarget(bodyRef.current?.closest('.drawer')?.querySelector<HTMLElement>('.artist-footer') ?? null);
+  }, []);
   const abortRef = useRef<AbortController | null>(null);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -47,14 +56,14 @@ function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDr
   const [pageError, setPageError] = useState<string | null>(null);
   const [category, setCategory] = useState<CatalogCategory>(restore?.category ?? 'album');
   const [workLinks, setWorkLinks] = useState<Record<string, WorkLinkInfo>>({});
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(restore?.expanded ?? null);
   const [linking, setLinking] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const roundRef = useRef<string | null>(null);
   const offsetRef = useRef(0);
   const hasWorksRef = useRef(false);
   const restoredRef = useRef(false);
-  const savedViewRef = useRef<ArtistDrawerRestore>({category: restore?.category, scrollTop: restore?.scrollTop});
+  const savedViewRef = useRef<ArtistDrawerRestore>({...restore});
   const bodyRef = useRef<HTMLDivElement>(null);
   // 封面加载闸门：进入可见区才请求，同时最多 2 个（组件内状态，不用模块级全局）
   const gate = useMemo<ArtworkGate>(() => {
@@ -208,7 +217,7 @@ function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDr
   useEffect(() => {
     if (restoredRef.current || !restore?.scrollTop) return;
     const body = bodyRef.current?.closest('.drawer-body') as HTMLElement | null;
-    if (body && body.scrollHeight > body.scrollTop) {
+    if (body && (body.scrollHeight - body.clientHeight >= restore.scrollTop || (complete && !progress))) {
       body.scrollTop = restore.scrollTop;
       restoredRef.current = true;
     }
@@ -216,10 +225,10 @@ function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDr
 
   const sourceState: SourceState = profile?.sourceState ?? EMPTY_SOURCE;
 
-  const openCopy = (id: string) => {
+  const openCopy = (id: string, unlinkedOpen = false) => {
     const body = bodyRef.current?.closest('.drawer-body') as HTMLElement | null;
-    savedViewRef.current = {category, scrollTop: body?.scrollTop ?? 0};
-    openDetail(app, id, {label: '返回艺人资料', run: () => openArtistDrawer(app, artist, savedViewRef.current)});
+    savedViewRef.current = {...restore, category, expanded, unlinkedOpen, scrollTop: body?.scrollTop ?? 0};
+    openDetail(app, id, {label: '返回艺人资料', artist, run: () => openArtistDrawer(app, artist, savedViewRef.current)});
   };
 
   const doLink = async (record: CollectionRecord, work: ArtistWork) => {
@@ -309,6 +318,7 @@ function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDr
     <div ref={bodyRef}>
       <ArtistProfile
         artist={artist}
+        footerTarget={footerTarget}
         modules={app.modules}
         profile={profile?.profile ?? null}
         identities={profile?.identities ?? null}
@@ -334,6 +344,7 @@ function ArtistDrawerBody({artist, restore}: {artist: string; restore?: ArtistDr
           setLinking(false);
         }}
         onToggleLinker={() => setLinking(v => !v)}
+        unlinkedInitiallyOpen={restore?.unlinkedOpen}
         onOpenRecord={openCopy}
         onLink={doLink}
         onUnlink={doUnlink}

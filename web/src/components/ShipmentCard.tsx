@@ -3,12 +3,13 @@ import {daysSince, shipFeeText} from '../core/format';
 import {labelTags} from '../types';
 import type {Shipment} from '../types';
 import {useApp} from '../state/AppContext';
+import {ArtistButton} from './ArtistButton';
 import {Thumb} from './Cover';
 import {openDetail} from '../forms/DetailDrawer';
 import {openConfirm} from './SaleCard';
 import {openShipmentEdit} from '../forms/ShipForm';
 
-export function ShipmentCard({s, arrived}: {s: Shipment; arrived: boolean}) {
+export function ShipmentCard({s, arrived, onArtist}: {s: Shipment; arrived: boolean; onArtist: (artist: string) => void}) {
   const app = useApp();
   const days = daysSince(s.date);
   return (
@@ -44,7 +45,8 @@ export function ShipmentCard({s, arrived}: {s: Shipment; arrived: boolean}) {
               <Thumb r={r}/>
               <div>
                 <button className="t" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-                <div className="a">{r.artist}{tags.length ? ` · ${tags.join(' · ')}` : ''}</div>
+                <ArtistButton artist={r.artist} onOpen={onArtist}/>
+                {tags.length ? <div className="a">{tags.join(' · ')}</div> : null}
               </div>
               <div className="sa-price"><small>运费分摊 {shipFeeText(s.currency, i.feeOriginal, i.fee)}</small></div>
             </div>

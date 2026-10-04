@@ -68,7 +68,7 @@ export interface ResolveResult {
 export interface IdentityInfo {
   artistMbid: string;
   sourceName: string;
-  method: 'manual' | 'corroborated';
+  method: 'manual' | 'corroborated' | 'single';
   confirmedAt: string;
 }
 

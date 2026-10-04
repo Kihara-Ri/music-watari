@@ -1,3 +1,4 @@
+import {openArtistDrawer} from '../forms/ArtistDrawer';
 // 已交易页：搜索 + 状态筛选 + 完整销售单，利润按到账时间排序。
 import {sum, yuan} from '../core/format';
 import {searchScore} from '../core/search';
@@ -50,7 +51,7 @@ export function TradesPage() {
       </div>
       <div id="sales-list">
         {sales.length
-          ? sales.map(s => <SaleCard key={s.id} s={s}/>)
+          ? sales.map(s => <SaleCard key={s.id} s={s} onArtist={name => openArtistDrawer(app, name)}/>)
           : (
             <div className="empty">
               <div className="empty-symbol">↗</div>

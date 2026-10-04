@@ -1,6 +1,7 @@
 // 艺人资料面板（纯展示）：结构化概况、我的收藏、分类目录、候选确认与副本关联。
 // 只接收 props 与回调，不做请求；打开、状态与详情往返由 forms/ArtistDrawer 负责。
 import {useEffect, useRef, useState} from 'react';
+import {createPortal} from 'react-dom';
 import type {ReactNode} from 'react';
 import {
   CATEGORY_LABELS, CATEGORY_ORDER, artistTypeText, lifeSpanText, workTypeText, strictTitle,
@@ -24,6 +25,7 @@ export interface SuggestionRow {
 
 export interface ArtistProfileProps {
   artist: string;
+  footerTarget?: HTMLElement | null;
   modules: ModuleFlags;
   profile: ProfileResponse['profile'];
   identities: IdentityInfo | null;
@@ -44,7 +46,8 @@ export interface ArtistProfileProps {
   onCategory(v: CatalogCategory): void;
   onToggleWork(mbid: string): void;
   onToggleLinker(): void;
-  onOpenRecord(id: string): void;
+  unlinkedInitiallyOpen?: boolean;
+  onOpenRecord(id: string, unlinkedOpen?: boolean): void;
   onLink(record: CollectionRecord, work: ArtistWork): void;
   onUnlink(record: CollectionRecord): void;
   onRetryPage(): void;
@@ -116,15 +119,22 @@ function Meta({children}: {children: ReactNode}) {
 
 export function ArtistProfile(props: ArtistProfileProps) {
   const {
-    artist, modules, profile, identities, identityInvalid, sourceState, profileLoading, profileError,
+    artist, footerTarget, modules, profile, identities, identityInvalid, sourceState, profileLoading, profileError,
     resolution, collection, works, catalogComplete, progress, pageError, category,
     workLinks, expanded, linking, onCategory, onToggleWork, onToggleLinker, onOpenRecord, onLink,
     onUnlink, onRetryPage, onRefresh, onChangeArtist, onRetryProfile, onPickCandidate, onSearchName, busy, gate,
   } = props;
   const [showAllAliases, setShowAllAliases] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(() => window.matchMedia('(min-width:841px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(min-width:841px)');
+    const sync = () => setMoreOpen(media.matches);
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
   const [candidateId, setCandidateId] = useState<string | null>(null);
   const [searchName, setSearchName] = useState('');
-  const [unlinkedOpen, setUnlinkedOpen] = useState(false);
+  const [unlinkedOpen, setUnlinkedOpen] = useState(props.unlinkedInitiallyOpen ?? false);
 
   const linkedByWork = new Map<string, WorkLinkRow[]>();
   for (const r of collection.records) {
@@ -156,25 +166,42 @@ export function ArtistProfile(props: ArtistProfileProps) {
   const lifeSpan = profile ? lifeSpanText(profile.type, profile.lifeSpan) : [];
   const aliasList = profile?.aliases ?? [];
   const shownAliases = showAllAliases ? aliasList : aliasList.slice(0, 3);
+  const candidates = resolution?.data?.candidates ?? [];
+  const nameCounts = new Map<string, {name: string; count: number}>();
+  for (const candidate of candidates) {
+    const key = strictTitle(candidate.name), entry = nameCounts.get(key);
+    nameCounts.set(key, {name: entry?.name ?? candidate.name, count: (entry?.count ?? 0) + 1});
+  }
+  const homonyms = [...nameCounts.values()].filter(entry => entry.count > 1);
   const selected = resolution?.data?.candidates.find(c => c.mbid === candidateId) ?? null;
   const fetchedAt = sourceState.fetchedAt ? sourceState.fetchedAt.replace('T', ' ') : null;
 
+  const confirmation = selected ? (
+<div className="candidate-confirm">
+                  <p>将库内 <b>{artist}</b> 对应到资料库 <b>{selected.name}</b>
+                    {selected.disambiguation ? `（${selected.disambiguation}）` : ''}</p>
+                  <p className="small-note">确认后，作品目录按这位艺人的身份读取；本地记录名称不变。</p>
+                  <button type="button" className="primary" disabled={busy === 'bind'}
+                          onClick={() => onPickCandidate(selected)}>确认艺人</button>
+                </div>
+  ) : null;
+
   return (
     <div className="artist-profile">
-      {/* 1. 名称与结构化概况 */}
-      <section className="profile-head">
-        <h3 className="profile-name">{artist}</h3>
-        {profile && profile.name && profile.name !== artist
-          ? <p className="profile-source-name">资料名称：{profile.name}</p> : null}
-        {identityInvalid ? (
-          <p className="profile-banner warn" role="alert">资料身份需重新确认，请更换艺人。</p>
-        ) : null}
-        {profileLoading && !profile ? <p className="profile-note">正在查找艺人资料…</p> : null}
-        {profileError && !profile ? (
-          <p className="profile-banner err" role="alert">
-            {profileError} <button type="button" className="quiet" onClick={onRetryProfile}>重试</button>
-          </p>
-        ) : null}
+      <header className="profile-head">
+        <p className="profile-eyebrow">艺人 · 资料与作品</p>
+        <h3 className="profile-name">{profile?.name || artist}</h3>
+        {profile?.name && profile.name !== artist
+          ? <p className="profile-source-name">收藏署名：{artist}</p> : null}
+        {identityInvalid ? <p className="profile-banner warn" role="alert">资料身份需重新确认，请更换艺人。</p> : null}
+        {profileLoading && !profile && !resolution ? <p className="profile-note" role="status">正在读取艺人资料…</p> : null}
+        {profileError && !profile ? <p className="profile-banner err" role="alert">
+          {profileError} <button type="button" className="quiet" onClick={onRetryProfile}>重试</button>
+        </p> : null}
+      </header>
+      <div className="artist-workspace">
+        <aside className="profile-sidebar" aria-label="艺人概况与收藏">
+          <section className="profile-overview">
         {profile ? (
           <div className="profile-facts">
             {artistTypeText(profile.type) ? <Meta>{artistTypeText(profile.type)}</Meta> : null}
@@ -182,9 +209,12 @@ export function ArtistProfile(props: ArtistProfileProps) {
             {lifeSpan.map(([label, value]) => <Meta key={label}>{label} {value}</Meta>)}
             {profile.disambiguation ? <Meta>{profile.disambiguation}</Meta> : null}
           </div>
-        ) : profileLoading || profileError ? null : (
+        ) : profileLoading || profileError || resolution ? null : (
           <p className="profile-note">该艺人的详细资料暂未收录。</p>
         )}
+        {profile && (aliasList.length || profile.genres.length) ? (
+          <details className="profile-more" open={moreOpen} onToggle={event => setMoreOpen(event.currentTarget.open)}>
+            <summary>别名与音乐类型</summary>
         {profile && aliasList.length ? (
           <p className="profile-aliases">
             <span className="profile-meta-item">别名</span>
@@ -201,24 +231,51 @@ export function ArtistProfile(props: ArtistProfileProps) {
             {' '}{profile.genres.join('、')}
           </p>
         ) : null}
+          </details>
+        ) : null}
         {identities ? (
           <p className="profile-identity small-note">
-            {identities.method === 'manual' ? '已人工确认身份' : '已自动核对身份'}
+            {identities.method === 'manual' ? '已人工确认' : identities.method === 'single' ? '唯一候选，已自动采用' : '已用本地专辑确认'}
             {profile?.sourceUrl ? <> · <a href={profile.sourceUrl} target="_blank" rel="noopener noreferrer">MusicBrainz 艺人页 ↗</a></> : null}
           </p>
         ) : null}
-      </section>
-
-      {/* 2. 我的收藏 */}
-      <section className="profile-collection">
-        <h4 className="profile-section-title">我的收藏</h4>
-        <p className="collection-summary">
-          <span>持有 <b>{collection.counts.holding}</b></span>
-          <span>售出中 <b>{collection.counts.shipping}</b></span>
-          <span>曾收藏 <b>{collection.counts.sold}</b></span>
+          </section>
+          <section className="profile-collection">
+            <h4 className="profile-section-title">我的收藏</h4>
+            <dl className="collection-summary">
+              <div><dt>持有</dt><dd>{collection.counts.holding}</dd></div>
+              {modules.trading ? <>
+                <div><dt>售出中</dt><dd>{collection.counts.shipping}</dd></div>
+                <div><dt>曾收藏</dt><dd>{collection.counts.sold}</dd></div>
+              </> : null}
+            </dl>
+          </section>
+      {/* 6. 来源与次要操作 */}
+      <details className="profile-foot">
+        <summary>来源与资料管理</summary>
+        <p className="small-note">
+          {fetchedAt ? `更新于 ${fetchedAt}` : '资料来源 MusicBrainz'}
+          {sourceState.cache === 'stale' || sourceState.error ? ' · 当前显示缓存资料' : ''}
         </p>
-      </section>
-
+        {sourceState.error && !identityInvalid ? (
+          <p className="small-note" role="alert">{sourceState.error}</p>
+        ) : null}
+        {identities && !resolution ? <div className="profile-ops">
+          <button type="button" disabled={busy === 'refresh'} onClick={onRefresh}>更新资料</button>
+          <button type="button" disabled={busy === 'resolve'} onClick={onChangeArtist}>更换艺人</button>
+        </div> : null}
+        {identities && !resolution ? <div className="candidate-search">
+            <label className="small-note" htmlFor="artist-correct-name">调整资料搜索名称</label>
+            <div className="candidate-search-row">
+              <input id="artist-correct-name" value={searchName} maxLength={500}
+                     placeholder="搜索另一位艺人" onChange={e => setSearchName(e.target.value)}/>
+              <button type="button" disabled={!searchName.trim() || !!busy}
+                      onClick={() => onSearchName(searchName.trim())}>搜索</button>
+            </div>
+        </div> : null}
+      </details>
+        </aside>
+        <div className="profile-content">
       {/* 候选确认 */}
       {resolution ? (
         <section className="profile-resolution">
@@ -226,9 +283,13 @@ export function ArtistProfile(props: ArtistProfileProps) {
             ? <p className="profile-note">正在查找艺人资料…</p> : null}
           {resolution.phase === 'candidates' && resolution.data ? (
             <>
-              <p className="profile-banner" role="status">有多位同名艺人，请确认。</p>
+              <h4 className="profile-resolution-title" role="status">{candidates.length === 1 ? '找到 1 位候选' : `找到 ${candidates.length} 位候选`}</h4>
+              {homonyms.map(entry => <p className="small-note" key={entry.name}>其中 {entry.count} 位以「{entry.name}」同名收录。</p>)}
+              <p className="profile-note">{candidates.length === 1 ? '唯一候选将自动采用。' : '本地专辑暂时无法确定唯一艺人，请选择对应的资料。'}</p>
+              {resolution.data.searchCount && resolution.data.searchCount > candidates.length
+                ? <p className="small-note">来源共返回 {resolution.data.searchCount} 个结果，当前显示前 {candidates.length} 位。</p> : null}
               {!resolution.data.evidenceComplete
-                ? <p className="small-note">候选证据尚未核对完整，请以资料内容为准。</p> : null}
+                ? <p className="small-note">专辑核对或来源结果尚不完整。</p> : null}
               <ul className="candidate-list">
                 {resolution.data.candidates.map(c => (
                   <li key={c.mbid}>
@@ -240,22 +301,16 @@ export function ArtistProfile(props: ArtistProfileProps) {
                         <b>{c.name}</b>
                         <small>
                           {[artistTypeText(c.type), c.area, c.disambiguation].filter(Boolean).join(' · ') || '暂无地区与类型资料'}
-                          {c.hasEvidence === true ? ' · 与本地专辑标题相符' : ''}
+                          </small>
+                        <small className="candidate-evidence">{c.hasEvidence === true ? '本地专辑有对应作品' : c.hasEvidence === false ? '未找到本地专辑对应' : '专辑尚未核对'}
                         </small>
                       </span>
                     </label>
+                    <a className="candidate-source" href={`https://musicbrainz.org/artist/${c.mbid}`}
+                       target="_blank" rel="noopener noreferrer" aria-label={`核对 ${c.name} 的 MusicBrainz 资料`}>核对来源 ↗</a>
                   </li>
                 ))}
               </ul>
-              {selected ? (
-                <div className="candidate-confirm">
-                  <p>将库内 <b>{artist}</b> 对应到资料库 <b>{selected.name}</b>
-                    {selected.disambiguation ? `（${selected.disambiguation}）` : ''}</p>
-                  <p className="small-note">确认后，作品目录按这位艺人的身份读取；本地记录名称不变。</p>
-                  <button type="button" className="primary" disabled={busy === 'bind'}
-                          onClick={() => onPickCandidate(selected)}>确认艺人</button>
-                </div>
-              ) : null}
               <div className="candidate-search">
                 <label className="small-note" htmlFor="artist-search-name">名称不符？调整搜索名称（不写回本地记录）</label>
                 <div className="candidate-search-row">
@@ -266,6 +321,7 @@ export function ArtistProfile(props: ArtistProfileProps) {
                           onClick={() => onSearchName(searchName.trim())}>搜索</button>
                 </div>
               </div>
+              {confirmation ? (footerTarget ? createPortal(confirmation, footerTarget) : confirmation) : null}
             </>
           ) : null}
           {resolution.phase === 'not_found' ? (
@@ -298,7 +354,7 @@ export function ArtistProfile(props: ArtistProfileProps) {
               <button key={c} type="button" role="tab" aria-selected={category === c}
                       className={`artist-cat${category === c ? ' on' : ''}`}
                       onClick={() => onCategory(c)}>
-                {CATEGORY_LABELS[c]}<b>{works.filter(w => w.category === c).length}</b>
+                {CATEGORY_LABELS[c]}<b>{works.filter(w => w.category === c).length}{catalogComplete ? '' : '+'}</b>
               </button>
             ))}
           </div>
@@ -327,7 +383,7 @@ export function ArtistProfile(props: ArtistProfileProps) {
                 const suggestion = suggestions.get(w.mbid);
                 const isOpen = expanded === w.mbid;
                 return (
-                  <li key={w.mbid} className="artist-work">
+                  <li key={w.mbid} className={`artist-work${isOpen ? ' expanded' : ''}`}>
                     <button type="button" className="work-row" aria-expanded={isOpen}
                             onClick={() => onToggleWork(w.mbid)}>
                       <WorkCover work={w}
@@ -361,7 +417,7 @@ export function ArtistProfile(props: ArtistProfileProps) {
                                   </small>
                                 </span>
                                 <span className="copy-actions">
-                                  <button type="button" onClick={() => onOpenRecord(record.id)}>详情</button>
+                                  <button type="button" onClick={() => onOpenRecord(record.id, unlinkedOpen)}>详情</button>
                                   <button type="button" className="quiet" disabled={busy === record.id}
                                           onClick={() => onUnlink(record)}>取消关联</button>
                                 </span>
@@ -430,7 +486,7 @@ export function ArtistProfile(props: ArtistProfileProps) {
                 <li key={r.id} className="copy-row">
                   <span className="copy-info"><b>{r.title}</b>
                     <small>{statusName(r.status, modules)}</small></span>
-                  <button type="button" onClick={() => onOpenRecord(r.id)}>详情</button>
+                  <button type="button" onClick={() => onOpenRecord(r.id, unlinkedOpen)}>详情</button>
                 </li>
               ))}
             </ul>
@@ -438,20 +494,8 @@ export function ArtistProfile(props: ArtistProfileProps) {
         </section>
       ) : null}
 
-      {/* 6. 来源与次要操作 */}
-      <section className="profile-foot">
-        <p className="small-note">
-          {fetchedAt ? `资料更新于 ${fetchedAt}` : '资料尚未读取'}
-          {sourceState.cache === 'stale' || sourceState.error ? ' · 当前显示缓存资料' : ''}
-        </p>
-        {sourceState.error && !identityInvalid ? (
-          <p className="small-note" role="alert">{sourceState.error}</p>
-        ) : null}
-        <div className="profile-ops">
-          <button type="button" disabled={busy === 'refresh'} onClick={onRefresh}>更新资料</button>
-          <button type="button" disabled={busy === 'resolve'} onClick={onChangeArtist}>更换艺人</button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

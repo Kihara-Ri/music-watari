@@ -1,4 +1,6 @@
 // 专辑详情抽屉：封面大图、字段、实物照片墙、双笔记、运输与交易历史。
+import {ArtistButton} from '../components/ArtistButton';
+import {openArtistDrawer} from './ArtistDrawer';
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
 import {fmt, fmtJPY, jpyCost, rmb, shipFeeText, yuan} from '../core/format';
@@ -13,16 +15,17 @@ import {releaseLabels} from '../core/recognition';
 
 export interface DetailBack {
   label?: string;
+  artist?: string;
   run: () => void;
 }
 
 export function openDetail(app: AppCtx, id: string, back?: DetailBack) {
   const r = app.rec(id);
   if (!r) { app.toast('记录不存在，请刷新页面', 'err'); return; }
-  app.openDrawer({title: '专辑详情', content: <DetailBody id={id}/>, footer: <DetailFooter id={id} back={back}/>});
+  app.openDrawer({title: '专辑详情', content: <DetailBody id={id} back={back}/>, footer: <DetailFooter id={id} back={back}/>});
 }
 
-function DetailBody({id}: {id: string}) {
+function DetailBody({id, back}: {id: string; back?: DetailBack}) {
   const app = useApp();
   const {modules} = app;
   const r = app.rec(id);
@@ -52,7 +55,10 @@ function DetailBody({id}: {id: string}) {
         <div className="big"><Cover r={r}/></div>
         <div>
           <h2>{r.title}</h2>
-          <p className="artist">{r.artist}</p>
+          <>{r.status === 'trash' ? <p className="artist">{r.artist}</p> : <ArtistButton artist={r.artist} onOpen={name => {
+            if (back?.artist === name) back.run();
+            else openArtistDrawer(app, name, {back: {label: '返回专辑详情', run: () => openDetail(app, id, back)}});
+          }}/> }</>
           <span className={`pill ${r.status}`}>{statusName(r.status, app.modules)}</span>
           {app.modules.trading && r.listed ? <span className="pill listed">已上架</span> : null}
         </div>
