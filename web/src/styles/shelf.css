@@ -100,7 +100,7 @@
 .view-switch button[aria-pressed=true]{background:var(--surface-3);color:var(--accent-deep)}
 
 /* 列表视图（桌面 / 手机同一套行布局）：单列行 + 64px 封面，徽标移到行内。 */
-.shelf-list .grid{grid-template-columns:minmax(0,1fr);gap:0}
+.shelf-list .grid{max-width:1000px;grid-template-columns:minmax(0,1fr);gap:0}
 .shelf-list .copy-group{grid-column:span 1;margin:18px 0 12px;outline-offset:4px;padding:8px 0 0}
 .shelf-list .card{display:block;padding:10px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
 .shelf-list .album-storage{margin-top:2px;overflow-wrap:anywhere}

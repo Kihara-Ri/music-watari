@@ -1,5 +1,5 @@
 /* 海外在途：包裹卡片 */
-.shipment-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+.shipment-card{max-width:1000px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
 .shipment-card.arrived{opacity:.82}
 .shipment-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .shipment-head .method{font-weight:650;font-size:14px}

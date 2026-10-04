@@ -1,5 +1,5 @@
 /* 销售单卡片：售出中页与已交易页共用（专辑行 + 金额脚注） */
-.sale-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+.sale-card{max-width:1000px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
 .sale-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .sale-top .when{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
 .sale-top .spacer{flex:1}
