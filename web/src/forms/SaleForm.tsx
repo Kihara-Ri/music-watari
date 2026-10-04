@@ -127,7 +127,7 @@ function SaleForm({ids}: {ids: string[]}) {
             </div>
           </div>
           <div className="row">
-            <label htmlFor="f-fees">平台扣费</label>
+            <label htmlFor="f-fees">平台扣费合计</label>
             <div className="row-value">
               <input id="f-fees" name="fees" type="number" min="0" step={step} inputMode="decimal"
                      placeholder="0" value={v.fees} onChange={e => set({fees: e.target.value})}/>
@@ -175,7 +175,7 @@ function SaleForm({ids}: {ids: string[]}) {
             {app.modules.acquisition && unknown ? <span className="hint">· 成本待补，利润稍后自动补齐</span> : null}
             {rs.length > 1 ? <span className="hint">· 多张按张数均摊</span> : null}
           </div>
-          <p>买家签收、钱款到账后点「确认收货」转为已售出。</p>
+          <p>买家签收、钱款到账后点「确认收货」转为已售出；平台扣费和运费之后仍可修改。</p>
         </div>
         <details className="adv">
           <summary>更多信息</summary>

@@ -636,11 +636,40 @@ class Store:
                 r['previousStatus']=r['status'];r['status']='shipping';r['saleId']=s['id'];r['revision']+=1;self.put(db,'records',r)
             self.put(db,'sales',s);self.audit(db,'记录售出',s)
         return {'id':s['id']}
+    def update_sale(self,data):
+        """补录/修正费用，不改变成交价、币种、到账日期或生命周期。"""
+        self.require_module('trading')
+        with self.connect() as db:
+            before=self.get(db,'sales',data.get('id'))
+        if before['status'] not in ('shipping','complete'):
+            raise ValidationError('只有售出中或已确认收货的销售单能修改费用')
+        currency=before.get('currency') or 'CNY'
+        changes={}
+        for key,label in (('fees','平台扣费'),('postage','寄出运费')):
+            if key not in data: continue
+            orig=number(data[key],label)
+            previous=before.get(key+'Original') if currency=='JPY' else before.get(key,'0')
+            if previous is not None and orig==Decimal(previous): continue
+            # 汇率查询在数据库事务之外；沿用售出日折算口径。
+            changes[key]=(orig,self.to_cny(orig,currency,before['date'],label))
+        with self.connect() as db:
+            s=self.get(db,'sales',data.get('id'));old=json.loads(dumps(s))
+            if s!=before: raise ValidationError('销售单已变化，请刷新后重试')
+            for key,(orig,cny) in changes.items():
+                s[key]=money(cny)
+                shares=allocate(cny,[1]*len(s['items']))
+                originals=allocate(orig,[1]*len(s['items'])) if currency=='JPY' else shares
+                if currency=='JPY': s[key+'Original']=money(orig)
+                for item,share,original in zip(s['items'],shares,originals):
+                    item[key]=share
+                    if currency=='JPY': item[key+'Original']=original
+            self.put(db,'sales',s);self.audit(db,'修改销售费用',{'before':old,'after':s})
+        return {'ok':True}
     def sale_action(self,data):
         self.require_module('trading')
         with self.connect() as db:
             s=self.get(db,'sales',data.get('id'));old=json.loads(dumps(s));action=data.get('action')
-            if s['status']=='complete': raise ValidationError('已确认收货，钱款已成现金，交易不可再改动')
+            if s['status']=='complete': raise ValidationError('已确认收货，只能修改销售费用，不能重复收货、撤销或退款')
             if s['status'] not in ('shipping',): raise ValidationError('这笔交易已处理，不能重复操作')
             if action=='receive':
                 s['status']='complete';s['receivedDate']=day(data.get('date'),'到账日期')

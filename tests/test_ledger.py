@@ -130,6 +130,67 @@ class LedgerTests(unittest.TestCase):
         id=self.buy();self.sell([id]);
         with self.assertRaises(ValidationError):self.sell([id])
         self.assertEqual(len(self.store.state()['sales']),1)
+    def test_update_sale_costs_shipping_and_complete(self):
+        rid=self.buy(currency='CNY',price='80',fees='0')
+        sid=self.sell([rid],gross='100',fees='0',postage='5')
+        self.store.update_sale({'id':sid,'fees':'2.10','postage':'5.56'})
+        self.assertEqual(self.sale(sid)['items'][0]['net'],'92.34')
+        self.assertEqual(self.sale(sid)['items'][0]['profit'],'12.34')
+        self.assertEqual(self.record(rid)['status'],'shipping')
+        self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+        before=self.sale(sid);record=self.record(rid)
+        self.store.update_sale({'id':sid,'fees':'3.10','postage':'6.56','gross':'999','date':'2026-01-01','currency':'JPY'})
+        after=self.sale(sid)
+        for key in ('id','status','receivedDate','gross','date','currency','channel','createdAt'):
+            self.assertEqual(after[key],before[key])
+        self.assertEqual(after['items'][0]['net'],'90.34')
+        self.assertEqual(after['items'][0]['profit'],'10.34')
+        self.assertEqual(self.record(rid),record)
+        self.store.update_sale({'id':sid,'fees':'0','postage':'0'})
+        self.assertEqual(self.sale(sid)['items'][0]['net'],'100.00')
+        self.assertEqual(self.store.state()['audit'][-1]['action'],'修改销售费用')
+    def test_update_sale_costs_jpy_allocations_conserve_totals(self):
+        ids=[self.buy() for _ in range(3)]
+        sid=self.sell(ids,currency='JPY',gross='3000',fees='0',postage='0')
+        self.store.update_sale({'id':sid,'fees':'109','postage':'161'})
+        s=self.sale(sid)
+        self.assertEqual((s['feesOriginal'],s['fees']),('109.00','5.23'))
+        self.assertEqual((s['postageOriginal'],s['postage']),('161.00','7.73'))
+        for key in ('fees','postage','feesOriginal','postageOriginal'):
+            self.assertEqual(sum(Decimal(i[key]) for i in s['items']),Decimal(s[key]))
+        self.assertEqual(sum(Decimal(i['net']) for i in s['items']),Decimal('131.04'))
+        self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+        self.store.update_sale({'id':sid,'fees':'108'})
+        self.assertEqual(self.sale(sid)['fees'],'5.18')  # 售出日 4.8，非到账日
+        self.assertEqual(self.sale(sid)['postageOriginal'],'161.00')
+    def test_update_sale_costs_unknown_cost_stays_unknown(self):
+        sid=self.sell([self.buy(price='')])
+        self.store.update_sale({'id':sid,'fees':'2.10'})
+        self.assertIsNone(self.sale(sid)['items'][0]['profit'])
+    def test_update_sale_costs_validation_is_atomic(self):
+        sid=self.sell([self.buy()]);before=self.store.backup()
+        for fees,postage in (('1','-1'),('NaN','0'),('Infinity','0'),('','0'),('1000000001','0')):
+            with self.assertRaises(ValidationError):
+                self.store.update_sale({'id':sid,'fees':fees,'postage':postage})
+            self.assertEqual(self.store.backup(),before)
+    def test_update_sale_costs_rejects_processed_sales_and_disabled_module(self):
+        for action in ('cancel','refund'):
+            sid=self.sell([self.buy()])
+            self.store.sale_action({'id':sid,'action':action,'refund':'160','date':'2026-09-08'})
+            before=self.store.backup()
+            with self.assertRaises(ValidationError):self.store.update_sale({'id':sid,'fees':'1'})
+            self.assertEqual(self.store.backup(),before)
+        sid=self.sell([self.buy()])
+        self.store.set_modules({'acquisition':True,'trading':False,'circulation':True})
+        with self.assertRaises(ValidationError):self.store.update_sale({'id':sid,'fees':'1'})
+    def test_update_sale_costs_missing_rate_does_not_change_sale(self):
+        sid=self.sell([self.buy()],currency='JPY',gross='1000',fees='100',postage='50')
+        before=self.store.backup();self.store.rates=FakeRates({})
+        with self.assertRaises(ValidationError):self.store.update_sale({'id':sid,'fees':'109'})
+        self.assertEqual(self.store.backup(),before)
+        # 原费用未变化时无须重算，保留已入账的历史折算金额。
+        self.store.update_sale({'id':sid,'fees':'100','postage':'50'})
+        self.assertEqual(self.sale(sid)['fees'],'4.80')
     def test_sale_cancel_restores_previous_status(self):
         id=self.buy();sid=self.sell([id]);self.store.sale_action({'id':sid,'action':'cancel'})
         self.assertEqual(self.record(id)['status'],'overseas');self.assertEqual(self.sale(sid)['status'],'cancelled')

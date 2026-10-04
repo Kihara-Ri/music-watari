@@ -1,4 +1,4 @@
-// 销售单卡片（已交易页完整版 / 售出中页精简条）与售出中专辑卡。
+// 售出中与已交易共用销售单卡片：专辑、金额与操作集中展示。
 import {useApp} from '../state/AppContext';
 import type {AppCtx} from '../state/AppContext';
 import type {AlbumRecord, Sale} from '../types';
@@ -15,67 +15,8 @@ function openConfirm(app: AppCtx, kind: keyof typeof CONFIRM_TITLES,
     content: <ConfirmForm kind={kind} id={opts.id} sale={opts.sale} arriveCount={opts.arriveCount}/>});
 }
 
-// 售出中的专辑卡（封面 + 预计到手 + 预估利润）
-export function ShippingCard({r, onArtist}: {r: AlbumRecord; onArtist: (artist: string) => void}) {
-  const app = useApp();
-  const s = app.state.sales.find(x => x.id === r.saleId);
-  const item = s?.items.find(i => i.recordId === r.id);
-  const h = [...r.artist].reduce((a, c) => a + c.charCodeAt(0), 0) % 4;
-  return (
-    <article className="card">
-      <div className="cover-wrap">
-        {r.cover
-          ? <img className="cover" src={r.cover} alt="" loading="lazy"/>
-          : <div className={`cover cover-fallback hue-${h}`}><span>{r.title.slice(0, 1)}</span></div>}
-        <span className="badge transit">已 {daysSince(s?.date)} 天</span>
-      </div>
-      <div className="card-body">
-        <button className="card-title" onClick={() => openDetail(app, r.id)}>{r.title}</button>
-        <div className="card-artist"><ArtistButton artist={r.artist} onOpen={onArtist}/></div>
-        <div className="card-price">
-          <span className="p">{item ? yuan(item.net) : '—'}<small>预计到手</small></span>
-          {app.modules.acquisition && item && item.profit !== null
-            ? <span className={`rmb ${Number(item.profit) < 0 ? 'negative' : 'positive'}`}>预估利润 {yuan(item.profit)}</span>
-            : null}
-        </div>
-      </div>
-      <div className="card-actions">
-        <button onClick={() => openDetail(app, r.id)}>详情</button>
-      </div>
-    </article>
-  );
-}
-
-// 售出中页的销售单操作条（整单确认）
-export function ShippingBar({s}: {s: Sale}) {
-  const app = useApp();
-  return (
-    <article className="sale-card">
-      <div className="sale-top">
-        <span className="pill shipping">售出中</span>
-        <span className="when">
-          {s.date} 售出 · {s.channel}{s.orderId ? ` · 单 ${s.orderId}` : ''}{s.address ? ` · ${s.address}` : ''}
-        </span>
-        <span className="spacer"/>
-        <span className="when">{s.items.length} 张 · 到手 {yuan(sum(s.items, 'net'))}</span>
-      </div>
-      <div className="sale-foot">
-        <div className="cell"><span>成交价</span><b>{shipFeeText(s.currency, s.grossOriginal, s.gross)}</b></div>
-        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div> : null}
-        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage)}</b></div> : null}
-        <span className="spacer"/>
-        <div className="actions">
-          <button className="primary" onClick={() => openConfirm(app, 'receive', {id: s.id})}>确认收货</button>
-          <button onClick={() => openConfirm(app, 'refund', {id: s.id, sale: s})}>退款 / 退货</button>
-          <button className="quiet" onClick={() => openConfirm(app, 'cancel', {id: s.id})}>撤销</button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-// 完整销售单（已交易页；也兼容售出中状态的展示分支）
-export function SaleCard({s, onArtist}: {s: Sale; onArtist: (artist: string) => void}) {
+// 完整销售单；多张合单仍按独立副本展示。
+export function SaleCard({s, onArtist, onEditCosts}: {s: Sale; onArtist: (artist: string) => void; onEditCosts: () => void}) {
   const app = useApp();
   const unknown = s.items.some(i => i.profit === null);
   const net = sum(s.items, 'net');
@@ -110,10 +51,11 @@ export function SaleCard({s, onArtist}: {s: Sale; onArtist: (artist: string) => 
                 {app.modules.acquisition ? <div className="a">{r.cost === null ? '成本待补' : `成本 ${yuan(r.cost)}`}</div> : null}
               </div>
               <div className="sa-price">
+                <small>{shipping ? '预计到手' : '到手'}</small>
                 <b>{yuan(i.net)}</b>
                 {app.modules.acquisition ? i.profit !== null
                   ? <small className={Number(i.profit) < 0 ? 'negative' : 'positive'}>
-                    {shipping ? '预估' : '利润'} {yuan(i.profit)}
+                    {shipping ? '预估利润' : '利润'} {yuan(i.profit)}
                   </small>
                   : <small>利润待补</small> : null}
               </div>
@@ -123,8 +65,8 @@ export function SaleCard({s, onArtist}: {s: Sale; onArtist: (artist: string) => 
       </div>
       <div className="sale-foot">
         <div className="cell"><span>成交价</span><b>{shipFeeText(s.currency, s.grossOriginal, s.gross)}</b></div>
-        {Number(s.fees) ? <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div> : null}
-        {Number(s.postage) ? <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage)}</b></div> : null}
+        <div className="cell"><span>平台扣费</span><b>−{shipFeeText(s.currency, s.feesOriginal, s.fees)}</b></div>
+        <div className="cell"><span>寄出运费</span><b>−{shipFeeText(s.currency, s.postageOriginal, s.postage || '0')}</b></div>
         <div className="cell"><span>{shipping ? '预计到手' : '到手'}</span><b>{yuan(net)}</b></div>
         {app.modules.acquisition ? <div className="cell">
           <span>{unknown ? (shipping ? '预估利润（待补）' : '利润（待补）') : shipping ? '预估利润' : '利润'}</span>
@@ -133,11 +75,14 @@ export function SaleCard({s, onArtist}: {s: Sale; onArtist: (artist: string) => 
           </b>
         </div> : null}
         <span className="spacer"/>
-        {shipping && (
+        {(shipping || s.status === 'complete') && (
           <div className="actions">
+            <button onClick={onEditCosts}>修改费用</button>
+            {shipping ? <>
             <button className="primary" onClick={() => openConfirm(app, 'receive', {id: s.id})}>确认收货</button>
             <button onClick={() => openConfirm(app, 'refund', {id: s.id, sale: s})}>退款 / 退货</button>
             <button className="quiet" onClick={() => openConfirm(app, 'cancel', {id: s.id})}>撤销</button>
+            </> : null}
           </div>
         )}
       </div>

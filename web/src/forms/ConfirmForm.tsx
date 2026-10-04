@@ -62,7 +62,7 @@ export function ConfirmForm({kind, id, arriveCount, sale, restoreData}: {
         {kind === 'cancel_shipment' && <p>包裹取消，专辑退回「海外库存」，运费分摊从成本中扣回。</p>}
         {kind === 'receive' && (
           <>
-            <p>买家已签收、钱款已到账。交易转为「已售出」，{app.modules.acquisition ? '利润' : '到账金额'}计入统计，此后不再支持退款操作。</p>
+            <p>买家已签收、钱款已到账。交易转为「已售出」，{app.modules.acquisition ? '利润' : '到账金额'}计入统计。平台扣费和寄出运费仍可修改，此后不再支持退款操作。</p>
             <div className="form-grid form-section">
               <Field label="到账日期" name="receive-date" type="date" required value={date} onChange={e => setDate(e.target.value)}/>
             </div>

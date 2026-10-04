@@ -1,10 +1,10 @@
 import {openArtistDrawer} from '../forms/ArtistDrawer';
-// 售出中页：专辑卡（预计到手/预估利润）+ 销售单操作条（整单确认）。
+// 售出中页：按销售单合并展示专辑、金额与整单操作。
 import {sum, yuan} from '../core/format';
 import {useApp} from '../state/AppContext';
 import {PageHead} from '../components/PageHead';
-import {ShippingCard, ShippingBar} from '../components/SaleCard';
-import {CardGrid} from '../components/Cards';
+import {SaleCard} from '../components/SaleCard';
+import {openSaleCostsForm} from '../forms/SaleCostsForm';
 
 export function ShippingPage() {
   const app = useApp();
@@ -17,7 +17,7 @@ export function ShippingPage() {
   return (
     <>
       <PageHead title="售出中"
-                desc="已卖出、包裹在途。买家签收且钱款到账后，在下方销售单点「确认收货」转为已交易。"/>
+                desc="每单集中查看专辑与费用。买家签收且钱款到账后点「确认收货」；平台扣费可在到账后补录或修改。"/>
       <div className="summary">
         <span><strong>{rs.length}</strong> 张专辑</span>
         <span><strong>{sales.length}</strong> 个销售单</span>
@@ -27,9 +27,9 @@ export function ShippingPage() {
         </strong></span> : null}
         {modules.acquisition && items.length - ks.length ? <span className="hint">{items.length - ks.length} 条成本待补</span> : null}
       </div>
-      {rs.length ? (
-        <div className="ship-cards">
-          <CardGrid records={rs} renderCard={r => <ShippingCard key={r.id} r={r} onArtist={name => openArtistDrawer(app, name)}/>}/>
+      {sales.length ? (
+        <div id="sales-list">
+          {sales.map(s => <SaleCard key={s.id} s={s} onArtist={name => openArtistDrawer(app, name)} onEditCosts={() => openSaleCostsForm(app, s)}/>)}
         </div>
       ) : (
         <div className="empty">
@@ -39,12 +39,6 @@ export function ShippingPage() {
           <a className="link-button" href="#domestic">查看{modules.circulation ? '国内库存' : '我的收藏'}</a>
         </div>
       )}
-      {sales.length ? (
-        <>
-          <div className="section-sub">销售单操作 · 整单确认</div>
-          {sales.map(s => <ShippingBar key={s.id} s={s}/>)}
-        </>
-      ) : null}
     </>
   );
 }

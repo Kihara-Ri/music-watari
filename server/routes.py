@@ -210,6 +210,7 @@ def api_bulk(h, svc, body):
     prewarm(svc)
 def api_sales(h, svc, body): h.send(svc.store.sell(body))
 def api_sale_action(h, svc, body): h.send(svc.store.sale_action(body))
+def api_sale_update(h, svc, body): h.send(svc.store.update_sale(body))
 def api_shipments(h, svc, body): h.send(svc.store.ship(body))
 def api_shipment_action(h, svc, body): h.send(svc.store.shipment_action(body))
 def api_shipment_update(h, svc, body): h.send(svc.store.update_shipment(body))
@@ -304,6 +305,7 @@ POST = {
     '/api/bulk': (api_bulk, True, True),
     '/api/sales': (api_sales, True, True),
     '/api/sale-action': (api_sale_action, True, True),
+    '/api/sale-update': (api_sale_update, True, True),
     '/api/shipments': (api_shipments, True, True),
     '/api/shipment-action': (api_shipment_action, True, True),
     '/api/shipment-update': (api_shipment_update, True, True),

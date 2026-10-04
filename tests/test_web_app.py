@@ -46,6 +46,21 @@ class WebTests(unittest.TestCase):
   # Host 正确但未登录：页面不返回应用本体，服务端 302 到登录页
   status,h,_=self.req('/',host='albums.example.test')
   self.assertEqual(status,302);self.assertEqual(h['Location'],'/login')
+ def test_sale_costs_update_api_auth_and_lifecycle(self):
+  body={'fees':'2.10','postage':'5.56'}
+  self.assertEqual(self.req('/api/sale-update',body)[0],401)
+  _,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
+  rid=self.store.save({'title':'费用编辑测试','artist':'测试艺人','currency':'CNY','price':'80','date':'2026-09-07'})['ids'][0]
+  sid=self.store.sell({'ids':[rid],'gross':'100','fees':'0','postage':'5','date':'2026-09-07'})['id']
+  body['id']=sid
+  self.assertEqual(self.req('/api/sale-update',body,cookie=cookie,origin='https://evil.test')[0],403)
+  self.assertEqual(self.req('/api/sale-update',body,cookie=cookie)[0],200)
+  self.store.sale_action({'id':sid,'action':'receive','date':'2026-09-20'})
+  self.assertEqual(self.req('/api/sale-update',{**body,'fees':'3.10'},cookie=cookie)[0],200)
+  _,_,out=self.req('/api/state',cookie=cookie);s=json.loads(out)['sales'][0]
+  self.assertEqual(s['items'][0]['net'],'91.34');self.assertEqual(s['receivedDate'],'2026-09-20')
+  self.store.set_modules({'acquisition':True,'trading':False,'circulation':False})
+  self.assertEqual(self.req('/api/sale-update',body,cookie=cookie)[0],400)
  def test_loopback_port_remap_trusted(self):
   # Docker 端口映射：回环主机 + 任意端口可信；Origin 须与 Host 一致（挡 localhost 旁站 CSRF）
   status,h,_=self.req('/',host='127.0.0.1:18765')

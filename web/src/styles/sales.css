@@ -20,7 +20,7 @@
 .sale-foot .cell span{font-size:11px;color:var(--faint)}
 .sale-foot .cell b{font-size:14px;font-variant-numeric:tabular-nums}
 .sale-foot .spacer{flex:1}
-.sale-foot .actions{display:flex;gap:7px}
+.sale-foot .actions{display:flex;gap:7px;flex-wrap:wrap}
 
 @media (max-width:840px){
   .sale-card{padding:13px 14px}
@@ -33,18 +33,4 @@
   .sale-foot .actions{grid-column:1/-1;margin-top:2px}
   .sale-foot .actions button{flex:1;min-height:42px}
 
-  /* 售出中专辑卡：手机上弃用「上图下文」大卡，改为与库存列表一致的紧凑行 */
-  .ship-cards .grid{grid-template-columns:minmax(0,1fr);gap:0}
-  .ship-cards .copy-group{grid-column:span 1}
-  .ship-cards .card{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px;
-    padding:12px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
-  .ship-cards .card:hover{transform:none;border-color:var(--border);box-shadow:none}
-  .ship-cards .cover-wrap{width:64px;height:64px;aspect-ratio:auto;border-radius:8px;overflow:hidden}
-  .ship-cards .card .badge{top:4px;left:4px;font-size:9.5px;padding:1px 6px}
-  .ship-cards .card-body{padding:0;gap:2px;min-width:0}
-  .ship-cards .card-title{font-size:14px;line-height:1.4}
-  .ship-cards .card-price{margin-top:0;padding-top:3px;gap:4px 10px}
-  .ship-cards .card-price .p{font-size:13.5px}
-  .ship-cards .card-actions{padding:0}
-  .ship-cards .card-actions button{background:none;border-color:transparent;padding:8px 0 8px 12px;min-height:44px;font-size:13px;color:var(--accent-deep)}
 }

@@ -6,6 +6,7 @@ import {useApp} from '../state/AppContext';
 import {PageHead} from '../components/PageHead';
 import {SaleCard} from '../components/SaleCard';
 import {Dropdown} from '../components/ui/Dropdown';
+import {openSaleCostsForm} from '../forms/SaleCostsForm';
 
 const TRADE_FILTERS = [
   {value: 'all', label: '全部'},
@@ -51,7 +52,7 @@ export function TradesPage() {
       </div>
       <div id="sales-list">
         {sales.length
-          ? sales.map(s => <SaleCard key={s.id} s={s} onArtist={name => openArtistDrawer(app, name)}/>)
+          ? sales.map(s => <SaleCard key={s.id} s={s} onArtist={name => openArtistDrawer(app, name)} onEditCosts={() => openSaleCostsForm(app, s)}/>)
           : (
             <div className="empty">
               <div className="empty-symbol">↗</div>
