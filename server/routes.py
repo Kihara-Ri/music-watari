@@ -229,6 +229,10 @@ def vision(svc):
 
 
 def api_vision(h, svc): h.send(vision(svc).public_config())
+def api_vision_providers(h, svc): h.send(vision(svc).providers())
+def api_vision_codex_login(h, svc, body): h.send(vision(svc).start_login())
+def api_vision_codex_callback(h, svc, body): h.send(vision(svc).complete_login(body.get('url','')))
+def api_vision_codex_logout(h, svc, body): h.send(vision(svc).logout())
 def api_release(h, svc): h.send({'releaseInfo':vision(svc).release_details(query(h).get('id'))})
 def api_vision_config(h, svc, body): h.send(vision(svc).configure(body))
 def api_imports(h, svc): h.send({'drafts':svc.store.list_imports()})
@@ -277,6 +281,7 @@ GET = {
     '/api/artists/catalog': api_artists_catalog,
     '/api/export': api_export,
     '/api/vision': api_vision,
+    '/api/vision/providers': api_vision_providers,
     '/api/vision/release': api_release,
     '/api/imports': api_imports,
     '/api/imports/draft': api_import_draft,
@@ -314,6 +319,9 @@ POST = {
     '/api/restore': (api_restore, True, True),
     '/api/modules': (api_modules, True, True),
     '/api/vision/config': (api_vision_config, True, False),
+    '/api/vision/codex/login': (api_vision_codex_login, True, False),
+    '/api/vision/codex/callback': (api_vision_codex_callback, True, False),
+    '/api/vision/codex/logout': (api_vision_codex_logout, True, False),
     '/api/recognize': (api_recognize, True, False),
     '/api/imports/create': (api_import_create, True, False),
     '/api/imports/upload': (api_import_upload, True, False),
