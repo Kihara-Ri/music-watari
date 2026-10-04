@@ -70,6 +70,11 @@ export function ShelfPage() {
     : page === 'overseas' ? (modules.trading ? '在日本持有的专辑，可标记上架（如メルカリ）或直接记录售出；选中多张可打包运输。' : '在海外持有的专辑，选中多张可打包运输。')
     : page === 'domestic' ? (modules.trading ? '已运回国；标记「已上架」的正在闲鱼出售，其余暂未上架，随时可记录售出。' : '已运回的专辑，记录版本、照片和存放位置。')
       : '移除的专辑保留在这里，随时可以恢复。';
+  // 页头说明小字只保留在回收站与单库模式（我的收藏）；国内/海外库存按用户要求去掉。
+  const keepDesc = isTrash || (page === 'domestic' && !modules.circulation);
+  // 与在途/售出中/已交易共用 align-list：内容列右缘统一 1147px，页头/汇总条/工具条跨页零位移。
+  const alignList = !isTrash && modules.circulation;
+  const timeline = !searching && sort === 'new' && modules.acquisition;
 
   const cardActions = (r: AlbumRecord) => {
     if (page === 'trash') return <button onClick={() => bulkAction(app, 'restore', [r.id])}>恢复</button>;
@@ -105,7 +110,7 @@ export function ShelfPage() {
           : !isTrash ? <button className="primary" onClick={() => openRecordForm(app)}>＋ 添加专辑</button> : null}
       </div>
     );
-  } else if (!searching && sort === 'new' && modules.acquisition) {
+  } else if (timeline) {
     // 按月时间线
     const sorted = [...rs].sort((a, b) => flip
       ? (a.date || '9999').localeCompare(b.date || '9999')
@@ -158,8 +163,8 @@ export function ShelfPage() {
   }
 
   return (
-    <div className={`shelf-page shelf-${app.shelfView}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
-      <PageHead title={modules.circulation && !isTrash ? <><span className="desktop-shelf-title">{title}</span><span className="mobile-shelf-title">库存</span></> : title} desc={desc} label="COLLECTION" actions={isTrash ? null : (
+    <div className={`shelf-page shelf-${app.shelfView}${alignList ? ' align-list' : ''}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
+      <PageHead title={modules.circulation && !isTrash ? <><span className="desktop-shelf-title">{title}</span><span className="mobile-shelf-title">库存</span></> : title} desc={keepDesc ? desc : undefined} label="COLLECTION" actions={isTrash ? null : (
         <>
           <button onClick={() => openBatchForm(app)}>批量录入</button>
           <button className="primary" onClick={() => openRecordForm(app)}>＋ 添加专辑</button>

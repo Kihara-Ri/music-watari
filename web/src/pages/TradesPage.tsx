@@ -33,8 +33,8 @@ export function TradesPage() {
   const ks = items.filter(i => i.profit !== null);
 
   return (
-    <>
-      <PageHead title="已交易" desc="买家已签收、钱款到账，落袋为安。" label="CASHED IN"
+    <div className="align-list">
+      <PageHead title="已交易" label="CASHED IN"
                 actions={<a className="link-button" href="/api/export?scope=sales">导出 CSV</a>}/>
       <div className="summary">
         <span>已完成 <strong>{all.length}</strong> 笔</span>
@@ -62,6 +62,6 @@ export function TradesPage() {
             </div>
           )}
       </div>
-    </>
+    </div>
   );
 }

@@ -12,8 +12,11 @@
 .record-detail .artist-entry{margin:12px 0}
 .record-detail .artist-button{font-size:15px;min-height:44px}
 @media (max-width:840px){
-  .artist-button{min-width:44px;min-height:44px;font-size:13px}
-  .artist-entry{gap:0;margin:6px 0 0}
+  /* 手机压缩纵向：艺人按钮不再撑 44px 触控行高，标签行距收紧 */
+  .artist-button{min-width:44px;min-height:24px;font-size:13px}
+  .artist-entry{gap:0;margin:2px 0 0}
   .card .card-artist .artist-entry{padding-top:6px}
+  /* 卡片视图砍掉「艺人」小标签，省一行纵向空间（摘要行窄容器下本就不显示） */
+  .card .card-artist .artist-entry-label{display:none}
   .sale-album .artist-button{font-size:12px}
 }

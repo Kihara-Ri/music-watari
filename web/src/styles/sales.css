@@ -1,5 +1,5 @@
-/* 销售单卡片：售出中页与已交易页共用（专辑行 + 金额脚注） */
-.sale-card{max-width:1000px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+/* 销售单卡片：售出中页与已交易页共用（专辑行 + 金额脚注）；宽度对齐统一内容列 1147px */
+.sale-card{max-width:1147px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
 .sale-top{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .sale-top .when{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
 .sale-top .spacer{flex:1}
@@ -26,11 +26,12 @@
   .sale-card{padding:13px 14px}
   .sale-top{gap:8px;margin-bottom:10px}
   .sale-top .when{font-size:12px}
-  /* 金额脚注改两列网格，操作按钮整行铺满 */
-  .sale-foot{display:grid;grid-template-columns:1fr 1fr;gap:9px 14px;padding-top:11px}
-  .sale-foot .spacer{display:none}
-  .sale-foot .cell b{font-size:14px}
-  .sale-foot .actions{grid-column:1/-1;margin-top:2px;margin-left:0}
+  .sale-items{margin-bottom:10px}
+  /* 金额脚注一行排开（放不下才折行），操作按钮整行铺满 */
+  .sale-foot{flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding-top:10px}
+  .sale-foot .cell{flex-direction:row;align-items:baseline;gap:4px}
+  .sale-foot .cell b{font-size:13.5px}
+  .sale-foot .actions{flex-basis:100%;margin-top:4px;margin-left:0}
   .sale-foot .actions button{flex:1;min-height:42px}
 
 }

@@ -35,8 +35,10 @@
   .album-meta{grid-area:meta;margin-top:2px}
   .album-artist{max-width:none;border:0;padding:0}
   .album-artist .artist-entry-label{display:none}
-  .album-artist .artist-button{font-size:13px;min-height:36px}
-  .album-money{max-width:140px;margin-left:0}
+  .album-artist .artist-button{font-size:13px;min-height:24px}
+  .album-money{max-width:150px;margin-left:0}
+  /* 买入价格一行排开：买入 1,700円 ≈¥72.6（放不下才折行） */
+  .album-purchase{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:2px 6px}
   .album-aside{grid-area:aside;display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:0}
   .album-actions{justify-content:flex-end}
 }
@@ -48,7 +50,7 @@
   .album-money-main,.album-purchase{align-items:flex-start}
 }
 @media (max-width:840px){
-  .album-summary .album-title{font-size:13.5px;min-height:44px}
-  .album-summary .artist-button{min-height:44px}
+  /* 手机压缩纵向：标题/艺人不再撑 44px 触控行高（操作按钮保留触控高度） */
+  .album-summary .album-title{font-size:13.5px}
   .album-actions button{min-height:44px}
 }

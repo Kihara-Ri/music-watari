@@ -15,9 +15,8 @@ export function ShippingPage() {
   const ks = items.filter(i => i.profit !== null);
 
   return (
-    <>
-      <PageHead title="售出中"
-                desc="每单集中查看专辑与费用。买家签收且钱款到账后点「确认收货」；平台扣费可在到账后补录或修改。"/>
+    <div className="align-list">
+      <PageHead title="售出中" label="SELLING"/>
       <div className="summary">
         <span><strong>{rs.length}</strong> 张专辑</span>
         <span><strong>{sales.length}</strong> 个销售单</span>
@@ -39,6 +38,6 @@ export function ShippingPage() {
           <a className="link-button" href="#domestic">查看{modules.circulation ? '国内库存' : '我的收藏'}</a>
         </div>
       )}
-    </>
+    </div>
   );
 }

@@ -30,6 +30,15 @@
 .page-head h1{font-size:24px;font-weight:700;letter-spacing:-.01em;margin:2px 0 4px}
 .page-head p{color:var(--muted);font-size:13px}
 .head-actions{display:flex;gap:9px;flex-wrap:wrap}
+/* 主题滑块与标准按钮同高（8×2 内边距 + 2 边框 + 行高 = 38px）：
+   在途/售出中页头只有滑块一个元素，不固定会被撑成 36px，跨页差 2px。 */
+.head-actions .seg{height:38px}
+
+/* 五个状态页（.align-list）统一内容列右缘 = 1147px（海外库存时间线几何：左槽147 + 1000），
+   页头 / 汇总条 / 工具条跨页零位移；时间线组内网格另行让出左槽（见 shelf.css）。
+   窄于 1433px 视口时内容本就不足 1147px，max-width 自动不生效，无需断点。 */
+.align-list{--list-w:1147px}
+.align-list .page-head,.align-list .summary,.align-list .toolbar{max-width:var(--list-w)}
 
 /* 手机外壳：吸顶页头，库存 / 在途 / 售出中 / 更多底栏。（sheet 上拉/收回关键帧在 drawer.css） */
 .mobile-nav{display:none}

@@ -65,6 +65,9 @@
   .grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
   .card .badge{font-size:10px;padding:2px 7px}
   .card-title{font-size:13.5px}
+  /* 手机卡片压缩纵向：body 内边距收紧，价格行不换行保持一行 */
+  .card-body{padding:8px 10px 10px}
+  .card-price{padding-top:4px;flex-wrap:nowrap;gap:5px}
   .card-actions{gap:7px;padding:0 10px 11px}
   .card-actions button{min-height:40px;padding:9px 8px;font-size:13px}
   .card-check{padding:9px}
@@ -101,6 +104,11 @@
 
 /* 列表视图（桌面 / 手机同一套行布局）：单列行 + 64px 封面，徽标移到行内。 */
 .shelf-list .grid{max-width:1000px;grid-template-columns:minmax(0,1fr);gap:0}
+/* 内容列右缘与页头统一（1147px）：时间线组内网格让出 147px 左槽后 1000px 封顶，
+   组外（按艺人 / 搜索 / 成本排序、卡片视图同论）直接 1147px 封顶。 */
+.align-list .tl-cards .grid{max-width:1000px}
+.align-list .artist-group .grid,
+.align-list > .grid{max-width:1147px}
 .shelf-list .copy-group{grid-column:span 1;margin:18px 0 12px;outline-offset:4px;padding:8px 0 0}
 .shelf-list .card{display:block;padding:10px 0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:none;box-shadow:none;transform:none}
 .shelf-list .album-storage{margin-top:2px;overflow-wrap:anywhere}

@@ -1,5 +1,5 @@
-/* 海外在途：包裹卡片 */
-.shipment-card{max-width:1000px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+/* 海外在途：包裹卡片；宽度对齐统一内容列 1147px */
+.shipment-card{max-width:1147px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
 .shipment-card.arrived{opacity:.82}
 .shipment-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
 .shipment-head .method{font-weight:650;font-size:14px}
@@ -10,8 +10,9 @@
 .shipment-items .sale-album .sa-price small{color:var(--faint)}
 
 @media (max-width:840px){
-  .shipment-card{padding:13px 14px}
-  .shipment-head{gap:6px}
+  .shipment-card{padding:12px 14px}
+  .shipment-head{gap:6px;margin-bottom:8px}
+  .shipment-items{gap:6px;margin-bottom:10px}
   /* 头部信息折行：方式/状态一行，说明与操作各自整行，按钮铺满可点 */
   .shipment-head .meta{order:5;flex-basis:100%;font-size:12px}
   .shipment-head .spacer{display:none}

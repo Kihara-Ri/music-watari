@@ -15,8 +15,8 @@ export function TransitPage() {
   const albumCount = shs.flatMap(s => s.items).length;
 
   return (
-    <>
-      <PageHead title="海外在途" desc="包裹整体运输，平均 11 天到国内，签收后整包转入国内库存。"/>
+    <div className="align-list">
+      <PageHead title="海外在途" label="IN TRANSIT"/>
       <div className="summary">
         <span><strong>{shs.length}</strong> 个在途包裹</span>
         <span><strong>{albumCount}</strong> 张专辑</span>
@@ -38,6 +38,6 @@ export function TransitPage() {
           <a className="link-button" href="#overseas">去海外库存</a>
         </div>
       )}
-    </>
+    </div>
   );
 }
