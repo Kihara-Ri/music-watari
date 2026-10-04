@@ -87,18 +87,9 @@ export interface ImportDraft {
   photos: {id: string; name: string; ext: string; url: string}[]; groups: ImportGroup[];
 }
 
-export interface VisionModelSuggestion { id: string; name: string; }
-
-export interface VisionProvider {
-  id: string; name: string; baseUrl: string; env: string; oauth: boolean; models: VisionModelSuggestion[];
-}
-
-export interface VisionLogin { state: 'none' | 'ok' | 'expired'; expires: number; }
-
 export interface VisionConfig {
-  provider: string; baseUrl: string; model: string; concurrency: number; lookup: boolean;
-  hasKey: boolean; keySource: '' | 'stored' | 'env'; envName: string; configured: boolean;
-  login: VisionLogin | null;
+  baseUrl: string; model: string; concurrency: number; lookup: boolean;
+  hasKey: boolean; configured: boolean;
 }
 
 export interface SaleItem {

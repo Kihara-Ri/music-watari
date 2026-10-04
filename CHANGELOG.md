@@ -19,13 +19,6 @@
 
 - 艺人界面重写：桌面分栏展示资料与封面目录；手机全屏、纵向作品列表。候选数量与核对状态明确展示；返回副本详情保留艺人目录分类、展开状态和滚动位置。
 
-### 照片识别模型配置改为供应商目录制（对齐 pi-ai 方案）
-
-- 设置页「照片识别」不再手填服务地址：内置供应商目录（智谱 BigModel、Z.AI、Kimi 开放平台、阿里云百炼、DeepSeek、OpenAI、Google Gemini、Anthropic、OpenRouter，快照来源 pi-ai / models.dev），选定供应商即确定官方 OpenAI 兼容端点；模型从目录建议中选择或手动输入，目录外的服务走「自定义 OpenAI 兼容服务」。
-- 密钥按供应商各自保存（旧版全局单密钥自动迁移），留空时可改读对应环境变量（如 `ZHIPU_API_KEY`、`OPENAI_API_KEY`）——已存密钥优先、环境变量兜底，与 pi-ai 的 auth 解析次序一致；旧版「地址 + 模型 + 密钥」配置启动时自动迁移为自定义服务，行为不变。
-- 新增 `GET /api/vision/providers` 目录接口；配置文件 `vision-config.json` 结构升级为 `{provider, apiKeys{}}`（权限 600 不变，密钥不回传）。
-- 新增 **ChatGPT 订阅（Codex）** 供应商：用 ChatGPT Plus/Pro 订阅做照片识别、无需 API key。登录采用 pi-ai openai-codex 同款 OAuth 授权码 + PKCE 流程（生成登录链接 → 浏览器登录 → 粘贴回跳网址完成绑定），令牌存服务端、识别前自动续期、401 自动刷新重试一次；识别走 Codex Responses 流式接口（`store:false` + 图片数据 URL）。服务端需能访问 `auth.openai.com` 与 `chatgpt.com`。
-
 ## v2.4.0（2026-10-02）
 
 ### 性能（打开网页提速一个数量级）
