@@ -23,9 +23,14 @@ export function Seg({options, value, onValue, className = '', ariaLabel}: {
       if (!thumb) return;
       const on = sg.querySelector<HTMLElement>('button.on');
       if (!on) { thumb.style.opacity = '0'; return; }
+      // 首次落位不得滑入：读 offsetWidth 会先定下「宽0位0」的旧样式，随后的定位
+      // 写入会触发 .18s 过渡，页面每次重挂载都重放一次指针滑入——先关过渡落定再恢复
+      const fresh = !thumb.style.width;
+      if (fresh) thumb.style.transition = 'none';
       thumb.style.opacity = '1';
       thumb.style.width = `${on.offsetWidth}px`;
       thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+      if (fresh) { void thumb.offsetWidth; thumb.style.transition = ''; }
     };
     paint();
     window.addEventListener('resize', paint);
