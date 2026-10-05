@@ -14,10 +14,13 @@ from urllib.request import Request, urlopen
 PACKAGE = 'album-ledger.tar.gz'
 CHECKSUM = PACKAGE + '.sha256'
 VERSION_RE = re.compile(r'^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')
+# 必须覆盖 package_app.py 打包的每一个根级文件/目录，否则新包会被旧校验拒收
+# （v2.4.0 加了 musicbrainz.py 却漏在这里，导致之后的补丁更新一直被拒）。
+# tests/test_updates.py 有对账测试防止再次漏加。
 PACKAGE_ROOTS = {'VERSION', 'app.py', 'domain.py', 'storage.py', 'covers.py',
-                 'cjkvariants.py', 'rates.py', 'security.py', 'backups.py',
-                 'README.md', '使用说明.md', '部署说明.md', 'CHANGELOG.md',
-                 'server', 'static', 'deploy', 'tools'}
+                 'cjkvariants.py', 'musicbrainz.py', 'rates.py', 'security.py',
+                 'backups.py', 'README.md', '使用说明.md', '部署说明.md',
+                 'CHANGELOG.md', 'server', 'static', 'deploy', 'tools'}
 
 
 def version_tuple(value):

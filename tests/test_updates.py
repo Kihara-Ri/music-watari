@@ -3,6 +3,7 @@ import io
 import json
 import os
 from pathlib import Path
+import ast
 import subprocess
 import tarfile
 import tempfile
@@ -41,6 +42,20 @@ class UpdateTests(unittest.TestCase):
         self.assertIsNone(updater.choose_patch(releases[:2], 'v2.1.1'))
         self.assertIsNone(updater.choose_patch([release('v2.1.0')], 'v2.1.1'))
         with self.assertRaises(ValueError):updater.choose_patch(releases, 'dev')
+
+    def test_package_roots_cover_every_packaged_root_module(self):
+        # package_app.py 打包的每个根级 .py 模块都必须在 PACKAGE_ROOTS 里，
+        # 否则旧校验器会拒收新包、自动补丁更新一直失败（v2.4.2 实际发生过）。
+        source = (Path(updater.__file__).resolve().parent / 'package_app.py').read_text()
+        modules = set()
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Assign) and any(
+                    getattr(t, 'id', None) == 'files' for t in node.targets):
+                modules |= {sub.value for sub in ast.walk(node.value)
+                            if isinstance(sub, ast.Constant) and isinstance(sub.value, str)
+                            and sub.value.endswith('.py') and '/' not in sub.value}
+        self.assertTrue({'app.py', 'musicbrainz.py'} <= modules)
+        self.assertLessEqual(modules, updater.PACKAGE_ROOTS)
 
     def test_missing_or_foreign_assets_are_rejected(self):
         item = release('v2.1.2'); item['assets'].pop()
