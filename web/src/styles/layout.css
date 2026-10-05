@@ -56,15 +56,20 @@
   .page-head h1{font-size:19px;margin:0}
   .head-actions button,.head-actions .link-button{padding:8px 13px}
 
-  /* 底部标签栏：图标 + 文字 + 计数气泡，按模块隐藏入口。 */
+  /* 底部标签栏：图标 + 文字 + 计数气泡，按模块隐藏入口。
+     选中高亮是一枚独立滑动的胶囊（.nav-pill），跟随切换平移；
+     各标签自身只负责文字/图标颜色过渡，不再自绘背景。 */
   .mobile-nav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:30;
     background:var(--chrome-nav);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     border-top:1px solid var(--border);padding:6px 6px calc(6px + env(safe-area-inset-bottom))}
+  .nav-pill{position:absolute;top:6px;bottom:calc(6px + env(safe-area-inset-bottom));left:6px;
+    border-radius:12px;background:var(--nav-active-bg);pointer-events:none;
+    transition:transform .28s cubic-bezier(.2,.8,.3,1);will-change:transform}
   .mobile-nav a,.mobile-nav button{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;
     justify-content:center;gap:3px;min-height:48px;padding:5px 2px 4px;border-radius:12px;
-    text-decoration:none;color:var(--muted);font-size:10.5px;font-weight:550}
+    text-decoration:none;color:var(--muted);font-size:10.5px;font-weight:550;transition:color .2s ease}
   .mobile-nav a:active,.mobile-nav button:active{background:var(--accent-wash)}
-  .mobile-nav a.active,.mobile-nav button.active{color:var(--accent-text);background:var(--nav-active-bg)}
+  .mobile-nav a.active,.mobile-nav button.active{color:var(--accent-text)}
   .tab-ico{font-size:18px;line-height:1}
   .tab-badge{position:absolute;top:2px;left:calc(50% + 5px);min-width:15px;height:15px;padding:0 4px;
     border-radius:99px;background:var(--accent);color:var(--accent-ink);font-size:9.5px;font-weight:700;

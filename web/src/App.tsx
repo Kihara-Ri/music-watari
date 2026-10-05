@@ -43,6 +43,14 @@ const MOBILE_TABS = [
 
 const MORE_HASHES = new Set(['more', 'ledger', 'trades', 'stats', 'settings', 'trash']);
 
+// 手机页面切换的空间方向：rank 是页面在横向层级里的位置（底栏从左到右，
+// 「更多」的子页比「更多」更深，回收站从设置进入）。进入更深的页面从右侧推入，
+// 向左返回时当前页向右滑出；桌面与 prefers-reduced-motion 不做切换动画。
+const PAGE_RANK: Record<string, number> = {
+  domestic: 0, overseas: .5, transit: 1, shipping: 2,
+  more: 3, ledger: 3.1, trades: 3.2, stats: 3.3, settings: 3.4, trash: 3.5,
+};
+
 export default function App() {
   const route = useHashRoute();
   const [state, setState] = useState<AppState | null>(null);
@@ -189,6 +197,87 @@ export default function App() {
 
   const setDrawerDirty = useCallback((v: boolean) => { drawerDirty.current = v; }, []);
 
+  // 页面切换动画（样式见 styles/pagetransition.css）：旧页面以 DOM 快照参与滑出，
+  // 组件不重复挂载。hashchange/popstate 在 React 重渲染前同步到达，监听里抢先
+  // 抓整个 #main 的克隆（连内边距一起保住几何）；等 effect 跑起来时旧内容已被
+  // 换掉，只能用这份快照。
+  const mainRef = useRef<HTMLElement | null>(null);
+  const prevPageRef = useRef(page);
+  const ghostSnapRef = useRef<{el: HTMLElement; y: number} | null>(null);
+  useEffect(() => {
+    const capture = () => {
+      // 滚动偏移必须此刻记下：换页后内容变矮会被视口钳到 0，快照就对不上用户看到的位置了
+      ghostSnapRef.current = mainRef.current
+        ? {el: mainRef.current.cloneNode(true) as HTMLElement, y: window.scrollY}
+        : null;
+    };
+    window.addEventListener('hashchange', capture);
+    window.addEventListener('popstate', capture);
+    return () => {
+      window.removeEventListener('hashchange', capture);
+      window.removeEventListener('popstate', capture);
+    };
+  }, []);
+  useEffect(() => {
+    const prev = prevPageRef.current;
+    prevPageRef.current = page;
+    const main = mainRef.current;
+    if (prev === page || !main) { ghostSnapRef.current = null; return; }
+    const snap = ghostSnapRef.current;
+    ghostSnapRef.current = null;
+    let mobile = false;
+    let animate = true;
+    try {
+      mobile = matchMedia('(max-width:840px)').matches;
+      animate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch { animate = false; }
+    if (!snap || !mobile || !animate) return;
+    const dir: 1 | -1 = (PAGE_RANK[page] ?? 3.5) >= (PAGE_RANK[prev] ?? 3.5) ? 1 : -1;
+    // 快照可能取自上一场过渡进行中，先剥掉入场类再挂滑出类
+    snap.el.classList.remove('page-in-right', 'page-in-left');
+    snap.el.classList.add(dir === 1 ? 'page-out-left' : 'page-out-right');
+    // 快照不随窗口滚动：按抓取时的滚动偏移还原，吸顶页头停在用户此刻看到的位置
+    snap.el.querySelectorAll<HTMLElement>('.page-head').forEach(h => {
+      h.style.transform = `translateY(${snap.y}px)`;
+    });
+    const ghost = document.createElement('div');
+    ghost.className = dir === 1 ? 'page-ghost page-ghost-under' : 'page-ghost page-ghost-over';
+    ghost.setAttribute('aria-hidden', 'true');
+    const shifter = document.createElement('div');
+    shifter.className = 'page-ghost-shift';
+    shifter.style.transform = `translateY(${-snap.y}px)`;
+    shifter.appendChild(snap.el);
+    ghost.appendChild(shifter);
+    document.body.appendChild(ghost);
+    // 新页面同样补页头偏移：transform 会让 sticky 失效，补齐后动画首尾位置一致
+    const heads = Array.from(main.querySelectorAll<HTMLElement>('.page-head'));
+    heads.forEach(h => { h.style.transform = `translateY(${window.scrollY}px)`; });
+    main.classList.add(dir === 1 ? 'page-in-right' : 'page-in-left');
+    document.documentElement.classList.add('page-anim-lock');
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      ghost.remove();
+      main.classList.remove('page-in-right', 'page-in-left');
+      heads.forEach(h => { h.style.transform = ''; });
+      document.documentElement.classList.remove('page-anim-lock');
+    };
+    const timer = window.setTimeout(finish, 450); // 收不到 animationend（如中途关动画）时兜底
+    const onEnd = (e: AnimationEvent) => {
+      // 子元素自带的入场动画也会冒泡上来，只认两层盒子自身的动画
+      if (e.target === main || e.target === snap.el) finish();
+    };
+    main.addEventListener('animationend', onEnd);
+    ghost.addEventListener('animationend', onEnd);
+    return () => {
+      window.clearTimeout(timer);
+      main.removeEventListener('animationend', onEnd);
+      ghost.removeEventListener('animationend', onEnd);
+      finish(); // 快速连切：立刻收掉上一场过渡
+    };
+  }, [page]);
+
   // PWA：注册 Service Worker、离线横幅、侧栏安装入口
   useEffect(() => {
     navigator.serviceWorker?.register('/sw.js').catch(() => { /* 离线壳不可用不影响使用 */ });
@@ -261,6 +350,10 @@ export default function App() {
               : page === 'ledger' ? <LedgerPage/>
                 : <SettingsPage/>;
 
+  // 底栏滑动高亮：胶囊按激活槽位平移；「更多」固定在最后一位
+  const activeTab = mobileTabs.findIndex(t => page === t.hash || (t.hash === 'domestic' && page === 'overseas'));
+  const pillIndex = activeTab >= 0 ? activeTab : mobileTabs.length;
+
   return (
     <AppContext.Provider value={ctx}>
       <a className="skip" href="#main">跳至内容</a>
@@ -290,10 +383,14 @@ export default function App() {
             <div className="local-note"><i/> 数据保存在服务设备</div>
           </div>
         </aside>
-        <main id="main" tabIndex={-1}>{content}</main>
+        <main id="main" tabIndex={-1} ref={mainRef}><div className="page-layer">{content}</div></main>
       </div>
       {offline ? <div id="connection-status" role="status">网络已断开，保存前请恢复连接。</div> : null}
       <nav className="mobile-nav" aria-label="手机导航">
+        <span className="nav-pill" aria-hidden="true" style={{
+          width: `calc((100% - 12px) / ${mobileTabs.length + 1})`,
+          transform: `translateX(${pillIndex * 100}%)`,
+        }}/>
         {mobileTabs.map(t => (
           <a key={t.hash} href={`#${t.hash === 'domestic' && modules.circulation ? inventoryPage : t.hash}`}
              className={page === t.hash || (t.hash === 'domestic' && page === 'overseas') ? 'active' : ''}
