@@ -1,5 +1,7 @@
 /* 布局层：应用外壳、侧栏导航、侧栏账本、手机底栏、页头 */
-#shell{position:relative;z-index:1;display:flex;min-height:100vh}
+/* min-height 用小视口高度：100vh 在 iOS Safari 取工具栏收起态的大视口，
+   会让文档永远多出 ~80px 幻影溢出，页面凭空可滚、sheet 上浮出滚动条 */
+#shell{position:relative;z-index:1;display:flex;min-height:100vh;min-height:100svh}
 .sidebar{width:218px;flex:none;display:flex;flex-direction:column;gap:6px;padding:20px 14px;border-right:1px solid var(--border);background:var(--chrome);position:sticky;top:0;height:100vh}
 .brand{display:flex;align-items:center;gap:12px;text-decoration:none;font-weight:700;font-size:17px;margin-bottom:16px}
 .brand small{display:block;font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.04em;margin-top:2px}
@@ -13,6 +15,7 @@
 .sidebar nav a.active b{background:var(--nav-active-badge-bg);color:var(--accent-text)}
 .sidebar-bottom a.active{color:var(--accent-text);background:var(--nav-active-bg)}
 .nav-ico{width:18px;text-align:center;font-size:14px;opacity:.85}
+.nav-ico svg{vertical-align:-0.2em}
 .sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:2px}
 .side-ledger{margin:0 2px 12px;padding:13px 15px;background:var(--surface);border:1px solid var(--border);border-radius:13px}
 .sl-title{font-size:10.5px;letter-spacing:.16em;color:var(--faint);font-weight:600;margin-bottom:7px}

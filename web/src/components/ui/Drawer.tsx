@@ -47,6 +47,52 @@ export function Drawer({spec, closing, onClose, onClosed}: {
     return () => window.clearTimeout(t);
   }, [closing]);
 
+  // iOS 软键盘：WebKit 会把可视视口在布局视口内下移（visualViewport.offsetTop>0），
+  // fixed 面板随之整体被顶出屏幕上方（只剩底部贴着键盘）。把面板锚定到可视视口
+  // 矩形，sheet 连头带底完整落在键盘上方；键盘收起（offsetTop 归零）即还原。
+  // 同期锁定文档滚动：sheet 盖不住系统级滚动指示器；聚焦输入还会让 WebKit 上滚
+  // 文档「露出」输入框，背景一动 Safari 底部地址栏就会重新展开、盖住 sheet 底部。
+  // html overflow:hidden 挡不住 iOS 的这脚程序滚动，需把 scrollY 钉在开抽屉时的值。
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const html = document.documentElement;
+    html.style.overflow = 'hidden';
+    const lockY = window.scrollY;
+    const onScroll = () => { if (window.scrollY !== lockY) window.scrollTo(0, lockY); };
+    window.addEventListener('scroll', onScroll, {passive: true});
+    if (!vv) {
+      return () => {
+        window.removeEventListener('scroll', onScroll);
+        html.style.overflow = '';
+      };
+    }
+    const apply = () => {
+      if (vv.offsetTop > 1) {
+        panel.style.top = `${vv.offsetTop}px`;
+        panel.style.height = `${vv.height}px`;
+        panel.style.bottom = 'auto';
+      } else {
+        panel.style.top = '';
+        panel.style.height = '';
+        panel.style.bottom = '';
+      }
+    };
+    apply();
+    vv.addEventListener('resize', apply);
+    vv.addEventListener('scroll', apply);
+    return () => {
+      vv.removeEventListener('resize', apply);
+      vv.removeEventListener('scroll', apply);
+      window.removeEventListener('scroll', onScroll);
+      panel.style.top = '';
+      panel.style.height = '';
+      panel.style.bottom = '';
+      html.style.overflow = '';
+    };
+  }, [spec]);
+
   const requestClose = () => { if (!closing) onClose(); };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
