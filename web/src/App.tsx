@@ -204,6 +204,9 @@ export default function App() {
   const mainRef = useRef<HTMLElement | null>(null);
   const prevPageRef = useRef(page);
   const ghostSnapRef = useRef<{el: HTMLElement; y: number} | null>(null);
+  const lastHashRef = useRef(location.hash);
+  const clickNavRef = useRef(0);
+  const historyNavRef = useRef(false);
   useEffect(() => {
     const capture = () => {
       // 滚动偏移必须此刻记下：换页后内容变矮会被视口钳到 0，快照就对不上用户看到的位置了
@@ -211,11 +214,28 @@ export default function App() {
         ? {el: mainRef.current.cloneNode(true) as HTMLElement, y: window.scrollY}
         : null;
     };
-    window.addEventListener('hashchange', capture);
-    window.addEventListener('popstate', capture);
+    // 真正的历史遍历（iOS 边缘右滑、后退/前进）系统自带过渡画面，自己再播一遍
+    // 就是双重动画——标记后由切页 effect 跳过。**WebKit 对锚点点击的 fragment
+    // 导航也会连发两次 popstate**（实测序列 pop、pop、hash，与历史返回无法从
+    // 事件本身区分），只能靠点击时间窗判别：点击后瞬间的 popstate 是应用内导航。
+    const onPop = () => {
+      if (location.hash !== lastHashRef.current && Date.now() - clickNavRef.current > 500) {
+        historyNavRef.current = true;
+      }
+      capture();
+    };
+    const onHash = () => {
+      lastHashRef.current = location.hash;
+      capture();
+    };
+    const onClick = () => { clickNavRef.current = Date.now(); };
+    document.addEventListener('click', onClick, true);
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('hashchange', onHash);
     return () => {
-      window.removeEventListener('hashchange', capture);
-      window.removeEventListener('popstate', capture);
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('hashchange', onHash);
     };
   }, []);
   useEffect(() => {
@@ -225,13 +245,16 @@ export default function App() {
     if (prev === page || !main) { ghostSnapRef.current = null; return; }
     const snap = ghostSnapRef.current;
     ghostSnapRef.current = null;
+    // 历史驱动的换页（边缘右滑/后退键）交给系统过渡，自己不再播动画
+    const fromHistory = historyNavRef.current;
+    historyNavRef.current = false;
     let mobile = false;
     let animate = true;
     try {
       mobile = matchMedia('(max-width:840px)').matches;
       animate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     } catch { animate = false; }
-    if (!snap || !mobile || !animate) return;
+    if (!snap || !mobile || !animate || fromHistory) return;
     const dir: 1 | -1 = (PAGE_RANK[page] ?? 3.5) >= (PAGE_RANK[prev] ?? 3.5) ? 1 : -1;
     // 快照可能取自上一场过渡进行中，先剥掉入场类再挂滑出类
     snap.el.classList.remove('page-in-right', 'page-in-left');
