@@ -413,9 +413,13 @@ export function RecordForm({id}: {id?: string}) {
                      })}/>
                 <input id="f-price" name="price" type="number" min="0"
                        /* 日元不设步进限制：step 会把 1145 円这类非整十金额判为无效，编辑历史数据时保存被静默拦截 */
-                       step={v.currency === 'JPY' ? 'any' : '0.01'} inputMode="decimal"
+                       step={v.currency === 'JPY' ? 'any' : '0.01'}
+                       inputMode={v.currency === 'JPY' ? 'numeric' : 'decimal'}
                        placeholder="按币种填写" value={v.price}
-                       onChange={e => { set({price: e.target.value}); dirty(); }}/>
+                       onChange={e => {
+                         set({price: v.currency === 'JPY' ? e.target.value.replace(/[^\d]/g, '') : e.target.value});
+                         dirty();
+                       }}/>
               </div>
             </div>
             <Field label="买入日期（选填）" name="date" type="date" value={v.date}

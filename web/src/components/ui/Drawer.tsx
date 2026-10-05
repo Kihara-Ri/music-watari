@@ -17,6 +17,7 @@ export function Drawer({spec, closing, onClose, onClosed}: {
   const sheetRef = useRef<HTMLElement>(null);
   const exitedRef = useRef(false);
   const dragRef = useRef<{startY: number; dy: number; v: number; lastY: number; lastT: number} | null>(null);
+  const edgeActiveRef = useRef(false);
 
   const finishClose = () => {
     if (exitedRef.current) return;
@@ -48,19 +49,25 @@ export function Drawer({spec, closing, onClose, onClosed}: {
   }, [closing]);
 
   // iOS 软键盘：WebKit 会把可视视口在布局视口内下移（visualViewport.offsetTop>0），
-  // fixed 面板随之整体被顶出屏幕上方（只剩底部贴着键盘）。把面板锚定到可视视口
-  // 矩形，sheet 连头带底完整落在键盘上方；键盘收起（offsetTop 归零）即还原。
-  // 同期锁定文档滚动：sheet 盖不住系统级滚动指示器；聚焦输入还会让 WebKit 上滚
-  // 文档「露出」输入框，背景一动 Safari 底部地址栏就会重新展开、盖住 sheet 底部。
+  // fixed 面板在屏幕上被整体顶出上缘。把 #panel 整层平移 offsetTop（背板随行，可视
+  // 区域永远被盖住），sheet 在屏幕上保持原位、布局零变化——键盘只是叠在其下半部
+  // 之上的一层；聚焦字段的露出交给 WebKit 对 drawer-body 的滚动露出。键盘收起
+  // （offsetTop 归零）即还原。只在手机 sheet 断点生效：桌面捏合缩放也会动 offsetTop，
+  // 不该拖着抽屉跑。
+  // 同期锁定文档滚动（横竖都钉）：sheet 盖不住系统级滚动指示器；聚焦输入还会让
+  // WebKit 滚动文档「露出」输入框，背景一动 Safari 底部地址栏就会重新展开盖住底部。
   // html overflow:hidden 挡不住 iOS 的这脚程序滚动，需把 scrollY 钉在开抽屉时的值。
   useEffect(() => {
     const vv = window.visualViewport;
     const panel = panelRef.current;
-    if (!panel) return;
+    if (!panel || !window.matchMedia(SHEET_QUERY).matches) return;
     const html = document.documentElement;
     html.style.overflow = 'hidden';
+    const lockX = window.scrollX;
     const lockY = window.scrollY;
-    const onScroll = () => { if (window.scrollY !== lockY) window.scrollTo(0, lockY); };
+    const onScroll = () => {
+      if (window.scrollX !== lockX || window.scrollY !== lockY) window.scrollTo(lockX, lockY);
+    };
     window.addEventListener('scroll', onScroll, {passive: true});
     if (!vv) {
       return () => {
@@ -69,15 +76,7 @@ export function Drawer({spec, closing, onClose, onClosed}: {
       };
     }
     const apply = () => {
-      if (vv.offsetTop > 1) {
-        panel.style.top = `${vv.offsetTop}px`;
-        panel.style.height = `${vv.height}px`;
-        panel.style.bottom = 'auto';
-      } else {
-        panel.style.top = '';
-        panel.style.height = '';
-        panel.style.bottom = '';
-      }
+      panel.style.transform = vv.offsetTop > 1 ? `translateY(${vv.offsetTop}px)` : '';
     };
     apply();
     vv.addEventListener('resize', apply);
@@ -86,12 +85,95 @@ export function Drawer({spec, closing, onClose, onClosed}: {
       vv.removeEventListener('resize', apply);
       vv.removeEventListener('scroll', apply);
       window.removeEventListener('scroll', onScroll);
-      panel.style.top = '';
-      panel.style.height = '';
-      panel.style.bottom = '';
+      panel.style.transform = '';
       html.style.overflow = '';
     };
   }, [spec]);
+
+  // —— 手机 sheet：屏幕左缘横向右滑 = 跟手下拉收起 ——
+  // iOS 系统对边缘右滑的默认响应是整页侧向过渡（浏览器自己的返回动画），对上拉
+  // sheet 毫无意义且收尾会闪。页面在 touchmove 上 preventDefault 可令该系统手势
+  // 中止（触摸流仍完整送达页面），于是把这段手势接管成「按住 sheet 往下拖」：
+  // 横向位移 1:1 映射为下拉位移，松手超过阈值或快速下滑即收回，否则回弹；纵向
+  // 滑动不拦截，放行给 drawer-body 原生滚动。桌面断点不接管。
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    let start: {x: number; y: number} | null = null;
+    let active = false;
+    let dx = 0, v = 0, lastX = 0, lastT = 0;
+    const springBack = () => {
+      sheet.style.transition = 'transform .26s cubic-bezier(.2,.8,.3,1)';
+      sheet.style.transform = '';
+    };
+    const onStart = (e: TouchEvent) => {
+      if (closing || dragRef.current || edgeActiveRef.current) return;
+      if (!window.matchMedia(SHEET_QUERY).matches) return;
+      const t = e.touches[0];
+      if (t.clientX > 28) return;
+      // 手起点落在 sheet 内部横向滚动条带上（如封面候选）时让位给原生横向滚动
+      let node: Element | null = e.target instanceof Element ? e.target : null;
+      while (node && node !== sheet) {
+        if (node.scrollWidth > node.clientWidth + 1) return;
+        node = node.parentElement;
+      }
+      // 键盘弹出时 WebKit 会把横向手势整流收归系统（页面收不到 touchmove），
+      // 先同步收起键盘：键盘落下后触摸流回到页面，本次滑动继续作为下拉接管
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA')) focused.blur();
+      start = {x: t.clientX, y: t.clientY};
+      active = false; dx = 0; v = 0; lastX = t.clientX; lastT = e.timeStamp;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!start) return;
+      if (e.touches.length > 1) {  // 捏合等多指手势不接管
+        start = null;
+        if (active) { active = false; edgeActiveRef.current = false; springBack(); }
+        return;
+      }
+      const t = e.touches[0];
+      const ddx = t.clientX - start.x;
+      const ddy = t.clientY - start.y;
+      if (!active) {
+        if (Math.abs(ddx) < 8 && Math.abs(ddy) < 8) return;
+        if (ddx <= 0 || Math.abs(ddx) <= Math.abs(ddy)) { start = null; return; }
+        active = true;
+        edgeActiveRef.current = true;
+        sheet.style.transition = 'none';
+      }
+      e.preventDefault();  // 中止系统边缘侧滑与页面滚动，本次触摸交给 sheet 拖拽
+      dx = Math.max(0, ddx);
+      const dt = e.timeStamp - lastT;
+      if (dt > 0) { v = (t.clientX - lastX) / dt; lastX = t.clientX; lastT = e.timeStamp; }
+      sheet.style.transform = `translateY(${dx}px)`;
+    };
+    const onEnd = () => {
+      if (!start) return;
+      start = null;
+      if (!active) return;
+      active = false;
+      edgeActiveRef.current = false;
+      const fling = dx > 40 && v > 0.55;
+      const far = dx > Math.max(110, sheet.offsetHeight * 0.22);
+      if ((fling || far) && onClose()) {
+        // closing 类接管：隐式动画起点 = 当前内联位移，继续滑向屏底
+      } else {
+        springBack();
+      }
+    };
+    // touchstart 必须 capture：iOS 键盘弹出时 WebKit 只把 touchstart 派发到捕获阶段
+    // （冒泡阶段收不到，实测），而收键盘、记录手势起点都依赖它。
+    document.addEventListener('touchstart', onStart, {passive: true, capture: true});
+    document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('touchend', onEnd, {passive: true});
+    document.addEventListener('touchcancel', onEnd, {passive: true});
+    return () => {
+      document.removeEventListener('touchstart', onStart, true);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+      document.removeEventListener('touchcancel', onEnd);
+    };
+  }, [closing, onClose, spec]);
 
   const requestClose = () => { if (!closing) onClose(); };
 
@@ -116,7 +198,7 @@ export function Drawer({spec, closing, onClose, onClosed}: {
 
   // —— 手机 sheet：按住头部跟手下拉 ——
   const onHeadPointerDown = (e: React.PointerEvent) => {
-    if (spec.variant === 'artist' || closing || dragRef.current || !window.matchMedia(SHEET_QUERY).matches) return;
+    if (spec.variant === 'artist' || closing || dragRef.current || edgeActiveRef.current || !window.matchMedia(SHEET_QUERY).matches) return;
     if (e.target instanceof Element && e.target.closest('button')) return;
     if (!sheetRef.current) return;
     dragRef.current = {startY: e.clientY, dy: 0, v: 0, lastY: e.clientY, lastT: e.timeStamp};

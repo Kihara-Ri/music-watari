@@ -165,7 +165,10 @@ export function BatchForm() {
       </div>
       {draft ? <details className="adv import-common" open={phase==='review'}><summary>这一批的共同资料</summary><div className="form-grid">
         {modules.acquisition ? <><div className="field"><label htmlFor="batch-date">买入日期（选填）</label><input id="batch-date" type="date" value={draft.common.date} disabled={!editable} onChange={e => update(d => {d.common.date=e.target.value;return d;})}/></div>
-          <div className="field"><label>币种</label><Seg ariaLabel="整批币种" options={[{value:'JPY',label:'日元'},{value:'CNY',label:'人民币'}]} value={draft.common.currency} onValue={v => {if(editable)update(d => {d.common.currency=v as 'JPY'|'CNY';return d;});}}/></div>
+          <div className="field"><label>币种</label><Seg ariaLabel="整批币种" options={[{value:'JPY',label:'日元'},{value:'CNY',label:'人民币'}]} value={draft.common.currency} onValue={v => {if(editable)update(d => {d.common.currency=v as 'JPY'|'CNY';
+            // 切日元即整批取整（与单张录入的币种切换同口径）；输入侧见下方 price 过滤
+            if(v==='JPY')d.groups=d.groups.map(g => g.savedId||!g.fields.price ? g : {...g,fields:{...g.fields,price:String(Math.round(Number(g.fields.price)))}});
+            return d;});}}/></div>
           <ShopField value={draft.common.location} records={app.state.records} defaultShop={prefs.get('location','')} onChange={value => {if(editable)update(d => {d.common.location=value;return d;});}}/></> : null}
         <div className="field"><label htmlFor="batch-storage">存放位置</label><input id="batch-storage" value={draft.common.storage} disabled={!editable} onChange={e => update(d => {d.common.storage=e.target.value;return d;})}/></div>
         {modules.circulation ? <div className="field"><label>入库位置</label><Seg ariaLabel="整批入库位置" options={[{value:'overseas',label:'海外库存'},{value:'domestic',label:'国内库存'}]} value={draft.common.status} onValue={v => {if(editable)update(d => {d.common.status=v as 'overseas'|'domestic';return d;});}}/></div> : null}
@@ -193,8 +196,10 @@ export function BatchForm() {
         <fieldset disabled={!editable||!!g.savedId||g.excluded} className="import-fields">
           <div className="import-basic-fields">{([['title','专辑名'],['artist','艺人'],...(modules.acquisition ? [['price','买入金额（选填）']] : []),['version','碟盒'],['pressing','日版／外版'],['obi','侧标']] as [keyof RecognitionFields,string][]).map(([key,label]) => <div className="field" key={key}>
             <label htmlFor={`${g.id}-${key}`}>{label}</label><input id={`${g.id}-${key}`} name={`batch-${key}`} value={String(g.fields[key]??'')}
-              type={key==='price' ? 'number' : 'text'} min={key==='price' ? '0' : undefined} step={key==='price' ? '0.01' : undefined}
-              onChange={e => field(g.id,{[key]:e.target.value})}/></div>)}</div>
+              type={key==='price' ? 'number' : 'text'} min={key==='price' ? '0' : undefined}
+              step={key==='price' ? (draft.common.currency==='JPY' ? 'any' : '0.01') : undefined}
+              inputMode={key==='price' ? (draft.common.currency==='JPY' ? 'numeric' : 'decimal') : undefined}
+              onChange={e => field(g.id,{[key]:key==='price'&&draft.common.currency==='JPY' ? e.target.value.replace(/[^\d]/g,'') : e.target.value})}/></div>)}</div>
           <details className="adv"><summary>发行资料与上架描述</summary><ReleaseEditor prefix={g.id} value={g.fields.releaseInfo??{}} onChange={releaseInfo => field(g.id,{releaseInfo})}/>
             <div className="field"><label htmlFor={`${g.id}-description`}>上架描述草稿</label><textarea id={`${g.id}-description`} value={g.fields.listingDescription??''} onChange={e => field(g.id,{listingDescription:e.target.value})}/></div>
             <button type="button" className="quiet" onClick={() => field(g.id,{listingDescription:listingText(g.fields)})}>从当前资料生成描述</button>
