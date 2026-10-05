@@ -17,8 +17,12 @@ function SaleCostsForm({sale}: {sale: Sale}) {
   const app = useApp();
   const {error, saving, run} = useFormSubmit();
   const jpy = sale.currency === 'JPY';
-  const [fees, setFees] = useState(jpy ? sale.feesOriginal ?? '' : sale.fees);
-  const [postage, setPostage] = useState(jpy ? sale.postageOriginal ?? '' : sale.postage || '0');
+  // 日元费用只接受整数：库里存的是两位小数格式（108.00），编辑界面取整回显，
+  // 输入时过滤掉小数点（与买入金额切日元取整同一口径）
+  const intStr = (v: string | null | undefined) =>
+    v == null || v === '' ? '' : String(Math.round(Number(v)));
+  const [fees, setFees] = useState(jpy ? intStr(sale.feesOriginal) : sale.fees);
+  const [postage, setPostage] = useState(jpy ? intStr(sale.postageOriginal) : sale.postage || '0');
   const rate = useRate(sale.date);
   const rs = sale.items.map(i => app.rec(i.recordId)).filter(r => !!r);
   const unknown = sale.items.some(i => i.profit === null);
@@ -33,6 +37,11 @@ function SaleCostsForm({sale}: {sale: Sale}) {
   const shipping = sale.status === 'shipping';
   const unit = jpy ? '日元' : '元';
   const step = jpy ? 'any' : '0.01';
+  const inputMode = jpy ? 'numeric' as const : 'decimal' as const;
+  const onFeeInput = (set: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    set(jpy ? e.target.value.replace(/[^\d]/g, '') : e.target.value);
+    app.setDrawerDirty(true);
+  };
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     run(app, () => api('sale-update', {id: sale.id, fees, postage}), '销售费用已更新');
@@ -44,9 +53,9 @@ function SaleCostsForm({sale}: {sale: Sale}) {
       <p className="small-note">{sale.date} 售出 · {sale.channel} · 成交价 {shipFeeText(sale.currency, sale.grossOriginal, sale.gross)}</p>
       <div className="form-grid form-section">
         <Field label={`平台扣费合计（${unit}）`} name="sale-fees" type="number" required min="0" step={step}
-          inputMode="decimal" value={fees} onChange={e => {setFees(e.target.value); app.setDrawerDirty(true);}}/>
+          inputMode={inputMode} value={fees} onChange={onFeeInput(setFees)}/>
         <Field label={`寄出运费（${unit}）`} name="sale-postage" type="number" required min="0" step={step}
-          inputMode="decimal" value={postage} onChange={e => {setPostage(e.target.value); app.setDrawerDirty(true);}}/>
+          inputMode={inputMode} value={postage} onChange={onFeeInput(setPostage)}/>
       </div>
       <p className="small-note">平台有多项服务费时填写合计；确认收货后仍可补录、修改。</p>
       {jpy ? <p className="small-note">按售出日汇率折算人民币。</p> : null}
