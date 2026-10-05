@@ -11,6 +11,7 @@ import type {AppState, SortMode} from './types';
 import {Ledger} from './components/PageHead';
 import {InstallNavItem} from './components/InstallNavItem';
 import {Drawer} from './components/ui/Drawer';
+import {GearIcon} from './components/ui/GearIcon';
 import {Lightbox} from './components/ui/Lightbox';
 import {Toast} from './components/ui/Toast';
 import type {ToastKind} from './state/AppContext';
@@ -126,19 +127,65 @@ export default function App() {
   }, [refresh]);
 
   // 关闭分两步：closeDrawer 只置 closing（Drawer 播完收回动画后回调 drawerExited 才真正卸载）
+  // 每个抽屉会话在历史里压入同址条目：iOS 边缘右滑的「返回」先消费它，popstate 里
+  // 把抽屉收回（脏表单先确认），而不是把路由退回上一个页面——所有上拉窗口统一行为。
+  const drawerStack = useRef<DrawerSpec[]>([]);
+  const drawerEntries = useRef(0);
+  const popGuard = useRef(false);
   const openDrawer = useCallback((spec: DrawerSpec) => {
     drawerDirty.current = false;
     setDrawerClosing(false);
     setDrawer(spec);
+    drawerStack.current.push(spec);
+    history.pushState({diedu: 'drawer'}, '');
+    drawerEntries.current++;
   }, []);
 
+  const confirmDiscard = () => !drawerDirty.current || confirm('还没有保存，确定放弃这次修改吗？');
+
   const closeDrawer = useCallback((force = false): boolean => {
-    if (!force && drawerDirty.current && !confirm('还没有保存，确定放弃这次修改吗？')) return false;
+    if (!force && !confirmDiscard()) return false;
+    drawerStack.current = []; // 收回动画期间到达的返回手势不再命中抽屉
     setDrawerClosing(true);
     return true;
   }, []);
 
-  const drawerExited = useCallback(() => { setDrawer(null); setDrawerClosing(false); }, []);
+  const drawerExited = useCallback(() => {
+    setDrawer(null); setDrawerClosing(false);
+    drawerStack.current = [];
+    if (drawerEntries.current > 0) {
+      popGuard.current = true;
+      history.go(-drawerEntries.current);
+      drawerEntries.current = 0;
+    }
+  }, []);
+
+  useEffect(() => {
+    const onPop = () => {
+      if (popGuard.current) { popGuard.current = false; return; }
+      const stack = drawerStack.current;
+      if (!stack.length) {
+        if (drawerEntries.current > 0) drawerEntries.current--; // 收回动画期间的手势先消费守卫条目
+        return; // 无抽屉时的返回 = 正常路由后退，交给 hashchange
+      }
+      if (!confirmDiscard()) {
+        history.pushState({diedu: 'drawer'}, ''); // 用户取消放弃：补回刚消费的守卫条目
+        return;
+      }
+      stack.pop();
+      drawerEntries.current = Math.max(0, drawerEntries.current - 1);
+      if (stack.length) {
+        // 艺人抽屉等往返场景：返回手势回到上一层抽屉（重挂载，与「返回」按钮同语义）
+        drawerDirty.current = false;
+        setDrawerClosing(false);
+        setDrawer(stack[stack.length - 1]);
+      } else {
+        setDrawerClosing(true);
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   const setDrawerDirty = useCallback((v: boolean) => { drawerDirty.current = v; }, []);
 
@@ -238,7 +285,7 @@ export default function App() {
             <Ledger/>
             <a href="#settings" data-nav="settings"
                className={page === 'settings' ? 'active' : ''}>
-              <span className="nav-ico">⚙</span>设置与备份
+              <span className="nav-ico" aria-hidden="true"><GearIcon size={14}/></span>设置与备份
             </a>
             <div className="local-note"><i/> 数据保存在服务设备</div>
           </div>
