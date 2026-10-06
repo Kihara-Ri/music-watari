@@ -1,0 +1,74 @@
+/* 连续胶片、自然延伸的桌面与有限视口等距斜列。 */
+.gallery-continuous-cover{user-select:none;-webkit-user-select:none}
+.gallery-film-shell{--film-size:clamp(150px,21vw,230px);--film-gap:18px;--film-controls:66px;position:relative;padding-bottom:var(--film-controls);background:var(--surface-3);border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.gallery-density--small .gallery-film-shell{--film-size:clamp(120px,17vw,180px)}
+.gallery-density--large .gallery-film-shell{--film-size:clamp(180px,25vw,280px)}
+.gallery-film-shell::before,.gallery-film-shell::after{content:"";position:absolute;left:0;right:0;z-index:1;height:9px;background:repeating-linear-gradient(90deg,var(--bg) 0 12px,transparent 12px 23px);pointer-events:none}
+.gallery-film-shell::before{top:11px}
+.gallery-film-shell::after{bottom:calc(var(--film-controls) + 10px)}
+.gallery-film-rail{position:relative;display:flex;align-items:center;gap:var(--film-gap);width:100%;padding:32px max(16px,calc(50% - var(--film-size)*.5));overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y pinch-zoom;scroll-snap-type:none;scroll-behavior:auto;scrollbar-width:none;cursor:grab}
+.gallery-film-rail::-webkit-scrollbar{display:none}
+.gallery-film-rail[data-dragging=true]{cursor:grabbing}
+.gallery-film-item{flex:0 0 var(--film-size);width:var(--film-size);aspect-ratio:1;min-width:0}
+.gallery-film-item .gallery-cover-button{height:100%;border:2px solid var(--border-strong);border-radius:0;box-shadow:none}
+.gallery-isometric-shell .gallery-stage-controls{bottom:10px}
+
+.gallery-table-grid{--table-min:144px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,var(--table-min)),1fr));align-items:start;gap:36px;padding:24px;min-width:0;background:radial-gradient(ellipse at 50% 20%,var(--surface-2),var(--bg) 78%);border:1px solid var(--border);border-radius:var(--radius);touch-action:pan-y pinch-zoom}
+.gallery-density--small .gallery-table-grid{--table-min:110px;gap:28px}
+.gallery-density--large .gallery-table-grid{--table-min:210px;gap:44px}
+.gallery-table-item{min-width:0;scroll-margin-block:90px}
+.gallery-table-item .gallery-cover-button{height:auto;aspect-ratio:1;box-shadow:2px 3px 0 var(--border-strong),6px 9px 20px var(--shadow-ink)}
+.gallery-table-item .gallery-tile-caption{padding-top:15px}
+.gallery-table-angle--0>.gallery-cover-button{transform:rotate(-5deg)}
+.gallery-table-angle--1>.gallery-cover-button{transform:rotate(3deg)}
+.gallery-table-angle--2>.gallery-cover-button{transform:rotate(-2deg)}
+.gallery-table-angle--3>.gallery-cover-button{transform:rotate(5deg)}
+.gallery-table-angle--4>.gallery-cover-button{transform:rotate(-3deg)}
+.gallery-table-angle--5>.gallery-cover-button{transform:rotate(4deg)}
+.gallery-table-angle--6>.gallery-cover-button{transform:rotate(-4deg)}
+.gallery-table-angle--7>.gallery-cover-button{transform:rotate(2deg)}
+.gallery-table-angle--8>.gallery-cover-button{transform:rotate(-1deg)}
+
+.gallery-isometric-shell{--iso-preferred:clamp(90px,12vw,148px);--iso-controls:64px;--iso-height:440px;--iso-size:min(var(--iso-preferred),calc((var(--iso-height) - var(--iso-controls))/3.15),calc((100vw - 68px)/3.15));--iso-step:calc(var(--iso-size)*.94);position:relative;padding-bottom:var(--iso-controls);border:1px solid var(--border);border-radius:var(--radius);background:radial-gradient(ellipse at 50% 70%,var(--surface-2),var(--bg) 75%);overflow:hidden;isolation:isolate}
+.gallery-density--small .gallery-isometric-shell{--iso-preferred:clamp(72px,9vw,112px)}
+.gallery-density--large .gallery-isometric-shell{--iso-preferred:clamp(110px,15vw,178px)}
+.gallery-isometric-viewport{position:relative;height:calc(var(--iso-height) - var(--iso-controls));overflow:hidden;perspective:1100px;touch-action:manipulation;cursor:grab}
+.gallery-isometric-gesture{position:absolute;inset:0 14px;perspective:inherit;touch-action:pinch-zoom;overflow:hidden}
+.gallery-isometric-viewport[data-dragging=true]{cursor:grabbing}
+.gallery-isometric-item{position:absolute;left:50%;top:50%;width:var(--iso-size);height:var(--iso-size);transform-style:preserve-3d;animation:gallery-isometric-position 32000ms linear both paused;will-change:transform}
+.gallery-isometric-lane--0{--iso-lane-x:calc(var(--iso-size)*-.82);--iso-lane-y:calc(var(--iso-size)*.82);--iso-lane-shift:0px}
+.gallery-isometric-lane--1{--iso-lane-x:0px;--iso-lane-y:0px;--iso-lane-shift:calc(var(--iso-step)*.5)}
+.gallery-isometric-lane--2{--iso-lane-x:calc(var(--iso-size)*.82);--iso-lane-y:calc(var(--iso-size)*-.82);--iso-lane-shift:0px}
+.gallery-isometric-item .gallery-cover-button{height:100%;box-shadow:4px 6px 0 var(--border-strong),10px 17px 22px var(--shadow-ink);border:1px solid var(--hairline)}
+@keyframes gallery-isometric-position{
+  from{transform:translate(-50%,-50%) translate(calc(var(--iso-step)*-16 + var(--iso-lane-x) + var(--iso-lane-shift)),calc(var(--iso-step)*-16 + var(--iso-lane-y) + var(--iso-lane-shift))) rotateX(30deg) rotateZ(-35deg)}
+  to{transform:translate(-50%,-50%) translate(calc(var(--iso-step)*16 + var(--iso-lane-x) + var(--iso-lane-shift)),calc(var(--iso-step)*16 + var(--iso-lane-y) + var(--iso-lane-shift))) rotateX(30deg) rotateZ(-35deg)}
+}
+.gallery-page.is-immersive .gallery-isometric-shell{--iso-height:min(72svh,700px)}
+@media(max-width:840px){
+  .gallery-film-shell{--film-size:min(48vw,220px);--film-gap:14px}
+  .gallery-density--small .gallery-film-shell{--film-size:min(36vw,160px)}
+  .gallery-density--large .gallery-film-shell{--film-size:min(58vw,260px)}
+  .gallery-film-rail{padding-block:30px}
+  .gallery-table-grid{--table-min:112px;gap:22px;padding:18px}
+  .gallery-density--small .gallery-table-grid{--table-min:86px;gap:18px}
+  .gallery-density--large .gallery-table-grid{--table-min:140px;gap:28px}
+  .gallery-isometric-shell{--iso-preferred:min(25vw,128px);--iso-height:390px}
+  .gallery-density--small .gallery-isometric-shell{--iso-preferred:min(19vw,100px)}
+  .gallery-density--large .gallery-isometric-shell{--iso-preferred:min(30vw,144px)}
+  .gallery-page.is-immersive .gallery-isometric-shell{--iso-height:calc(100svh - 110px)}
+}
+@media(max-height:560px) and (orientation:landscape){
+  .gallery-film-shell{--film-size:130px}
+  .gallery-density--small .gallery-film-shell{--film-size:110px}
+  .gallery-density--large .gallery-film-shell{--film-size:150px}
+  .gallery-film-rail{padding-block:28px}
+  .gallery-isometric-shell{--iso-preferred:96px;--iso-height:280px}
+  .gallery-density--small .gallery-isometric-shell{--iso-preferred:76px}
+  .gallery-density--large .gallery-isometric-shell{--iso-preferred:110px}
+  .gallery-page.is-immersive .gallery-isometric-shell{--iso-height:max(230px,calc(100svh - 100px))}
+}
+@media(prefers-reduced-motion:reduce){
+  /* 暂停动画只是 CSP 下的位置表；没有自播，惯性由共用 hook 禁用。 */
+  .gallery-isometric-item{animation:gallery-isometric-position 32000ms linear both paused!important}
+}

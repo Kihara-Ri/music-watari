@@ -166,7 +166,7 @@ export interface AppState {
   shipments: Shipment[];
   audit: AuditEntry[];
   settings: Record<string, unknown>;
-  modules?: {enabled: ModuleFlags; configured: boolean; needsSetup: boolean}; // 旧运行进程尚未重启时可能缺失
+  modules?: {enabled: ModuleFlags; configured: boolean; needsSetup: boolean; startPage?: StartPage}; // 旧运行进程尚未重启时可能缺失
   rateService?: { days: number; latest: string | null };
   service?: { login: boolean; version?: string; backup: BackupStatus };
 }
@@ -175,7 +175,10 @@ export interface ModuleFlags {
   acquisition: boolean;
   trading: boolean;
   circulation: boolean;
+  showcase: boolean;
 }
+
+export type StartPage = 'domestic' | 'gallery';
 
 export interface BackupFile {
   format: 'album-ledger';

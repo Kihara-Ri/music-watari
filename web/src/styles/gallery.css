@@ -1,0 +1,45 @@
+/* 展示页外壳与控制区；舞台、模式选择与放大抽屉分别维护。 */
+.gallery-page{min-width:0}
+#main.showcase-main{max-width:1560px}
+.gallery-controls{display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+.gallery-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gallery-filter-inputs{display:flex;flex:1;align-items:center;gap:8px;min-width:min(100%,300px);max-width:540px}
+.gallery-search{flex:1;min-width:0}
+.gallery-search input{background:var(--surface);min-height:44px}
+.gallery-scope-trigger{min-width:0;max-width:42%;min-height:44px;display:flex;align-items:center;gap:6px;padding:8px 10px}
+.gallery-scope-trigger strong{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-toolbar{display:flex;flex:1;align-items:center;gap:8px;min-width:min(100%,260px);flex-wrap:wrap}
+.gallery-mode-trigger{flex:0 1 auto;min-width:0;min-height:44px;display:flex;align-items:center;gap:6px;padding:8px 10px}
+.gallery-mode-trigger strong{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gallery-mode-trigger>span{flex:none}
+.gallery-adjust-trigger{flex:none;min-height:44px;min-width:52px;padding:7px 8px}
+.gallery-adjustments{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.gallery-adjustments[hidden]{display:none}
+.gallery-setting{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.gallery-setting .seg button{min-width:42px;min-height:38px}
+.gallery-setting .dd-btn{min-height:44px}
+.gallery-check{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;white-space:nowrap;min-height:44px;cursor:pointer}
+.gallery-waterfall-note{font-size:11px;color:var(--faint)}
+.gallery-count{flex:1;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.gallery-manage-link{flex:none;font-size:12px;color:var(--muted);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
+.gallery-roaming{min-height:44px;padding:6px 10px;font-size:12px;white-space:normal}
+.gallery-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* 整个应用树一起沉浸，资料抽屉与照片灯箱仍保持可见。 */
+#shell:has(.gallery-page.is-immersive) .sidebar,#shell:has(.gallery-page.is-immersive)~.mobile-nav{display:none}
+#main.showcase-main:has(.gallery-page.is-immersive){max-width:none;padding:22px 28px 40px}
+.gallery-page.is-immersive .page-head{position:static;margin:0 0 18px;padding:0;border:0;background:none;backdrop-filter:none;justify-content:flex-end}
+.gallery-page.is-immersive .gallery-controls,.gallery-page.is-immersive .page-head>div:first-child{display:none}
+.gallery-page.is-immersive .head-actions .theme-seg{display:none}
+
+@media(max-width:840px){
+  .gallery-controls{gap:9px;margin-bottom:12px}
+  .gallery-filters{gap:8px}
+  .gallery-filter-inputs{flex-basis:100%;max-width:none}
+  .gallery-toolbar{flex-basis:100%}
+  .gallery-adjustments{gap:8px;padding:8px 12px}
+  .gallery-setting{width:100%;justify-content:space-between}
+  #main.showcase-main:has(.gallery-page.is-immersive){padding:calc(12px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))}
+  .gallery-page.is-immersive .page-head{margin:0 0 10px;gap:8px;flex-wrap:nowrap}
+  .gallery-page.is-immersive .head-actions button{font-size:12px;padding:7px 10px;min-height:44px}
+}

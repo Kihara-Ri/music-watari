@@ -35,7 +35,7 @@ jobs:
       - run: python3 -m unittest discover -s tests -v
 
   web:
-    name: 前端 typecheck + 构建
+    name: 前端契约测试 + typecheck + 构建
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,5 +45,6 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm --prefix web ci
+      - run: npm --prefix web test
       - run: npm --prefix web run typecheck
       - run: npm --prefix web run build

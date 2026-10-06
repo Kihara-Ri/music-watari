@@ -1,6 +1,7 @@
 """内置模块组合的行为契约；所有写入只使用临时目录。"""
 import base64
 import copy
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,8 +18,9 @@ class ModuleTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def modules(self, acquisition=False, trading=False, circulation=False):
-        return self.store.set_modules(dict(acquisition=acquisition, trading=trading, circulation=circulation))
+    def modules(self, acquisition=False, trading=False, circulation=False, showcase=False, start_page=None):
+        return self.store.set_modules(dict(acquisition=acquisition, trading=trading, circulation=circulation,
+                                           showcase=showcase), start_page)
 
     def test_new_and_legacy_instances(self):
         self.assertTrue(self.store.state()['modules']['needsSetup'])
@@ -27,7 +29,69 @@ class ModuleTests(unittest.TestCase):
         config = self.store.state()['modules']
         self.assertFalse(config['needsSetup'])
         self.assertFalse(config['configured'])
-        self.assertTrue(all(config['enabled'].values()))
+        self.assertEqual(config['enabled'], {'acquisition': True, 'trading': True, 'circulation': True,
+                                             'showcase': False})
+        self.assertEqual(config['startPage'], 'domestic')
+        self.assertNotIn('start-page-v1', self.store.backup()['settings'])
+        with self.assertRaisesRegex(ValidationError, '收藏展示'):
+            self.store.require_module('showcase')
+
+    def test_legacy_configuration_read_normalizes_without_writing(self):
+        self.store.save({'title': '旧收藏', 'artist': '艺人'})
+        legacy = {'acquisition': True, 'trading': False, 'circulation': False}
+        # 模拟旧版本已落盘的三键配置；只在本测试的临时库设置夹具。
+        with self.store.connect() as db:
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('modules-v1', json.dumps(legacy)))
+        before = self.store.backup()
+        config = self.store.state()['modules']
+        self.assertEqual(config['enabled'], {**legacy, 'showcase': False})
+        self.assertTrue(config['configured'])
+        self.assertFalse(config['needsSetup'])
+        self.store.require_module('acquisition')
+        with self.assertRaises(ValidationError): self.store.require_module('showcase')
+        after = self.store.backup()
+        for key in ('records', 'sales', 'shipments', 'settings', 'audit'):
+            self.assertEqual(after[key], before[key])
+
+    def test_legacy_client_configuration_is_accepted_with_showcase_off(self):
+        legacy = {'acquisition': False, 'trading': True, 'circulation': False}
+        result = self.store.set_modules(legacy)
+        self.assertEqual(result['enabled'], {**legacy, 'showcase': False})
+        self.assertEqual(self.store.backup()['settings']['modules-v1'], result['enabled'])
+        self.assertEqual(legacy, {'acquisition': False, 'trading': True, 'circulation': False})
+
+    def test_showcase_is_independent_and_switching_preserves_the_collection(self):
+        self.modules()
+        photo = 'data:image/jpeg;base64,' + base64.b64encode(b'showcase-photo').decode()
+        rid = self.store.save({'title': '欣赏', 'artist': '艺人', 'storage': '书架', 'photos': [photo]})['ids'][0]
+        before = self.store.backup()
+        self.modules(showcase=True)
+        self.store.require_module('showcase')
+        with self.assertRaises(ValidationError): self.store.require_module('acquisition')
+        self.modules()
+        with self.assertRaises(ValidationError): self.store.require_module('showcase')
+        after = self.store.backup()
+        for key in ('records', 'sales', 'shipments'):
+            self.assertEqual(after[key], before[key])
+        self.assertEqual((self.store.photos_dir / rid / '0.jpg').read_bytes(), b'showcase-photo')
+        self.assertIsNone(self.store.state()['records'][0]['cost'])
+
+    def test_home_page_is_saved_preserved_and_validated_atomically(self):
+        result = self.modules(showcase=True, start_page='gallery')
+        self.assertEqual(result['startPage'], 'gallery')
+        self.assertEqual(self.store.state()['modules']['startPage'], 'gallery')
+        self.modules()  # 关闭欣赏，省略首页仍保留原偏好。
+        self.assertEqual(self.store.state()['modules']['startPage'], 'gallery')
+        self.modules(showcase=True)
+        before = self.store.backup()
+        for start_page in ('settings', '', 1, False, [], {}):
+            with self.subTest(start_page=start_page), self.assertRaises(ValidationError):
+                self.modules(acquisition=True, start_page=start_page)
+            after = self.store.backup()
+            self.assertEqual(after['settings'], before['settings'])
+            self.assertEqual(after['audit'], before['audit'])
+        self.modules(showcase=True, start_page='domestic')
+        self.assertEqual(self.store.state()['modules']['startPage'], 'domestic')
 
     def test_collection_without_purchase_information(self):
         self.modules()
@@ -50,7 +114,11 @@ class ModuleTests(unittest.TestCase):
     def test_strict_configuration_and_dependency(self):
         for enabled in (None, {}, {'acquisition': 1, 'trading': False, 'circulation': False},
                         {'acquisition': False, 'trading': False, 'circulation': True},
-                        {'acquisition': True, 'trading': False, 'circulation': False, 'unknown': True}):
+                        {'acquisition': True, 'trading': False, 'circulation': False, 'unknown': True},
+                        {'acquisition': False, 'circulation': False, 'showcase': True},
+                        {'acquisition': False, 'trading': False, 'circulation': False, 'showcase': 1},
+                        {'acquisition': False, 'trading': False, 'circulation': False, 'showcase': 'true'},
+                        {'acquisition': False, 'trading': False, 'circulation': False, 'showcase': None}):
             with self.subTest(enabled=enabled), self.assertRaises(ValidationError):
                 self.store.set_modules(enabled)
         self.assertNotIn('modules-v1', self.store.backup()['settings'])
@@ -95,17 +163,55 @@ class ModuleTests(unittest.TestCase):
         self.assertIsNone(item['profit'])
 
     def test_backup_restores_configuration_and_rejects_bad_configuration(self):
-        self.modules(acquisition=True)
+        self.modules(acquisition=True, showcase=True, start_page='gallery')
         self.store.save({'title': '来源', 'artist': '艺人', 'currency': 'CNY', 'price': '15'})
         backup = self.store.backup()
         self.modules(trading=True)
         self.store.restore_backup(copy.deepcopy(backup))
         self.assertEqual(self.store.state()['modules']['enabled'], backup['settings']['modules-v1'])
+        self.assertEqual(self.store.state()['modules']['startPage'], 'gallery')
         bad = copy.deepcopy(backup)
         bad['settings']['modules-v1']['circulation'] = True
         bad['settings']['modules-v1']['acquisition'] = False
         with self.assertRaises(ValidationError): self.store.restore_backup(bad)
         self.assertEqual(self.store.backup()['records'], backup['records'])
+        before = self.store.backup()
+        for start_page in ('settings', None, 1):
+            bad = copy.deepcopy(backup)
+            bad['settings']['start-page-v1'] = start_page
+            with self.subTest(start_page=start_page), self.assertRaises(ValidationError):
+                self.store.restore_backup(bad)
+            after = self.store.backup()
+            for key in ('records', 'sales', 'shipments', 'settings', 'audit'):
+                self.assertEqual(after[key], before[key])
+
+    def test_legacy_backup_normalizes_new_module_without_changing_records(self):
+        self.modules(acquisition=True)
+        self.store.save({'title': '旧备份', 'artist': '艺人', 'currency': 'CNY', 'price': '15'})
+        legacy = self.store.backup()
+        legacy['settings']['modules-v1'].pop('showcase')
+        self.modules(trading=True, showcase=True, start_page='gallery')
+        self.store.restore_backup(copy.deepcopy(legacy))
+        restored = self.store.backup()
+        for key in ('records', 'sales', 'shipments'):
+            self.assertEqual(restored[key], legacy[key])
+        self.assertEqual(restored['settings']['modules-v1'],
+                         {**legacy['settings']['modules-v1'], 'showcase': False})
+        self.assertEqual(self.store.state()['modules']['startPage'], 'domestic')
+        self.assertNotIn('start-page-v1', restored['settings'])
+        self.assertNotIn('showcase', legacy['settings']['modules-v1'])
+
+    def test_backup_without_configuration_keeps_legacy_business_defaults(self):
+        self.store.save({'title': '未配置的收藏', 'artist': '艺人'})
+        legacy = self.store.backup()
+        self.modules(showcase=True, start_page='gallery')
+        self.store.restore_backup(copy.deepcopy(legacy))
+        config = self.store.state()['modules']
+        self.assertEqual(config['enabled'], {'acquisition': True, 'trading': True, 'circulation': True,
+                                             'showcase': False})
+        self.assertFalse(config['configured'])
+        self.assertEqual(config['startPage'], 'domestic')
+        self.assertEqual(self.store.backup()['records'], legacy['records'])
 
     def test_listing_roundtrip_validation_and_core_edit_preservation(self):
         self.modules(trading=True)

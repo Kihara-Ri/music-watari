@@ -29,7 +29,7 @@ class WebTests(unittest.TestCase):
   self.assertEqual(self.req('/api/logout',{},cookie=cookie)[0],200)
   self.assertEqual(self.req('/api/state',cookie=cookie)[0],401)
  def test_module_settings_api_and_disabled_operation(self):
-  flags={'acquisition':False,'trading':False,'circulation':False}
+  flags={'acquisition':False,'trading':False,'circulation':False,'showcase':False}
   self.assertEqual(self.req('/api/modules',{'enabled':flags})[0],401)
   _,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
   self.assertEqual(self.req('/api/modules',{'enabled':flags},cookie=cookie,origin='https://evil.test')[0],403)
@@ -40,6 +40,25 @@ class WebTests(unittest.TestCase):
   rid=json.loads(body)['ids'][0]
   self.assertEqual(self.req('/api/bulk',{'ids':[rid],'action':'list'},cookie=cookie)[0],400)
   self.assertEqual(self.req('/api/modules',{'enabled':{**flags,'circulation':True}},cookie=cookie)[0],400)
+ def test_legacy_module_settings_request_and_home_page(self):
+  _,h,_=self.req('/api/login',{'password':'test-password-12345'});cookie=h['Set-Cookie']
+  legacy={'acquisition':False,'trading':False,'circulation':False}
+  flags={**legacy,'showcase':True}
+  status,_,body=self.req('/api/modules',{'enabled':flags,'startPage':'gallery'},cookie=cookie)
+  self.assertEqual(status,200)
+  self.assertEqual(json.loads(body),{'ok':True,'enabled':flags,'startPage':'gallery'})
+  status,_,body=self.req('/api/modules',{'enabled':legacy},cookie=cookie)
+  self.assertEqual(status,200)
+  self.assertEqual(json.loads(body)['enabled'],{**legacy,'showcase':False})
+  self.assertEqual(json.loads(body)['startPage'],'gallery')
+  _,_,body=self.req('/api/state',cookie=cookie)
+  self.assertEqual(json.loads(body)['modules']['startPage'],'gallery')
+  before=self.store.backup()
+  for start_page in (None,'settings',False):
+   with self.subTest(start_page=start_page):
+    self.assertEqual(self.req('/api/modules',{'enabled':flags,'startPage':start_page},cookie=cookie)[0],400)
+    self.assertEqual(self.store.backup()['settings'],before['settings'])
+    self.assertEqual(self.store.backup()['audit'],before['audit'])
  def test_origins_and_hosts(self):
   self.assertEqual(self.req('/api/login',{'password':'test-password-12345'},origin='https://evil.test')[0],403)
   self.assertEqual(self.req('/',host='evil.test')[0],403)

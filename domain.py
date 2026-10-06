@@ -13,7 +13,8 @@ from urllib.parse import urlsplit
 COVER_URL_RE = re.compile(r'^/api/cover/[0-9a-f]{16}\.(jpg|png|webp)$')
 
 STATUSES = ('overseas', 'transit', 'domestic', 'shipping', 'sold', 'trash')
-MODULE_NAMES = ('acquisition', 'trading', 'circulation')
+MODULE_NAMES = ('acquisition', 'trading', 'circulation', 'showcase')
+SHOWCASE_ID_RE = re.compile(r'^[0-9a-f]{32}$')
 
 
 class ValidationError(ValueError):
@@ -46,13 +47,55 @@ def clean_release_info(value):
 
 def clean_modules(enabled):
     """内置模块的唯一配置契约；海外周转需要购入记录来追溯分摊成本。"""
-    if not isinstance(enabled, dict) or set(enabled) != set(MODULE_NAMES):
+    # 旧客户端、已保存配置与旧备份只有三个业务开关；新增展示能力默认关闭。
+    if not isinstance(enabled, dict) or set(enabled) not in (set(MODULE_NAMES), set(MODULE_NAMES) - {'showcase'}):
         raise ValidationError('请提供完整的模块配置')
-    if any(type(enabled[k]) is not bool for k in MODULE_NAMES):
+    if any(type(value) is not bool for value in enabled.values()):
         raise ValidationError('模块开关必须为布尔值')
     if enabled['circulation'] and not enabled['acquisition']:
         raise ValidationError('海外周转需要同时启用购入记录')
-    return {k: enabled[k] for k in MODULE_NAMES}
+    return {k: enabled.get(k, False) for k in MODULE_NAMES}
+
+
+def clean_start_page(value):
+    if not isinstance(value, str) or value not in ('domestic', 'gallery'):
+        raise ValidationError('首页必须为收藏或展示')
+    return value
+
+
+def clean_showcase_group(value):
+    """展示组是有序的实物 ID 清单，不合并作品或要求外部艺人绑定。"""
+    if not isinstance(value, dict) or set(value) != {'id', 'name', 'recordIds'}:
+        raise ValidationError('展示组格式不正确')
+    ident = value['id']
+    if not isinstance(ident, str) or not SHOWCASE_ID_RE.fullmatch(ident):
+        raise ValidationError('展示组编号不正确')
+    name = value['name']
+    if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
+        raise ValidationError('展示组名称应为 1–100 字')
+    ids = value['recordIds']
+    if not isinstance(ids, list) or len(ids) > 10000:
+        raise ValidationError('展示组的副本清单不正确')
+    if any(not isinstance(rid, str) or not SHOWCASE_ID_RE.fullmatch(rid) for rid in ids):
+        raise ValidationError('展示组的副本编号不正确')
+    if len(set(ids)) != len(ids):
+        raise ValidationError('同一副本不能在展示组中重复')
+    return {'id': ident, 'name': name.strip(), 'recordIds': list(ids)}
+
+
+def clean_showcase_groups(value):
+    """meta/备份的唯一展示组契约；允许历史清单含目前不存在的副本。"""
+    if not isinstance(value, dict) or set(value) != {'revision', 'groups'}:
+        raise ValidationError('展示组设置格式不正确')
+    revision = value['revision']
+    if type(revision) is not int or revision < 0:
+        raise ValidationError('展示组版本不正确')
+    if not isinstance(value['groups'], list) or len(value['groups']) > 1000:
+        raise ValidationError('展示组清单不正确')
+    groups = [clean_showcase_group(group) for group in value['groups']]
+    if len({group['id'] for group in groups}) != len(groups):
+        raise ValidationError('展示组编号重复')
+    return {'revision': revision, 'groups': groups}
 
 
 def clean_listing(data):

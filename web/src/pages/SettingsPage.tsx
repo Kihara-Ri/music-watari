@@ -78,7 +78,7 @@ export function SettingsPage() {
       <PageHead title="设置与备份" label="KEEP IT IN ORDER"/>
       <section className="settings-section">
         <h3>功能模块</h3>
-        <p>按需要选择收藏、购入记录、二手交易与海外周转。</p>
+        <p>按需要选择收藏展示、购入记录、二手交易与海外周转；基础收藏始终可用。</p>
         {state.modules ? <ModuleChooser/> : <p className="small-note">当前后端仍是旧版本。重启碟渡服务后，即可选择功能模块；原有账本可以继续使用。</p>}
       </section>
       <section className="settings-section">

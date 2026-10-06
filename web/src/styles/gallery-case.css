@@ -1,0 +1,67 @@
+/* A thin case in local coordinates: the outer rail determines visible edges.
+   Only the front is clipped. Overflow/filter on the 3D body would flatten it. */
+.gallery-stage .gallery-cover-button.gallery-case-button{
+  overflow:visible;transform-style:preserve-3d;border:0;background:none;box-shadow:none;
+}
+.gallery-stage .gallery-cover-button.gallery-case-button:hover{background:none}
+.gallery-case{
+  --case-depth:clamp(3px,.9vw,6px);--case-half:calc(var(--case-depth)*.5);
+  --case-rim:color-mix(in srgb,var(--text) 26%,var(--surface-3));
+  --case-edge:color-mix(in srgb,var(--border-strong) 80%,var(--text));
+  position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;pointer-events:none;
+}
+.gallery-case-body{
+  position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;
+  transform:translateZ(0);transition:transform 180ms cubic-bezier(.2,.8,.2,1);
+}
+.gallery-case-shadow{
+  position:absolute;inset:2%;border-radius:3px;
+  transform:translateZ(calc(var(--case-half)*-1 - 1px));
+  box-shadow:0 5px 13px color-mix(in srgb,var(--shadow-ink) 70%,transparent);
+  transition:box-shadow 180ms ease;
+}
+.gallery-case-face{position:absolute;display:block;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.gallery-case-face--front{
+  inset:0;transform:translateZ(var(--case-half));padding:2px;border:1px solid var(--case-rim);
+  border-radius:3px;background:var(--surface-2);overflow:hidden;
+}
+.gallery-case-face--front::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--text) 9%,transparent),transparent 28%,transparent 72%,color-mix(in srgb,var(--text) 3%,transparent));
+  box-shadow:inset 0 1px color-mix(in srgb,var(--text) 28%,transparent),inset 0 -1px color-mix(in srgb,var(--bg) 25%,transparent);
+}
+.gallery-case-face--rear{
+  inset:0;transform:translateZ(calc(var(--case-half)*-1)) rotateY(180deg);
+  border:1px solid var(--case-edge);border-radius:3px;background:var(--surface-3);
+}
+/* Opposite faces share the same depth. Their normal points out of the cuboid;
+   no arbitrary offset is added in screen coordinates. */
+.gallery-case-face--left,.gallery-case-face--right{
+  top:0;width:var(--case-depth);height:100%;transform-origin:0 50%;
+  background:linear-gradient(90deg,var(--border-strong),var(--case-edge) 45%,var(--border-strong));
+}
+.gallery-case-face--left{left:0;transform:translateZ(calc(var(--case-half)*-1)) rotateY(-90deg)}
+.gallery-case-face--right{left:100%;transform:translateZ(var(--case-half)) rotateY(90deg)}
+.gallery-case-face--top,.gallery-case-face--bottom{
+  left:0;width:100%;height:var(--case-depth);transform-origin:50% 0;
+  background:linear-gradient(var(--border-strong),var(--case-edge) 45%,var(--border-strong));
+}
+.gallery-case-face--top{top:0;transform:translateZ(calc(var(--case-half)*-1)) rotateX(90deg)}
+.gallery-case-face--bottom{top:100%;transform:translateZ(var(--case-half)) rotateX(-90deg)}
+.gallery-case--sleeve{--case-depth:2px;--case-rim:var(--border);--case-edge:var(--border-strong)}
+.gallery-case--sleeve .gallery-case-face--front{padding:1px;border-radius:2px}
+.gallery-case--sleeve .gallery-case-face--front::after{background:none;box-shadow:inset 0 0 0 1px var(--hairline)}
+.gallery-case--flat{--case-half:0px;transform-style:flat}
+.gallery-case--flat .gallery-case-body{overflow:hidden;border-radius:2px;transform:translateY(0);transform-style:flat}
+.gallery-case--flat .gallery-case-shadow{transform:none;box-shadow:var(--shadow-sm)}
+.gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case--spatial .gallery-case-body{transform:translateZ(12px) scale(1.012)}
+.gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case--flat .gallery-case-body{transform:translateY(-4px) scale(1.012)}
+.gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case-shadow{box-shadow:0 9px 22px color-mix(in srgb,var(--shadow-ink) 65%,transparent)}
+@media(hover:hover) and (pointer:fine){
+  .gallery-case-button:hover .gallery-case--spatial .gallery-case-body{transform:translateZ(12px) scale(1.012)}
+  .gallery-case-button:hover .gallery-case--flat .gallery-case-body{transform:translateY(-4px) scale(1.012)}
+  .gallery-case-button:hover .gallery-case-shadow{box-shadow:0 9px 22px color-mix(in srgb,var(--shadow-ink) 65%,transparent)}
+}
+@media(prefers-reduced-motion:reduce){
+  .gallery-case-body,.gallery-case-shadow{transition:none}
+}

@@ -1,0 +1,17 @@
+/* 胶片的连续定位与辅助箭头组成一条操作带，原生轨道仍负责触屏滚动。 */
+.gallery-film-navigator{position:absolute;z-index:2;left:12px;right:12px;bottom:10px;max-width:520px;margin-inline:auto;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:4px;padding:4px;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.gallery-film-nav-arrow{display:flex;align-items:center;justify-content:center;width:44px;height:44px;min-height:44px;padding:0;border:0;border-radius:9px;background:transparent;color:var(--text);touch-action:pan-y pinch-zoom}
+.gallery-film-nav-arrow:hover{background:var(--surface-2)}
+.gallery-film-nav-arrow:disabled{opacity:.35;cursor:default;background:transparent}
+.gallery-film-nav-arrow:focus-visible{outline-offset:0}
+.gallery-film-seek{display:block;appearance:none;-webkit-appearance:none;width:100%;min-width:0;height:44px;min-height:44px;margin:0;padding:0;border:0;border-radius:9px;background:transparent;color:var(--text);cursor:ew-resize;touch-action:pan-y pinch-zoom;transition:none}
+.gallery-film-seek:focus{background:transparent;border:0}
+.gallery-film-seek:focus-visible{outline-offset:0}
+.gallery-film-seek:disabled{opacity:.35;cursor:default}
+.gallery-film-seek::-webkit-slider-runnable-track{height:3px;border:0;border-radius:3px;background:var(--border-strong)}
+.gallery-film-seek::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;margin-top:-7.5px;border:3px solid var(--surface);border-radius:50%;background:var(--text);box-shadow:0 0 0 1px var(--border-strong)}
+.gallery-film-seek::-moz-range-track{height:3px;border:0;border-radius:3px;background:var(--border-strong)}
+.gallery-film-seek::-moz-range-thumb{box-sizing:border-box;width:18px;height:18px;border:3px solid var(--surface);border-radius:50%;background:var(--text);box-shadow:0 0 0 1px var(--border-strong)}
+@media(max-width:360px){
+  .gallery-film-navigator{left:8px;right:8px;gap:2px}
+}

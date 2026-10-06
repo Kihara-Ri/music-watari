@@ -15,6 +15,7 @@ export interface DrawerSpec {
   back?: {label: string; run: () => void};
   workspace?: boolean;
   asForm?: boolean;   // 表单类抽屉：内容自带 <form>，撑满抽屉高度
+  initialFocus?: 'close'; // 选择面板先浏览，避免自动聚焦搜索框唤起手机键盘
 }
 
 // 消息级别：成功（绿）/ 警告（黄）/ 错误（红）

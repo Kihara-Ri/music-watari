@@ -31,7 +31,8 @@ export function Drawer({spec, closing, onClose, onClosed}: {
     const shell = document.getElementById('shell');
     if (shell) shell.inert = true;
     const panel = panelRef.current;
-    const target = panel?.querySelector<HTMLElement>('input:not([type=hidden]),select,textarea')
+    const target = (spec.initialFocus === 'close' ? null
+      : panel?.querySelector<HTMLElement>('input:not([type=hidden]),select,textarea'))
       || panel?.querySelector<HTMLElement>('[data-action=close]')
       || panel?.querySelector<HTMLElement>('.drawer-head button');
     target?.focus();

@@ -1,7 +1,7 @@
 // 应用外壳：状态装配、hash 路由、抽屉/toast/PWA 效果、侧栏与页面分发。
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {api, ApiError} from './core/api';
-import {pageEnabled, PRESETS} from './core/modules';
+import {homePage, LEGACY_MODULES, normalizeModules, pageEnabled, PRESETS} from './core/modules';
 import {applyThemePref, themePref} from './core/theme';
 import type {ThemePref} from './core/theme';
 import {useHashRoute} from './hooks/useHashRoute';
@@ -24,8 +24,10 @@ import {SettingsPage} from './pages/SettingsPage';
 import {SetupPage} from './pages/SetupPage';
 import {MorePage} from './pages/MorePage';
 import {LedgerPage} from './pages/LedgerPage';
+import {GalleryPage} from './pages/GalleryPage';
 
 const NAV = [
+  {hash: 'gallery', ico: '▦', label: '收藏展示'},
   {hash: 'overseas', ico: '◧', label: '海外库存'},
   {hash: 'transit', ico: '✈', label: '海外在途'},
   {hash: 'domestic', ico: '▤', label: '国内库存'},
@@ -41,14 +43,14 @@ const MOBILE_TABS = [
   {hash: 'shipping', ico: '◨', label: '售出中', count: 'shipping'},
 ] as const;
 
-const MORE_HASHES = new Set(['more', 'ledger', 'trades', 'stats', 'settings', 'trash']);
+const MORE_HASHES = new Set(['more', 'gallery', 'ledger', 'trades', 'stats', 'settings', 'trash']);
 
 // 手机页面切换的空间方向：rank 是页面在横向层级里的位置（底栏从左到右，
 // 「更多」的子页比「更多」更深，回收站从设置进入）。进入更深的页面从右侧推入，
 // 向左返回时当前页向右滑出；桌面与 prefers-reduced-motion 不做切换动画。
 const PAGE_RANK: Record<string, number> = {
   domestic: 0, overseas: .5, transit: 1, shipping: 2,
-  more: 3, ledger: 3.1, trades: 3.2, stats: 3.3, settings: 3.4, trash: 3.5,
+  more: 3, gallery: 3.05, ledger: 3.1, trades: 3.2, stats: 3.3, settings: 3.4, trash: 3.5,
 };
 
 export default function App() {
@@ -87,8 +89,10 @@ export default function App() {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [installEvt, setInstallEvt] = useState<Event | null>(null);
   const [inventoryPage, setInventoryPage] = useState('domestic');
-  const modules = state?.modules?.needsSetup ? PRESETS[0].enabled : state?.modules?.enabled ?? (state ? PRESETS[3].enabled : undefined);
-  const page = modules && !pageEnabled(route, modules) ? 'domestic' : route;
+  const modules = state?.modules?.needsSetup ? PRESETS[0].enabled
+    : state ? normalizeModules(state.modules?.enabled ?? LEGACY_MODULES) : undefined;
+  const home = modules ? homePage(state?.modules?.startPage, modules) : 'domestic';
+  const page = !route ? home : modules && !pageEnabled(route, modules) ? 'domestic' : route;
 
   const refresh = useCallback(async () => { setState(await api<AppState>('state')); }, []);
 
@@ -108,11 +112,11 @@ export default function App() {
     setShelfFilter('all');
     setMobileSelecting(false);
     if (page === 'domestic' || page === 'overseas') setInventoryPage(page);
-  }, [page, modules?.acquisition, modules?.trading, modules?.circulation]);
+  }, [page, modules?.acquisition, modules?.trading, modules?.circulation, modules?.showcase]);
 
   useEffect(() => {
-    if (modules && page !== route) location.replace('#domestic');
-  }, [modules, page, route]);
+    if (state && !state.modules?.needsSetup && page !== route) location.replace(`#${page}`);
+  }, [state, page, route]);
 
   // 环绕动画结束（onAnimationEnd）时由 Toast 自己通知消失；定时器只兜底
   const toast = useCallback((msg: string, kind: ToastKind = 'ok') => {
@@ -203,16 +207,27 @@ export default function App() {
   // 换掉，只能用这份快照。
   const mainRef = useRef<HTMLElement | null>(null);
   const prevPageRef = useRef(page);
-  const ghostSnapRef = useRef<{el: HTMLElement; y: number} | null>(null);
+  const ghostSnapRef = useRef<{el: HTMLElement; y: number;
+    scroll: {index: number; left: number; top: number}[];
+    poses: {index: number; name: string; time: number}[]} | null>(null);
   const lastHashRef = useRef(location.hash);
   const clickNavRef = useRef(0);
   const historyNavRef = useRef(false);
   useEffect(() => {
     const capture = () => {
       // 滚动偏移必须此刻记下：换页后内容变矮会被视口钳到 0，快照就对不上用户看到的位置了
-      ghostSnapRef.current = mainRef.current
-        ? {el: mainRef.current.cloneNode(true) as HTMLElement, y: window.scrollY}
-        : null;
+      const source = mainRef.current;
+      ghostSnapRef.current = source ? {
+        el: source.cloneNode(true) as HTMLElement, y: window.scrollY,
+        // cloneNode 不复制内部滚动偏移；快照挂载后才能还原可滚动容器的位置。
+        scroll: Array.from(source.querySelectorAll<HTMLElement>('*')).flatMap((el, index) =>
+          el.scrollLeft || el.scrollTop ? [{index, left: el.scrollLeft, top: el.scrollTop}] : []),
+        // 连续展示以暂停 CSS 动画定位；克隆同样要保留当前姿态，避免切页时封面跳回起点。
+        poses: Array.from(source.querySelectorAll<HTMLElement>('*')).flatMap((el, index) =>
+          el.getAnimations().flatMap(animation => animation.playState === 'paused'
+            && typeof animation.currentTime === 'number' && 'animationName' in animation
+            ? [{index, name: (animation as CSSAnimation).animationName, time: animation.currentTime}] : [])),
+      } : null;
     };
     // 真正的历史遍历（iOS 边缘右滑、后退/前进）系统自带过渡画面，自己再播一遍
     // 就是双重动画——标记后由切页 effect 跳过。**WebKit 对锚点点击的 fragment
@@ -243,6 +258,12 @@ export default function App() {
     prevPageRef.current = page;
     const main = mainRef.current;
     if (prev === page || !main) { ghostSnapRef.current = null; return; }
+    // 国内 / 海外是同一张库存页里的两个子标签（.shelf-location），切换不算换页：
+    // 不播整页过渡，只有列表内容替换与地区下划线滑动。
+    if ((prev === 'domestic' || prev === 'overseas') && (page === 'domestic' || page === 'overseas')) {
+      ghostSnapRef.current = null;
+      return;
+    }
     const snap = ghostSnapRef.current;
     ghostSnapRef.current = null;
     // 历史驱动的换页（边缘右滑/后退键）交给系统过渡，自己不再播动画
@@ -272,6 +293,16 @@ export default function App() {
     shifter.appendChild(snap.el);
     ghost.appendChild(shifter);
     document.body.appendChild(ghost);
+    const clonedElements = snap.el.querySelectorAll<HTMLElement>('*');
+    snap.scroll.forEach(({index, left, top}) => {
+      clonedElements[index].scrollLeft = left;
+      clonedElements[index].scrollTop = top;
+    });
+    snap.poses.forEach(({index, name, time}) => {
+      clonedElements[index].getAnimations().forEach(animation => {
+        if ('animationName' in animation && (animation as CSSAnimation).animationName === name) animation.currentTime = time;
+      });
+    });
     // 新页面同样补页头偏移：transform 会让 sticky 失效，补齐后动画首尾位置一致
     const heads = Array.from(main.querySelectorAll<HTMLElement>('.page-head'));
     heads.forEach(h => { h.style.transform = `translateY(${window.scrollY}px)`; });
@@ -364,6 +395,7 @@ export default function App() {
     label: n.hash === 'domestic' && !modules.circulation ? '收藏' : n.label,
   }));
   const content = state.modules?.needsSetup ? <SetupPage/>
+    : page === 'gallery' ? <GalleryPage/>
     : ['overseas', 'domestic', 'trash'].includes(page) ? <ShelfPage/>
     : page === 'transit' ? <TransitPage/>
       : page === 'shipping' ? <ShippingPage/>
@@ -380,9 +412,9 @@ export default function App() {
   return (
     <AppContext.Provider value={ctx}>
       <a className="skip" href="#main">跳至内容</a>
-      <div id="shell">
+      <div id="shell" className={page === 'gallery' ? 'showcase-shell' : undefined}>
         <aside className="sidebar">
-          <a className="brand" href="#domestic">
+          <a className="brand" href={`#${home}`}>
             <img className="brand-logo" src="/icon-192.png" alt="" width="30" height="30"/>
             <span>碟渡<small>{modules.circulation ? '藏 · 渡 · 售' : modules.trading ? '藏 · 售' : '记住每张唱片'}</small></span>
           </a>
@@ -392,7 +424,7 @@ export default function App() {
                  className={page === n.hash ? 'active' : ''}
                  aria-current={page === n.hash ? 'page' : 'false'}>
                 <span className="nav-ico">{n.ico}</span>{n.label}
-                {n.hash !== 'stats' ? <b id={`${n.hash}-count`}>{counts[n.hash]}</b> : null}
+                {counts[n.hash] !== undefined && n.hash !== 'stats' ? <b id={`${n.hash}-count`}>{counts[n.hash]}</b> : null}
               </a>
             ))}
           </nav>
@@ -406,7 +438,7 @@ export default function App() {
             <div className="local-note"><i/> 数据保存在服务设备</div>
           </div>
         </aside>
-        <main id="main" tabIndex={-1} ref={mainRef}><div className="page-layer">{content}</div></main>
+        <main id="main" className={page === 'gallery' ? 'showcase-main' : undefined} tabIndex={-1} ref={mainRef}><div className="page-layer">{content}</div></main>
       </div>
       {offline ? <div id="connection-status" role="status">网络已断开，保存前请恢复连接。</div> : null}
       <nav className="mobile-nav" aria-label="手机导航">

@@ -1,4 +1,5 @@
 // 库存页（海外 / 国内 / 回收站共用）：搜索、排序、时间线/艺人分组、批量操作条。
+import {useLayoutEffect, useRef} from 'react';
 import {useApp} from '../state/AppContext';
 import type {AlbumRecord, SortMode} from '../types';
 import {fmtMonth, sum, yuan} from '../core/format';
@@ -64,6 +65,25 @@ export function ShelfPage() {
     if (on) next.add(id); else next.delete(id);
     app.setSelected(next);
   };
+
+  // 国内/海外的滑动下划线：测量选中项的 offset 平移过去（同底栏胶囊 / Seg）。
+  // 每次渲染与窗口缩放后重算；首次落位先关过渡，避免重挂载时从左端滑入。
+  const scopeNavRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const paint = () => {
+      const thumb = scopeNavRef.current?.querySelector<HTMLElement>('.shelf-tab-thumb');
+      const on = scopeNavRef.current?.querySelector<HTMLElement>('a[aria-current=page]');
+      if (!thumb || !on) return;
+      const fresh = !thumb.style.width;
+      if (fresh) thumb.style.transition = 'none';
+      thumb.style.width = `${on.offsetWidth}px`;
+      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+      if (fresh) { void thumb.offsetWidth; thumb.style.transition = ''; }
+    };
+    paint();
+    window.addEventListener('resize', paint);
+    return () => window.removeEventListener('resize', paint);
+  });
 
   const title = page === 'domestic' && !modules.circulation ? '我的收藏' : page === 'overseas' ? '海外库存' : page === 'domestic' ? '国内库存' : '回收站';
   const desc = !modules.circulation && !isTrash ? '整理每张实物的版本、照片和存放位置。'
@@ -166,12 +186,14 @@ export function ShelfPage() {
     <div className={`shelf-page shelf-${app.shelfView}${alignList ? ' align-list' : ''}${app.mobileSelecting || curSelected.size ? ' is-selecting' : ''}`}>
       <PageHead title={modules.circulation && !isTrash ? <><span className="desktop-shelf-title">{title}</span><span className="mobile-shelf-title">库存</span></> : title} desc={keepDesc ? desc : undefined} label="COLLECTION" actions={isTrash ? null : (
         <>
+          {modules.showcase ? <a className="link-button" href="#gallery">展示收藏</a> : null}
           <button onClick={() => openBatchForm(app)}>批量录入</button>
           <button className="primary" onClick={() => openRecordForm(app)}>＋ 添加专辑</button>
         </>
       )}/>
       {modules.circulation && !isTrash ? (
-        <nav className="shelf-location" aria-label="库存地区">
+        <nav className="shelf-location" aria-label="库存地区" ref={scopeNavRef}>
+          <span className="shelf-tab-thumb" aria-hidden="true"/>
           {(['domestic', 'overseas'] as const).map(p => (
             <a key={p} href={`#${p}`} aria-current={page === p ? 'page' : 'false'}>
               {p === 'domestic' ? '国内' : '海外'}<b>{state.records.filter(r => r.status === p).length}</b>

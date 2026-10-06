@@ -1,0 +1,107 @@
+/* 展示舞台使用工具区与底栏之间的真实剩余高度；自然网格仍向下延伸。 */
+#main.showcase-main{
+  --gallery-main-top:30px;
+  --gallery-main-bottom:24px;
+  padding-block:var(--gallery-main-top) var(--gallery-main-bottom);
+}
+.gallery-page{
+  display:flex;
+  flex-direction:column;
+  min-height:calc(100svh - var(--gallery-main-top) - var(--gallery-main-bottom));
+}
+@supports(height:100dvh){
+  .gallery-page{min-height:calc(100dvh - var(--gallery-main-top) - var(--gallery-main-bottom))}
+}
+.gallery-page>.page-head,.gallery-page>.gallery-controls{flex:none}
+.gallery-stage-layout{min-width:0}
+.gallery-stage-layout .gallery-wall{grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--gallery-min)),1fr))}
+.gallery-stage-layout .gallery-table-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--table-min)),1fr))}
+
+/* 尺寸容器以 flex 分配后的空间为准。调整区展开时轨道缩短；空间太小时
+   保留可操作的舞台下限，整页自然滚动，不把封面或按钮压到工具区下面。 */
+.gallery-stage-layout:is([data-mode=flow],[data-mode=crate],[data-mode=fan],[data-mode=ring],[data-mode=isometric],[data-mode=film]),
+.gallery-stage-layout[data-mode=waterfall]:has(.has-roam-viewport){
+  flex:1 0 260px;
+  min-height:260px;
+  display:flex;
+  flex-direction:column;
+  container-type:size;
+}
+.gallery-stage-layout:is([data-mode=flow],[data-mode=crate],[data-mode=fan],[data-mode=ring],[data-mode=isometric])>.gallery-stage,
+.gallery-stage-layout[data-mode=waterfall]>.has-roam-viewport{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+/* 原有轨道与手势边缘不变；正方形封面的尺寸同时受可用宽度和高度约束。 */
+.gallery-stage-layout .gallery-orbit-space{
+  --gallery-size:min(76cqw,calc((100cqh - var(--gallery-controls-height))*.72),420px);
+  flex:1;
+  height:auto;
+  min-height:0;
+}
+.gallery-stage-layout .gallery-stage--ring .gallery-orbit-space{
+  --gallery-size:min(68cqw,calc((100cqh - var(--gallery-controls-height))*.68),360px);
+}
+.gallery-stage-layout .gallery-stage--fan .gallery-orbit-space{
+  /* The compact side turn fits the resting fan's envelope, including contact lift. */
+  --gallery-size:min(68cqw,calc((100cqh - var(--gallery-controls-height))*.65),360px);
+}
+.gallery-stage-layout .gallery-stage--crate .gallery-orbit-space{
+  --gallery-size:min(76cqw,calc((100cqh - var(--gallery-controls-height))*.6),420px);
+}
+.gallery-stage-layout .gallery-isometric-shell{
+  --iso-preferred:clamp(96px,27cqw,180px);
+  --iso-size:min(var(--iso-preferred),calc((100cqh - var(--iso-controls))/2.65),calc((100cqw - 28px)/2.7));
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+.gallery-stage-layout .gallery-density--small .gallery-isometric-shell{--iso-preferred:clamp(76px,20cqw,128px)}
+.gallery-stage-layout .gallery-density--large .gallery-isometric-shell{--iso-preferred:clamp(120px,32cqw,218px)}
+.gallery-stage-layout .gallery-isometric-viewport{flex:1;height:auto;min-height:0}
+
+/* 胶片保持方形画幅和紧贴画幅的齿孔，不把横向胶片拉成空的大面板。 */
+.gallery-stage-layout[data-mode=film]{justify-content:center}
+.gallery-stage-layout[data-mode=film]>.gallery-stage{width:100%;flex:none}
+.gallery-stage-layout .gallery-film-shell{
+  --film-rail-padding:64px;
+  --film-size:min(82cqw,calc(100cqh - var(--film-controls,66px) - var(--film-rail-padding) - 2px),420px);
+}
+.gallery-stage-layout .gallery-density--small .gallery-film-shell{
+  --film-size:min(62cqw,calc(100cqh - var(--film-controls,66px) - var(--film-rail-padding) - 2px),300px);
+}
+.gallery-stage-layout .gallery-density--large .gallery-film-shell{
+  --film-size:min(calc(100cqw - 34px),calc(100cqh - var(--film-controls,66px) - var(--film-rail-padding) - 2px),520px);
+}
+.gallery-page .gallery-stage-layout .has-roam-viewport .gallery-waterfall{flex:1;min-height:0}
+.gallery-page .gallery-stage-layout .has-roam-viewport .gallery-waterfall-column{height:100cqh}
+
+#main.showcase-main:has(.gallery-page.is-immersive){
+  --gallery-main-top:22px;
+  --gallery-main-bottom:24px;
+  padding-block:var(--gallery-main-top) var(--gallery-main-bottom);
+}
+
+@media(max-width:840px){
+  #main.showcase-main{
+    --gallery-main-top:20px;
+    /* 底栏 = 48px 标签 + 两侧 6px padding + 1px 边框；再留 12px 间隔。 */
+    --gallery-main-bottom:calc(73px + env(safe-area-inset-bottom));
+  }
+  .gallery-stage-layout .gallery-film-shell{--film-rail-padding:60px}
+  #main.showcase-main:has(.gallery-page.is-immersive){
+    --gallery-main-top:calc(12px + env(safe-area-inset-top));
+    --gallery-main-bottom:calc(18px + env(safe-area-inset-bottom));
+    padding-block:var(--gallery-main-top) var(--gallery-main-bottom);
+  }
+}
+
+@media(max-height:560px) and (orientation:landscape){
+  .gallery-stage-layout:is([data-mode=flow],[data-mode=crate],[data-mode=fan],[data-mode=ring],[data-mode=isometric],[data-mode=film]),
+  .gallery-stage-layout[data-mode=waterfall]:has(.has-roam-viewport){flex-basis:220px;min-height:220px}
+  .gallery-stage-layout .gallery-film-shell{--film-rail-padding:56px}
+}

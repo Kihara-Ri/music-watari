@@ -10,7 +10,7 @@ import re
 import threading
 from urllib.parse import parse_qs, urlsplit
 
-from domain import ValidationError
+from domain import ValidationError, clean_start_page
 from storage import SCHEMA
 from . import export_csv
 from .artists import SourceUnavailableError
@@ -220,7 +220,10 @@ def api_import(h, svc, body):
 def api_restore(h, svc, body):
     h.send(svc.store.restore_backup(body))
     prewarm(svc)
-def api_modules(h, svc, body): h.send(svc.store.set_modules(body.get('enabled')))
+def api_modules(h, svc, body):
+    start_page = clean_start_page(body['startPage']) if 'startPage' in body else None
+    h.send(svc.store.set_modules(body.get('enabled'), start_page))
+def api_showcase_groups(h, svc, body): h.send(svc.store.change_showcase_groups(body))
 
 
 def vision(svc):
@@ -313,6 +316,7 @@ POST = {
     '/api/import': (api_import, True, True),
     '/api/restore': (api_restore, True, True),
     '/api/modules': (api_modules, True, True),
+    '/api/showcase/groups': (api_showcase_groups, True, True),
     '/api/vision/config': (api_vision_config, True, False),
     '/api/recognize': (api_recognize, True, False),
     '/api/imports/create': (api_import_create, True, False),

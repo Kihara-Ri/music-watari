@@ -12,7 +12,8 @@ Sales start at 'shipping'; only 确认收货 turns them into realized cash ('sol
 import json, sqlite3, uuid, base64, hashlib, re, shutil, threading
 from pathlib import Path
 from datetime import datetime
-from domain import ValidationError, ConflictError, clean_record, clean_release_info, clean_modules, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
+from contextlib import closing
+from domain import ValidationError, ConflictError, clean_record, clean_release_info, clean_modules, clean_start_page, clean_showcase_group, clean_showcase_groups, clean_listing, MODULE_NAMES, cost, number, money, day, allocate, STATUSES
 from decimal import Decimal
 
 SCHEMA = 4
@@ -165,8 +166,9 @@ class Store:
     def state(self):
         b=self.backup(audit_limit=100)  # audit 全量只服务备份/导出；state 只带最近 100 条
         enabled = b['settings'].get('modules-v1')
-        b['modules'] = {'enabled': clean_modules(enabled) if enabled is not None else {k: True for k in MODULE_NAMES},
+        b['modules'] = {'enabled': clean_modules(enabled) if enabled is not None else {k: k != 'showcase' for k in MODULE_NAMES},
                         'configured': enabled is not None,
+                        'startPage': clean_start_page(b['settings'].get('start-page-v1', 'domestic')),
                         'needsSetup': enabled is None and not any(b[k] for k in ('records', 'sales', 'shipments'))}
         rates=self.record_rates(b['records'])
         for r in b['records']:
@@ -186,19 +188,75 @@ class Store:
                 item['profit']=money(p) if p is not None else None
         if self.rates: b['rateService']=self.rates.status()
         return b
-    def set_modules(self, enabled):
+    def set_modules(self, enabled, start_page=None):
         enabled = clean_modules(enabled)
+        if start_page is not None: start_page = clean_start_page(start_page)
         with self.connect() as db:
             before = self.meta_get(db, 'modules-v1')
+            before_start_page = self.meta_get(db, 'start-page-v1')
+            saved_start_page = start_page if start_page is not None else clean_start_page(
+                before_start_page if before_start_page is not None else 'domestic')
             db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('modules-v1', dumps(enabled)))
-            self.audit(db, '调整功能模块', {'before': before, 'after': enabled})
-        return {'ok': True, 'enabled': enabled}
-    def require_module(self, name):
-        with self.connect() as db:
+            if start_page is not None:
+                db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('start-page-v1', dumps(start_page)))
+            self.audit(db, '调整功能模块', {'before': before, 'after': enabled,
+                                          'beforeStartPage': before_start_page, 'afterStartPage': saved_start_page})
+        return {'ok': True, 'enabled': enabled, 'startPage': saved_start_page}
+    def require_module(self, name, db=None):
+        if db is None:
+            with self.connect() as conn:
+                enabled = self.meta_get(conn, 'modules-v1')
+        else:
             enabled = self.meta_get(db, 'modules-v1')
-        if enabled is not None and not clean_modules(enabled)[name]:
-            label = {'acquisition': '购入记录', 'trading': '二手交易', 'circulation': '海外周转'}[name]
+        enabled = clean_modules(enabled) if enabled is not None else {k: k != 'showcase' for k in MODULE_NAMES}
+        if not enabled[name]:
+            label = {'acquisition': '购入记录', 'trading': '二手交易', 'circulation': '海外周转', 'showcase': '收藏展示'}[name]
             raise ValidationError(f'请先在设置中启用「{label}」模块')
+
+    def change_showcase_groups(self, data):
+        """手动组 CRUD；全清单版本避免两台设备静默覆盖，组内顺序原样保存。"""
+        if not isinstance(data, dict): raise ValidationError('展示组请求格式不正确')
+        action = data.get('action')
+        fields = {'create': {'action', 'expectedRevision', 'name', 'recordIds'},
+                  'update': {'action', 'expectedRevision', 'id', 'name', 'recordIds'},
+                  'delete': {'action', 'expectedRevision', 'id'}}
+        if not isinstance(action, str) or action not in fields or set(data) != fields[action]:
+            raise ValidationError('展示组操作或字段不正确')
+        expected = data['expectedRevision']
+        if type(expected) is not int or expected < 0:
+            raise ValidationError('请提供有效的展示组版本')
+        ident = uid() if action == 'create' else data['id']
+        if not isinstance(ident, str) or not RECORD_ID_RE.fullmatch(ident):
+            raise ValidationError('展示组编号不正确')
+        incoming = None if action == 'delete' else clean_showcase_group(
+            {'id': ident, 'name': data['name'], 'recordIds': data['recordIds']})
+        with closing(self.connect()) as db, db:
+            # 先取得写事务再读版本，直接调用 Store 时也不允许两次旧版本写入都成功。
+            db.execute('BEGIN IMMEDIATE')
+            self.require_module('showcase', db)
+            stored = self.meta_get(db, 'showcase-groups-v1')
+            before = clean_showcase_groups(stored) if stored is not None else {'revision': 0, 'groups': []}
+            if before['revision'] != expected:
+                raise ConflictError('展示组已在其他设备修改，请刷新后重试')
+            groups = before['groups']
+            position = next((i for i, group in enumerate(groups) if group['id'] == ident), None)
+            if action != 'create' and position is None:
+                raise ValidationError('展示组不存在，请刷新后重试')
+            old = groups[position] if position is not None else None
+            if incoming is not None:
+                existing = {row['id'] for row in db.execute('SELECT id FROM records')}
+                retained = set(old['recordIds']) if old is not None else set()
+                if any(rid not in existing and rid not in retained for rid in incoming['recordIds']):
+                    raise ValidationError('所选副本不存在，请刷新后重新选择')
+            if action == 'create': groups.append(incoming)
+            elif action == 'update': groups[position] = incoming
+            else: groups.pop(position)
+            after = clean_showcase_groups({'revision': before['revision'] + 1, 'groups': groups})
+            db.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', ('showcase-groups-v1', dumps(after)))
+            self.audit(db, {'create': '创建展示组', 'update': '修改展示组', 'delete': '删除展示组'}[action],
+                       {'groupId': ident, 'before': old, 'after': incoming,
+                        'beforeRevision': before['revision'], 'afterRevision': after['revision']})
+        return {'ok': True, **after}
     def import_preview(self, source):
         if not isinstance(source,list) or len(source)>10000: raise ValidationError('请选择专辑 JSON 数组文件，最多 10000 条')
         with self.connect() as db:
@@ -696,7 +754,11 @@ class Store:
         if not isinstance(b,dict) or b.get('format')!='album-ledger': raise ValidationError('不是兼容的完整备份文件')
         if not isinstance(b.get('records'),list) or not isinstance(b.get('sales'),list): raise ValidationError('备份内容不完整')
         if not isinstance(b.get('settings', {}), dict): raise ValidationError('备份的设置无效')
-        if 'modules-v1' in b.get('settings', {}): clean_modules(b['settings']['modules-v1'])
+        settings = dict(b.get('settings', {}))
+        if 'modules-v1' in settings: settings['modules-v1'] = clean_modules(settings['modules-v1'])
+        if 'start-page-v1' in settings: settings['start-page-v1'] = clean_start_page(settings['start-page-v1'])
+        if 'showcase-groups-v1' in settings:
+            settings['showcase-groups-v1'] = clean_showcase_groups(settings['showcase-groups-v1'])
         # 新键只验结构与类型；恢复可能带来不存在的记录 ID / 过期关联，读取时再忽略或标待核对。
         if 'artist-identities-v1' in b.get('settings', {}):
             clean_artist_identities(b['settings']['artist-identities-v1'])
@@ -753,7 +815,7 @@ class Store:
             for s in b['sales']: self.put(db,'sales',s)
             for sh in shipments: self.put(db,'shipments',sh)
             for a in b.get('audit',[]): db.execute('INSERT INTO audit(at,action,data) VALUES(?,?,?)',(a['at'],a['action'],a['data']))
-            for k,v in b.get('settings',{}).items():
+            for k,v in settings.items():
                 if k!='schema': db.execute('INSERT INTO meta VALUES(?,?)',(k,dumps(v)))
             db.execute("INSERT OR REPLACE INTO meta VALUES('schema',?)",(dumps(SCHEMA),))
             self.audit(db,'恢复完整备份',{'from':b.get('createdAt')})

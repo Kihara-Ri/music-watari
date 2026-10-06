@@ -97,7 +97,7 @@ button:disabled:hover{background:var(--surface-2)}
 .dd{position:relative}
 .dd-btn{display:inline-flex;align-items:center;gap:9px;padding:9px 13px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-weight:500;font-size:13px;color:var(--text);white-space:nowrap;transition:border-color .15s,background .15s}
 .dd-btn:hover{background:var(--surface-3);border-color:var(--border-strong)}
-.dd-caret{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:5.5px solid var(--muted);transition:transform .15s}
+.dd-caret{display:flex;align-items:center;justify-content:center;flex:none;width:14px;height:14px;color:var(--muted);transition:transform .15s}
 .dd-btn[aria-expanded=true] .dd-caret{transform:rotate(180deg)}
 .dd-list{left:auto;right:0;width:max-content;min-width:100%}
 /* 表单字段内的下拉：撑满字段宽，箭头靠右，高度对齐输入框 */

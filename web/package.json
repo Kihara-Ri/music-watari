@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "prebuild": "node scripts/clean.mjs",
+    "prebuild": "node scripts/clean.mjs && node scripts/gallery-fan.mjs",
     "build": "vite build",
     "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
     "dev": "vite"
   },
   "dependencies": {

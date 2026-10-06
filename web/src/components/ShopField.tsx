@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {AlbumRecord} from '../types';
 import {SHOP_ICONS} from './shopIcons';
+import {ChevDownIco} from './icons';
 
 export function ShopMark({name}: {name: string}) {
   const s = (name || '').toLowerCase();
@@ -12,11 +13,6 @@ export function ShopMark({name}: {name: string}) {
   const ch = [...(name || '').trim()][0];
   return ch ? <span className="shop-letter">{ch.toUpperCase()}</span> : null;
 }
-
-const CHEV_DOWN = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"
-       strokeLinejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-);
 
 const normShop = (s: string) => s.toLocaleLowerCase().replace(/[\s\u3000]+/g, '');
 
@@ -95,7 +91,7 @@ export function ShopField({value, records, defaultShop, onChange}: {
                onClick={() => { if (!open) show(); }}
                onKeyDown={onKeyDown}/>
         <button type="button" className="shop-toggle" aria-label="展开已有店铺"
-                onClick={() => { if (open) close(); else show(); }}>{CHEV_DOWN}</button>
+                onClick={() => { if (open) close(); else show(); }}>{ChevDownIco}</button>
       </div>
       <div id="shop-options" className="shop-options" role="listbox" aria-label="已有店铺"
            hidden={!open} ref={listRef}>

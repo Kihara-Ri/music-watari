@@ -1,0 +1,48 @@
+/* 模式选择的缩略图使用同一组中性封面块，让排列本身成为选择依据。 */
+.gallery-mode-picker>.small-note{margin:0 0 16px}
+.gallery-mode-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gallery-mode-choice{display:flex;flex-direction:column;align-items:stretch;text-align:left;white-space:normal;padding:10px;gap:5px;min-width:0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.gallery-mode-choice[aria-pressed=true]{border-color:var(--accent-deep);box-shadow:inset 0 0 0 1px var(--accent-deep)}
+.gallery-mode-name{font-size:13px;font-weight:600}
+.gallery-mode-name>span{color:var(--accent-text)}
+.gallery-mode-choice>small{font-size:11px;line-height:1.5;color:var(--muted);font-weight:400;min-height:33px}
+.gallery-mode-preview{height:76px;display:grid;grid-template-columns:repeat(3,20px);grid-template-rows:repeat(3,20px);gap:3px;align-content:center;justify-content:center;position:relative;overflow:hidden;margin-bottom:4px}
+.gallery-mode-preview i{display:block;aspect-ratio:1;background:var(--border-strong);border:1px solid var(--hairline);border-radius:2px;box-shadow:var(--shadow-sm)}
+.gallery-mode-preview i:nth-child(3n+2){background:var(--faint)}
+.gallery-mode-preview i:nth-child(3n){background:var(--muted)}
+.gallery-mode-preview--waterfall i:nth-child(3n+2){transform:translateY(8px)}
+.gallery-mode-preview--waterfall i:nth-child(3n){transform:translateY(-5px)}
+.gallery-mode-preview--table{gap:5px}
+.gallery-mode-preview--table i:nth-child(3n+1){rotate:-9deg}
+.gallery-mode-preview--table i:nth-child(3n+2){rotate:7deg}
+.gallery-mode-preview--table i:nth-child(3n){rotate:-4deg}
+.gallery-mode-preview--isometric{transform:rotate(-10deg) skew(12deg);scale:.92}
+.gallery-mode-preview--film{display:flex;gap:5px;align-items:center;border-block:5px dotted var(--border-strong);height:66px;margin:5px 0 9px}
+.gallery-mode-preview--film i{width:32px;flex:none}
+.gallery-mode-preview--film i:nth-child(n+6){display:none}
+.gallery-mode-preview--flow,.gallery-mode-preview--crate,.gallery-mode-preview--fan,.gallery-mode-preview--ring{display:block;perspective:180px}
+.gallery-mode-preview--flow i,.gallery-mode-preview--crate i,.gallery-mode-preview--fan i,.gallery-mode-preview--ring i{position:absolute;left:calc(50% - 23px);top:16px;width:46px;height:46px}
+.gallery-mode-preview--flow i:nth-child(n+4),.gallery-mode-preview--crate i:nth-child(n+5),.gallery-mode-preview--fan i:nth-child(n+6),.gallery-mode-preview--ring i:nth-child(n+6){display:none}
+.gallery-mode-preview--flow i:first-child{transform:translateX(-37px) rotateY(48deg) scale(.82)}
+.gallery-mode-preview--flow i:nth-child(2){transform:translateX(37px) rotateY(-48deg) scale(.82)}
+.gallery-mode-preview--flow i:nth-child(3){z-index:2}
+.gallery-mode-preview--crate i:first-child{transform:translateY(-13px) scale(.85)}
+.gallery-mode-preview--crate i:nth-child(2){transform:translateY(-8px) scale(.9)}
+.gallery-mode-preview--crate i:nth-child(3){transform:translateY(-3px) scale(.95)}
+.gallery-mode-preview--crate i:nth-child(4){transform:translateY(4px)}
+.gallery-mode-preview--fan i{transform-origin:50% 115%}
+.gallery-mode-preview--fan i:first-child{transform:rotate(-34deg)}
+.gallery-mode-preview--fan i:nth-child(2){transform:rotate(-17deg)}
+.gallery-mode-preview--fan i:nth-child(4){transform:rotate(17deg)}
+.gallery-mode-preview--fan i:nth-child(5){transform:rotate(34deg)}
+.gallery-mode-preview--fan i:nth-child(3){z-index:2}
+.gallery-mode-preview--ring i:first-child{transform:translate(-40px,-8px) rotateY(48deg) scale(.65)}
+.gallery-mode-preview--ring i:nth-child(2){transform:translate(-24px,1px) rotateY(30deg) scale(.8)}
+.gallery-mode-preview--ring i:nth-child(4){transform:translate(24px,1px) rotateY(-30deg) scale(.8)}
+.gallery-mode-preview--ring i:nth-child(5){transform:translate(40px,-8px) rotateY(-48deg) scale(.65)}
+.gallery-mode-preview--ring i:nth-child(3){transform:translateY(5px);z-index:2}
+@media(max-width:840px){
+  .gallery-mode-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .gallery-mode-choice{padding:9px 10px}
+  .gallery-mode-choice>small{min-height:0}
+}

@@ -13,6 +13,12 @@ export function MorePage({installEvt, onInstalled}: {installEvt: Event | null; o
   return <>
     <PageHead title="更多" label="YOUR LEDGER"/>
     <div className="more-page">
+      {modules.showcase ? <section aria-labelledby="more-gallery">
+        <h2 id="more-gallery">展示收藏</h2>
+        <nav aria-label="展示收藏">
+          <a href="#gallery"><span className="nav-ico" aria-hidden="true">▦</span><span><strong>收藏展示</strong><small>九种封面排列，慢慢展示自己的收藏</small></span><span className="more-arrow" aria-hidden="true">›</span></a>
+        </nav>
+      </section> : null}
       <section aria-labelledby="more-records">
         <h2 id="more-records">账本与记录</h2>
         <nav aria-label="账本与记录">

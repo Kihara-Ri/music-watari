@@ -1,6 +1,7 @@
 // 自定义下拉选择（排序 / 交易状态筛选）：按钮 + 浮层 + 键盘导航，
 // 不用原生 <select> 以保持视觉一致。
 import {useEffect, useRef, useState} from 'react';
+import {ChevDownIco} from '../icons';
 
 export interface DdOption {
   value: string;
@@ -49,7 +50,7 @@ export function Dropdown({id, value, options, label, onPick}: {
               aria-controls={`${id}-list`} aria-label={label}
               onClick={() => setOpen(o => !o)}>
         <span className="dd-label">{cur.label}</span>
-        <span className="dd-caret" aria-hidden="true"/>
+        <span className="dd-caret" aria-hidden="true">{ChevDownIco}</span>
       </button>
       <div className="shop-options dd-list" id={`${id}-list`} role="listbox" aria-label={label}
            hidden={!open} ref={listRef}>
