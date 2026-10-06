@@ -18,15 +18,25 @@
 .photo-strip a:hover img{transform:scale(1.04)}
 .batch-photos{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
 
-/* 灯箱 */
-#lightbox{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:rgba(4,6,10,.9);cursor:zoom-out;animation:lb-in .15s ease}
+/* 灯箱：背景点按关闭；照片排在滑动轨道上（邻张预挂载），跟手拖动、惯性落位 */
+#lightbox{position:fixed;inset:0;z-index:80;overflow:hidden;background:rgba(4,6,10,.9);cursor:zoom-out;animation:lb-in .15s ease;touch-action:none}
 #lightbox[hidden]{display:none}
-#lightbox img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:var(--shadow)}
+.lb-track{position:absolute;inset:0}
+.lb-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;will-change:transform}
+.lb-slide img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:var(--shadow);pointer-events:auto}
+.lb-nav{position:absolute;top:calc(50% - 28px);width:44px;height:56px;display:flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:var(--radius);background:rgba(9,11,15,.55);color:rgba(255,255,255,.9);cursor:pointer;transition:background .18s ease}
+.lb-nav:hover{background:rgba(9,11,15,.75)}
+.lb-nav:active{transform:none;background:rgba(9,11,15,.85)}
+.lb-nav svg{width:22px;height:22px}
+.lb-prev{left:14px}
+.lb-next{right:14px}
+.lb-count{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(9,11,15,.55);color:rgba(255,255,255,.8);font-size:13px;cursor:default}
+@media (hover:none),(pointer:coarse){.lb-nav{display:none}}
 @keyframes lb-in{from{opacity:0}to{opacity:1}}
 .cam-ico{width:14px;height:14px;flex:none}
 .cam-ico svg{width:100%;height:100%;display:block}
 
 @media (max-width:840px){
   .photo-strip a{width:74px;height:74px}
-  #lightbox img{max-width:96vw;max-height:84dvh}
+  .lb-slide img{max-width:96vw;max-height:84dvh}
 }
