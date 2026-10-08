@@ -18,21 +18,30 @@
 .photo-strip a:hover img{transform:scale(1.04)}
 .batch-photos{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
 
-/* 灯箱：背景点按关闭；照片排在滑动轨道上（邻张预挂载），跟手拖动、惯性落位 */
-#lightbox{position:fixed;inset:0;z-index:80;overflow:hidden;background:rgba(4,6,10,.9);cursor:zoom-out;animation:lb-in .15s ease;touch-action:none}
+/* 灯箱：背景点按关闭；照片排在滑动轨道上（邻张预挂载），跟手拖动、惯性落位；
+   开合从被点缩略图的位置与尺寸缩放过渡，背景与操作键随之淡入淡出（.lb-intro/.lb-closing）。
+   背景独立成 ::before 层：收起时背景先隐、照片不透明地缩回缩略图。 */
+#lightbox{position:fixed;inset:0;z-index:80;overflow:hidden;cursor:zoom-out;touch-action:none}
+#lightbox::before{content:'';position:absolute;inset:0;background:rgba(4,6,10,.9);animation:lb-in .15s ease}
+#lightbox.lb-closing::before{animation:lb-out .26s ease forwards}
 #lightbox[hidden]{display:none}
 .lb-track{position:absolute;inset:0}
 .lb-slide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;will-change:transform}
-.lb-slide img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:var(--shadow);pointer-events:auto}
-.lb-nav{position:absolute;top:calc(50% - 28px);width:44px;height:56px;display:flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:var(--radius);background:rgba(9,11,15,.55);color:rgba(255,255,255,.9);cursor:pointer;transition:background .18s ease}
+.lb-slide img{max-width:92vw;max-height:92vh;border-radius:12px;box-shadow:var(--shadow);pointer-events:auto;cursor:default}
+.lb-nav{position:absolute;top:calc(50% - 28px);width:44px;height:56px;display:flex;align-items:center;justify-content:center;padding:0;border:none;border-radius:var(--radius);background:rgba(9,11,15,.55);color:rgba(255,255,255,.9);cursor:pointer;transition:background .18s ease,opacity .18s ease}
 .lb-nav:hover{background:rgba(9,11,15,.75)}
 .lb-nav:active{transform:none;background:rgba(9,11,15,.85)}
 .lb-nav svg{width:22px;height:22px}
 .lb-prev{left:14px}
 .lb-next{right:14px}
-.lb-count{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(9,11,15,.55);color:rgba(255,255,255,.8);font-size:13px;cursor:default}
+.lb-count{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(9,11,15,.55);color:rgba(255,255,255,.8);font-size:13px;cursor:default;transition:opacity .18s ease}
+/* intro 与类同帧挂上：禁用过渡让操作键从首帧就隐藏，结束后再靠基础过渡淡入；
+   closing 从已绘制的可见态淡出。 */
+#lightbox.lb-intro :is(.lb-nav,.lb-count){opacity:0;pointer-events:none;transition:none}
+#lightbox.lb-closing :is(.lb-nav,.lb-count){opacity:0;pointer-events:none}
 @media (hover:none),(pointer:coarse){.lb-nav{display:none}}
 @keyframes lb-in{from{opacity:0}to{opacity:1}}
+@keyframes lb-out{from{opacity:1}to{opacity:0}}
 .cam-ico{width:14px;height:14px;flex:none}
 .cam-ico svg{width:100%;height:100%;display:block}
 
