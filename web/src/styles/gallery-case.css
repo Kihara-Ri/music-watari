@@ -54,11 +54,11 @@
 .gallery-case--flat{--case-half:0px;transform-style:flat}
 .gallery-case--flat .gallery-case-body{overflow:hidden;border-radius:2px;transform:translateY(0);transform-style:flat}
 .gallery-case--flat .gallery-case-shadow{transform:none;box-shadow:var(--shadow-sm)}
-.gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case--spatial .gallery-case-body{transform:translateZ(12px) scale(1.012)}
+.gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case--spatial .gallery-case-body{transform:translateZ(var(--case-contact-lift,12px)) scale(1.012)}
 .gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case--flat .gallery-case-body{transform:translateY(-4px) scale(1.012)}
 .gallery-case-button:is(:focus-visible,.is-gallery-contact) .gallery-case-shadow{box-shadow:0 9px 22px color-mix(in srgb,var(--shadow-ink) 65%,transparent)}
 @media(hover:hover) and (pointer:fine){
-  .gallery-case-button:hover .gallery-case--spatial .gallery-case-body{transform:translateZ(12px) scale(1.012)}
+  .gallery-case-button:hover .gallery-case--spatial .gallery-case-body{transform:translateZ(var(--case-contact-lift,12px)) scale(1.012)}
   .gallery-case-button:hover .gallery-case--flat .gallery-case-body{transform:translateY(-4px) scale(1.012)}
   .gallery-case-button:hover .gallery-case-shadow{box-shadow:0 9px 22px color-mix(in srgb,var(--shadow-ink) 65%,transparent)}
 }

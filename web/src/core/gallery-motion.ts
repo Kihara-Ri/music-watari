@@ -1,6 +1,8 @@
 /** Continuous display positions are measured in records, not pixels or pages. */
 export interface GalleryPoint {x: number; y: number}
 export type GalleryOrbitMode = 'flow' | 'crate' | 'fan' | 'ring';
+export const GALLERY_FAN_FRAME_RATE = 16;
+export const GALLERY_FAN_CONTACT_LIFT = 4;
 export interface GalleryMotionState {
   position: number;
   velocity: number;
@@ -9,7 +11,7 @@ export interface GalleryMotionState {
 }
 
 const FRICTION = 5.8;
-const SETTLE_RATE = 14;
+const SETTLE_RATE = 24;
 const COAST_END = .045;
 
 export function clampGalleryPosition(position: number, min: number, max: number): number {
@@ -58,6 +60,45 @@ export function projectGalleryLine(delta: GalleryPoint, direction: GalleryPoint,
   return (delta.x * direction.x + delta.y * direction.y) / length / pitch;
 }
 
+/** A finger travel spans the cover, rather than the crate's tightly stacked spines. */
+export function projectGalleryCrate(start: GalleryPoint, current: GalleryPoint, position: number, size: number): number {
+  const pitch = Math.max(150, (Number.isFinite(size) ? size : 190) * .65);
+  return position + (current.y - start.y) / pitch;
+}
+
+/** Reflect on the same bounded rail, preserving fractional positions at both ends. */
+export function advanceGalleryRoaming(position: number, direction: number, seconds: number, speed: number,
+                                      min: number, max: number): {position: number; direction: number} {
+  const span = Math.max(0, max - min);
+  if (!span) return {position: min, direction: 1};
+  const forward = direction < 0 ? -1 : 1;
+  const travel = Number.isFinite(seconds) && Number.isFinite(speed) ? Math.max(0, seconds) * Math.abs(speed) : 0;
+  const phase = wrapGalleryPosition(clampGalleryPosition(position, min, max) - min + forward * travel, span * 2);
+  if (phase === 0) return {position: min, direction: 1};
+  if (phase === span) return {position: max, direction: -1};
+  return {position: min + (phase < span ? phase : span * 2 - phase), direction: phase < span ? forward : -forward};
+}
+
+export interface GalleryCarouselClock {elapsed: number; direction: number}
+
+/** Rest for the selected interval, then request one normal-speed neighboring turn. */
+export function advanceGalleryCarousel(clock: GalleryCarouselClock, seconds: number, position: number,
+                                       interval: number, min: number, max: number, paused = false):
+                                       {clock: GalleryCarouselClock; destination: number | null} {
+  let direction = clock.direction < 0 ? -1 : 1;
+  if (paused || max <= min) return {clock: {elapsed: 0, direction}, destination: null};
+  const duration = Number.isFinite(interval) && interval > 0 ? interval : 4;
+  const elapsed = clock.elapsed + (Number.isFinite(seconds) ? Math.max(0, seconds) : 0);
+  if (elapsed + 1e-9 < duration) return {clock: {elapsed, direction}, destination: null};
+  const center = clampGalleryPosition(Math.round(position), min, max);
+  let destination = clampGalleryPosition(center + direction, min, max);
+  if (destination === center) {
+    direction *= -1;
+    destination = clampGalleryPosition(center + direction, min, max);
+  }
+  return {clock: {elapsed: 0, direction}, destination};
+}
+
 /** Recent samples rather than the last event alone avoid a noisy release impulse. */
 export function galleryReleaseVelocity(samples: ReadonlyArray<{position: number; at: number}>): number {
   if (samples.length < 2) return 0;
@@ -80,6 +121,14 @@ export function releaseGalleryMotion(position: number, velocity: number, min: nu
                                      snap: boolean): GalleryMotionState {
   const bounded = clampGalleryPosition(position, min, max);
   const speed = Number.isFinite(velocity) ? Math.max(-10, Math.min(10, velocity)) : 0;
+  if (snap) {
+    // Choose the same destination as the former long coast, then attract it
+    // immediately. The critically damped spring retains the release velocity.
+    const target = clampGalleryPosition(Math.round(bounded + speed / FRICTION), min, max);
+    const outward = (bounded === min && speed < 0) || (bounded === max && speed > 0);
+    return {position: bounded, velocity: outward ? 0 : speed,
+      phase: target === bounded && (outward || !speed) ? 'idle' : 'settle', target};
+  }
   if (Math.abs(speed) > COAST_END && !((bounded === min && speed < 0) || (bounded === max && speed > 0))) {
     return {position: bounded, velocity: speed, phase: 'coast', target: null};
   }
@@ -87,9 +136,12 @@ export function releaseGalleryMotion(position: number, velocity: number, min: nu
   return {position: bounded, velocity: 0, phase: target === bounded ? 'idle' : 'settle', target};
 }
 
-/** Exact exponential coast and critically damped settle; independent of frame rate. */
+/** Exact exponential coast and critically damped settle; independent of frame rate.
+ *  settleRate lets a caller run a tighter spring (the lightbox snaps harder than
+ *  the showcase rail); omitted means the shared showcase feel. */
 export function advanceGalleryMotion(state: GalleryMotionState, seconds: number, min: number, max: number,
-                                     snap: boolean): GalleryMotionState {
+                                     snap: boolean, settleRate = SETTLE_RATE): GalleryMotionState {
+  const rate = Number.isFinite(settleRate) && settleRate > 0 ? settleRate : SETTLE_RATE;
   let position = clampGalleryPosition(state.position, min, max);
   let velocity = state.velocity;
   let target = state.target;
@@ -112,11 +164,12 @@ export function advanceGalleryMotion(state: GalleryMotionState, seconds: number,
   }
   if (phase === 'settle' && target !== null) {
     const error = position - target;
-    const coupling = velocity + SETTLE_RATE * error;
-    const decay = Math.exp(-SETTLE_RATE * time);
-    position = clampGalleryPosition(target + (error + coupling * time) * decay, min, max);
-    velocity = (velocity - SETTLE_RATE * coupling * time) * decay;
-    if (Math.abs(position - target) < .0005 && Math.abs(velocity) < .006) {
+    const coupling = velocity + rate * error;
+    const decay = Math.exp(-rate * time);
+    const raw = target + (error + coupling * time) * decay;
+    position = clampGalleryPosition(raw, min, max);
+    velocity = (velocity - rate * coupling * time) * decay;
+    if (raw !== position || (Math.abs(position - target) < .0005 && Math.abs(velocity) < .006)) {
       position = target; velocity = 0; phase = 'idle';
     }
   }
@@ -164,15 +217,18 @@ function sampleOrbitPose(mode: GalleryOrbitMode, offset: number, handoff = true)
     pose.rotateZ = offset * 19;
     pose.scale = 1 - .05 * Math.min(a, 4);
     if (handoff) {
-      // Keep the resting arc and size. A broad local side turn changes
-      // occlusion without throwing either cover up/down or pulsing its scale.
+      // Peel the rigid case gently away from the stack along its existing arc.
+      // A broad turn leaves the cover legible; shallow pitch/depth shows the
+      // case rim while the fixed scale and vertical track remain untouched.
       const left = Math.floor(offset * 2) / 2;
       const base = mixOrbitPose(sampleOrbitPose(mode, left, false), sampleOrbitPose(mode, left + .5, false), (offset - left) * 2);
       Object.assign(pose, base);
-      const turn = a < 1 ? Math.sin(Math.PI * a) ** 2 : 0;
+      const turn = a < 1 ? Math.sin(Math.PI * a) : 0;
       if (turn) {
-        pose.x += Math.sign(offset) * .035 * turn;
-        pose.rotateY = -Math.sign(offset) * 78 * turn;
+        pose.x += Math.sign(offset) * .05 * turn;
+        pose.z += .015 * turn;
+        pose.rotateX = -3 * turn;
+        pose.rotateY = -Math.sign(offset) * 66 * turn;
       }
     }
   } else {
@@ -186,10 +242,10 @@ function sampleOrbitPose(mode: GalleryOrbitMode, offset: number, handoff = true)
   return pose;
 }
 
-/** Matches external CSS seeking, including the fan's eighth-record handoff keyframes. */
+/** Matches the generated external CSS, including the fan's sampled peel path. */
 export function galleryOrbitPose(mode: GalleryOrbitMode, offset: number, handoff = true): GalleryOrbitPose {
   const bounded = Math.max(-4, Math.min(4, offset));
-  const rate = mode === 'fan' && handoff ? 8 : 2;
+  const rate = mode === 'fan' && handoff ? GALLERY_FAN_FRAME_RATE : 2;
   const left = Math.floor(bounded * rate) / rate;
   const fraction = (bounded - left) * rate;
   return mixOrbitPose(sampleOrbitPose(mode, left, handoff), sampleOrbitPose(mode, Math.min(4, left + 1 / rate), handoff), fraction);
@@ -211,7 +267,7 @@ export function galleryOrbitCorners(mode: GalleryOrbitMode, offset: number, size
   const points: GalleryPoint[] = [];
   for (const sideX of [-1, 1]) for (const sideY of [-1, 1]) for (const sideZ of [-1, 1]) {
     const x = sideX * size * .5 * contactScale, y = sideY * size * .5 * contactScale;
-    const z = sideZ * 3 * contactScale + (contact ? 12 : 0);
+    const z = sideZ * 3 * contactScale + (contact ? mode === 'fan' ? GALLERY_FAN_CONTACT_LIFT : 12 : 0);
     const az = x * Math.cos(rz) - y * Math.sin(rz), bz = x * Math.sin(rz) + y * Math.cos(rz);
     const ay = az * Math.cos(ry) + z * Math.sin(ry), cy = -az * Math.sin(ry) + z * Math.cos(ry);
     const by = bz * Math.cos(rx) - cy * Math.sin(rx), cz = bz * Math.sin(rx) + cy * Math.cos(rx);

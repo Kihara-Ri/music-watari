@@ -1,7 +1,7 @@
 import {useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {KeyboardEvent} from 'react';
-import {galleryIndex} from '../core/gallery';
-import {galleryFanLayer, galleryOrbitPoint, galleryOrbitPose, projectGalleryOrbit} from '../core/gallery-motion';
+import {GALLERY_ROAMING_DEFAULTS, galleryIndex} from '../core/gallery';
+import {galleryFanLayer, galleryOrbitPoint, galleryOrbitPose, projectGalleryCrate, projectGalleryOrbit} from '../core/gallery-motion';
 import type {GalleryOrbitMode} from '../core/gallery-motion';
 import type {GalleryStageProps} from './GalleryStage';
 import {GalleryCase} from './GalleryCase';
@@ -30,7 +30,7 @@ function CrateShell({front = false}: {front?: boolean}) {
 }
 
 /** Bounded, continuously scrubbed cover rails for the four central display modes. */
-export function GalleryOrbit({records, mode, currentId, onPick, onFocus}: GalleryStageProps) {
+export function GalleryOrbit({records, mode, currentId, roaming = false, roamingSpeed = GALLERY_ROAMING_DEFAULTS[mode], onPick, onFocus}: GalleryStageProps) {
   const orbitMode = mode as GalleryOrbitMode;
   const index = galleryIndex(records, currentId);
   const [windowCenter, setWindowCenter] = useState(index);
@@ -84,6 +84,9 @@ export function GalleryOrbit({records, mode, currentId, onPick, onFocus}: Galler
 
   const motion = useGalleryMotion({position: index, min: 0, max: Math.max(0, records.length - 1), snap: true,
     scopeKey, enabled: records.length > 0,
+    autoRun: roaming && records.length > 1,
+    autoInterval: () => Math.max(2, Math.min(30, roamingSpeed)),
+    releaseVelocityLimit: mode === 'crate' ? 1.8 : 10,
     onDragStart: () => space.current?.setAttribute('data-dragging', 'true'),
     onDragEnd: () => space.current?.removeAttribute('data-dragging'),
     onFrame: paint,
@@ -96,6 +99,7 @@ export function GalleryOrbit({records, mode, currentId, onPick, onFocus}: Galler
       }
     },
     project: (start, current, startPosition, anchor) => {
+      if (mode === 'crate') return projectGalleryCrate(start, current, startPosition, geometry.current.size);
       const recordIndex = anchor ? Number(anchor.dataset.motionIndex) : Math.round(startPosition);
       const startOffset = recordIndex - startPosition;
       const origin = galleryOrbitPoint(orbitMode, startOffset, geometry.current.size, geometry.current.perspective);
@@ -139,7 +143,7 @@ export function GalleryOrbit({records, mode, currentId, onPick, onFocus}: Galler
   const controlIndex = mode === 'fan' ? motion.navigationTarget ?? activeIndex : activeIndex;
   const key = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
-        document.getElementById('panel') || document.getElementById('lightbox')) return;
+        document.getElementById('panel') || document.getElementById('lightbox') || document.querySelector('dialog[open]')) return;
     const selected = Math.round(motion.positionRef.current);
     const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
     const backward = event.key === 'ArrowLeft' || event.key === 'ArrowUp';

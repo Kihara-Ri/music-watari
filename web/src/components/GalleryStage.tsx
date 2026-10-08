@@ -11,7 +11,7 @@ export interface GalleryStageProps {
   density: GalleryDensity;
   showTitles: boolean;
   roaming?: boolean;
-  onPauseRoaming?(): void;
+  roamingSpeed?: number;
   onPick(id: string): void;
   onFocus(id: string): void;
   onArtist(artist: string, id: string): void;

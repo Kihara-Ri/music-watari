@@ -2,6 +2,10 @@ import type {AlbumRecord} from '../types';
 import {searchScore} from './search';
 
 export type GalleryMode = 'tiles' | 'waterfall' | 'film' | 'flow' | 'crate' | 'table' | 'fan' | 'isometric' | 'ring';
+export const GALLERY_ROAMING_DEFAULTS: Readonly<Record<GalleryMode, number>> = {
+  tiles: 8, waterfall: 10, film: 6, flow: 4, crate: 5,
+  table: 10, fan: 4, isometric: 4, ring: 4,
+};
 export type GalleryDensity = 'small' | 'medium' | 'large';
 export type GallerySort = 'recent' | 'artist' | 'title' | 'group';
 export type GalleryScope = {kind: 'all'} | {kind: 'artist'; artist: string} | {kind: 'group'; groupId: string};
@@ -41,6 +45,7 @@ export interface GalleryPreferences {
   sort: GallerySort;
   currentId: string | null;
   scope: GalleryScope;
+  roamingSpeeds: Partial<Record<GalleryMode, number>>;
 }
 
 const PREF_KEY = 'album-gallery-v1';
@@ -48,12 +53,18 @@ const PREF_KEY = 'album-gallery-v1';
 export function readGalleryPreferences(): GalleryPreferences {
   const fallback: GalleryPreferences = {
     mode: 'tiles', density: 'medium', showTitles: false,
-    sort: 'recent', currentId: null, scope: {kind: 'all'},
+    sort: 'recent', currentId: null, scope: {kind: 'all'}, roamingSpeeds: {},
   };
   try {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) || 'null') as Partial<GalleryPreferences> | null;
     if (!p || typeof p !== 'object') return fallback;
+    const roamingSpeeds: GalleryPreferences['roamingSpeeds'] = {};
+    for (const {value} of GALLERY_MODES) {
+      const seconds = p.roamingSpeeds?.[value];
+      if (typeof seconds === 'number' && Number.isInteger(seconds) && seconds >= 2 && seconds <= 30) roamingSpeeds[value] = seconds;
+    }
     return {
+      roamingSpeeds,
       mode: GALLERY_MODES.some(m => m.value === p.mode) ? p.mode! : fallback.mode,
       density: ['small', 'medium', 'large'].includes(p.density || '') ? p.density! : fallback.density,
       showTitles: typeof p.showTitles === 'boolean' ? p.showTitles : fallback.showTitles,

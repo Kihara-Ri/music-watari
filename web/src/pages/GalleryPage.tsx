@@ -1,12 +1,13 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useApp} from '../state/AppContext';
-import {GALLERY_MODES, galleryIndex, galleryRecords, readGalleryPreferences, saveGalleryPreferences, showcaseGroups} from '../core/gallery';
+import {GALLERY_MODES, GALLERY_ROAMING_DEFAULTS, galleryIndex, galleryModeHasFocus, galleryRecords, readGalleryPreferences, saveGalleryPreferences, showcaseGroups} from '../core/gallery';
 import type {GalleryDensity, GalleryPreferences, GallerySort, GalleryScope, ShowcaseGroup} from '../core/gallery';
 import {PageHead} from '../components/PageHead';
 import {GalleryStage} from '../components/GalleryStage';
 import {GalleryFocus} from '../components/GalleryFocus';
 import {GalleryModePicker} from '../components/GalleryModePicker';
 import {GalleryScopePicker} from '../components/GalleryScopePicker';
+import {GalleryRoamingSwitch, GalleryRoamingSpeed} from '../components/GalleryRoamingControls';
 import {Dropdown} from '../components/ui/Dropdown';
 import {Seg} from '../components/ui/Seg';
 import {ChevDownIco} from '../components/icons';
@@ -37,6 +38,7 @@ export function GalleryPage() {
   const updatePreference = (patch: Partial<GalleryPreferences>) => setPreferences(p => ({...p, ...patch}));
   const pick = (id: string) => updatePreference({currentId: id});
   const modeLabel = GALLERY_MODES.find(m => m.value === preferences.mode)!.label;
+  const roamingSeconds = preferences.roamingSpeeds[preferences.mode] ?? GALLERY_ROAMING_DEFAULTS[preferences.mode];
   const scopeLabel = scope.kind === 'artist' ? scope.artist
     : scope.kind === 'group' ? groups.groups.find(g => g.id === scope.groupId)?.name ?? '展示组'
       : '全部收藏';
@@ -44,22 +46,20 @@ export function GalleryPage() {
 
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const change = () => { setReducedMotion(media.matches); if (media.matches) setRoaming(false); };
+    const change = () => setReducedMotion(media.matches);
     media.addEventListener('change', change);
     return () => media.removeEventListener('change', change);
   }, []);
 
   const chooseMode = () => {
-    setRoaming(false);
     app.openDrawer({title: '选择展示方式', wide: true,
       content: <GalleryModePicker mode={preferences.mode} onSelect={mode => {
-        updatePreference({mode}); setRoaming(false); app.closeDrawer();
+        updatePreference({mode}); app.closeDrawer();
       }}/>,
     });
   };
 
   const editGroup = (group?: ShowcaseGroup) => {
-    setRoaming(false);
     app.openDrawer({title: group ? '编辑展示组' : '新建展示组', wide: true,
       content: <ShowcaseGroupForm group={group} store={groups} onSaved={id => {
         setQuery(''); updatePreference({scope: {kind: 'group', groupId: id}, sort: 'group'});
@@ -68,7 +68,6 @@ export function GalleryPage() {
     });
   };
   const chooseScope = () => {
-    setRoaming(false);
     app.openDrawer({title: '选择展示范围', wide: true, initialFocus: 'close',
       content: <GalleryScopePicker records={app.state.records} groups={groups.groups} scope={preferences.scope}
         onSelect={(scope: GalleryScope) => {
@@ -126,7 +125,7 @@ export function GalleryPage() {
   useEffect(() => {
     if (!immersive) return;
     const onEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.defaultPrevented || event.key !== 'Escape' || document.getElementById('panel') || document.getElementById('lightbox')) return;
+      if (event.defaultPrevented || event.key !== 'Escape' || document.getElementById('panel') || document.getElementById('lightbox') || document.querySelector('dialog[open]')) return;
       event.preventDefault(); exitImmersive();
     };
     document.addEventListener('keydown', onEscape);
@@ -134,7 +133,6 @@ export function GalleryPage() {
   }, [immersive]);
 
   const focus = (id: string) => {
-    setRoaming(false);
     pick(id);
     const ids = records.map(r => r.id);
     const restore = (recordId: string) => focus(recordId);
@@ -160,7 +158,7 @@ export function GalleryPage() {
             <strong>{scopeLabel}</strong><span className="dd-caret" aria-hidden="true">{ChevDownIco}</span>
           </button>
           <label className="gallery-search"><span className="gallery-visually-hidden">搜索收藏</span>
-            <input type="search" placeholder="搜索专辑或艺人" value={query} onChange={e => {setQuery(e.target.value); setRoaming(false);}}/>
+            <input type="search" placeholder="搜索专辑或艺人" value={query} onChange={e => setQuery(e.target.value)}/>
           </label>
         </div>
         <div className="gallery-toolbar">
@@ -172,42 +170,42 @@ export function GalleryPage() {
                 title={`${records.length} 张${query.trim() ? '匹配的' : ''}收藏`}>
             {records.length} 张<span className="gallery-visually-hidden">{query.trim() ? '匹配的收藏' : '收藏'}</span>
           </span>
-          <button type="button" className="quiet gallery-adjust-trigger" aria-expanded={adjusting}
-            aria-controls="gallery-adjustments" onClick={() => {setAdjusting(v => !v); if (preferences.mode !== 'isometric') setRoaming(false);}}>
-            调整<span aria-hidden="true"> {adjusting ? '−' : '+'}</span>
+          <button type="button" className="gallery-adjust-trigger" aria-expanded={adjusting}
+            aria-controls="gallery-adjustments" onClick={() => setAdjusting(v => !v)}>
+            展示设置<span className="dd-caret" aria-hidden="true">{ChevDownIco}</span>
           </button>
+          <GalleryRoamingSwitch enabled={roaming} disabled={!records.length && !roaming} onToggle={() => setRoaming(v => !v)}/>
           <a className="gallery-manage-link" href="#domestic" aria-label="管理收藏" title="管理收藏">管理</a>
         </div>
       </div>
       <div id="gallery-adjustments" className="gallery-adjustments" hidden={!adjusting}>
         <div className="gallery-setting"><span>展示顺序</span>
           <Dropdown id="gallery-sort" options={sorts} value={preferences.sort === 'group' && preferences.scope.kind !== 'group' ? 'recent' : preferences.sort} label="展示顺序"
-            onPick={v => {updatePreference({sort: v as GallerySort}); setRoaming(false);}}/>
+            onPick={v => updatePreference({sort: v as GallerySort})}/>
         </div>
         {['tiles', 'waterfall', 'film', 'table', 'isometric'].includes(preferences.mode) ? <>
           <div className="gallery-setting"><span>封面大小</span>
             <Seg options={[{value: 'small', label: '小'}, {value: 'medium', label: '中'}, {value: 'large', label: '大'}]}
               value={preferences.density} ariaLabel="封面大小"
-              onValue={v => {updatePreference({density: v as GalleryDensity}); setRoaming(false);}}/>
+              onValue={v => updatePreference({density: v as GalleryDensity})}/>
           </div>
           {preferences.mode === 'tiles' || preferences.mode === 'table' ? <label className="gallery-check"><input type="checkbox" checked={preferences.showTitles}
             onChange={e => updatePreference({showTitles: e.target.checked})}/>显示标题</label>
             : preferences.mode === 'waterfall' ? <span className="gallery-waterfall-note">标题随封面错落排列</span> : null}
         </> : null}
-        {['waterfall', 'isometric'].includes(preferences.mode) && records.length ? <div className="gallery-setting">
-          <span>{preferences.mode === 'isometric' ? '等距墙漫游' : '瀑布流漫游'}</span>
-          <button type="button" className="quiet gallery-roaming"
-            aria-pressed={roaming} disabled={reducedMotion} onClick={() => setRoaming(v => !v)}>
-            {reducedMotion ? '已启用减少动态效果' : roaming ? '暂停漫游' : '自动漫游'}
-          </button>
+        {roaming ? <div className="gallery-setting gallery-roaming-setting">
+          <span>{galleryModeHasFocus(preferences.mode) ? '切换间隔' : '漫游速度'}</span>
+          <GalleryRoamingSpeed seconds={roamingSeconds} discrete={galleryModeHasFocus(preferences.mode)}
+            onSpeedChange={seconds => setPreferences(p => ({...p, roamingSpeeds: {...p.roamingSpeeds, [p.mode]: seconds}}))}/>
         </div> : null}
       </div>
+      {reducedMotion && roaming ? <span className="gallery-waterfall-note" role="status">减少动态效果已开启，漫游暂时暂停</span> : null}
     </div>
     {records.length ? <GalleryStage records={records} mode={preferences.mode} currentId={currentId}
       density={preferences.density} showTitles={preferences.showTitles} onPick={pick} onFocus={focus}
-      roaming={roaming} onPauseRoaming={() => setRoaming(false)}
+      roaming={roaming} roamingSpeed={roamingSeconds}
       onArtist={(artist, recordId) => {
-        setRoaming(false); pick(recordId); openArtistDrawer(app, artist);
+        pick(recordId); openArtistDrawer(app, artist);
       }}/>
       : <div className="empty gallery-empty"><div className="empty-symbol">◫</div>
         <h3>{query.trim() ? '没有找到匹配的收藏' : '还没有可展示的收藏'}</h3>

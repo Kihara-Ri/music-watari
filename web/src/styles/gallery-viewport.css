@@ -27,6 +27,22 @@
   flex-direction:column;
   container-type:size;
 }
+.gallery-stage-layout:is([data-mode=tiles],[data-mode=table]):has(.has-roam-viewport){
+  flex:1 0 260px;
+  min-height:260px;
+  display:flex;
+  flex-direction:column;
+  container-type:size;
+}
+.gallery-stage-layout:is([data-mode=tiles],[data-mode=table])>.has-roam-viewport{
+  flex:1;
+  min-height:0;
+  height:100cqh;
+  overflow-y:auto;
+  overscroll-behavior-y:contain;
+  scrollbar-width:none;
+}
+.gallery-stage-layout:is([data-mode=tiles],[data-mode=table])>.has-roam-viewport::-webkit-scrollbar{display:none}
 .gallery-stage-layout:is([data-mode=flow],[data-mode=crate],[data-mode=fan],[data-mode=ring],[data-mode=isometric])>.gallery-stage,
 .gallery-stage-layout[data-mode=waterfall]>.has-roam-viewport{
   flex:1;

@@ -17,6 +17,7 @@ import './styles/recognition.css';
 import './styles/artists.css';
 import './styles/artist-entry.css';
 import './styles/gallery.css';
+import './styles/gallery-roaming.css';
 import './styles/gallery-picker.css';
 import './styles/gallery-stage.css';
 import './styles/gallery-orbit.css';

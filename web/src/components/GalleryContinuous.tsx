@@ -1,12 +1,13 @@
 import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import type {KeyboardEvent, MouseEvent, PointerEvent} from 'react';
 import type {GalleryStageProps} from './GalleryStage';
-import {galleryIndex} from '../core/gallery';
+import {galleryIndex, GALLERY_ROAMING_DEFAULTS} from '../core/gallery';
 import {labelTags} from '../types';
 import {ArtistButton} from './ArtistButton';
 import {GalleryCase} from './GalleryCase';
 import {GalleryFilmNavigator, galleryFilmProgressLabel} from './GalleryFilmNavigator';
 import {useGalleryMotion} from './useGalleryMotion';
+import {useGalleryRoaming, roamGalleryScroller} from './useGalleryRoaming';
 import {galleryIsometricSlots, wrapGalleryPosition} from '../core/gallery-motion';
 
 const ISO_POSE_EXTENT = 16;
@@ -41,6 +42,7 @@ function StageControls({index, count, start, end, step, showPosition = true}: {
 /** 手机使用原生横向滚动；桌面拖动只写 scrollLeft，不引入吸附。 */
 export function GalleryFilm(props: GalleryStageProps) {
   const {records, currentId, density, onFocus} = props;
+  const stageRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const rangeRef = useRef<HTMLInputElement>(null);
   const latest = useRef(props);
@@ -58,6 +60,12 @@ export function GalleryFilm(props: GalleryStageProps) {
   const trailingClick = useRef(false);
   const seeking = useRef(false);
   const drag = useRef<{id: number; x: number; y: number; scroll: number; moved: boolean} | null>(null);
+  const roamPosition = useRef({position: 0, painted: 0, direction: 1});
+  useGalleryRoaming(stageRef, !!props.roaming, seconds => {
+    const rail = railRef.current;
+    if (!rail || seeking.current || drag.current) return;
+    roamGalleryScroller(rail, roamPosition.current, seconds, metric.current / (props.roamingSpeed ?? GALLERY_ROAMING_DEFAULTS.film), true);
+  });
 
   const readPosition = () => {
     const rail = railRef.current;
@@ -186,7 +194,7 @@ export function GalleryFilm(props: GalleryStageProps) {
   };
   const endSeek = () => {seeking.current = false; readPosition(); commit();};
 
-  return <div className={`gallery-stage gallery-stage--film gallery-density--${density}`} tabIndex={0}
+  return <div ref={stageRef} className={`gallery-stage gallery-stage--film gallery-density--${density}`} tabIndex={0}
     role="region" aria-label="胶片连续浏览，左右方向键浏览" onKeyDown={event => stageKey(event, step)}>
     <div className="gallery-film-shell">
       <div className="gallery-film-rail" ref={railRef} onScroll={onScroll} onDragStart={event => event.preventDefault()}
@@ -215,8 +223,16 @@ function tableAngle(id: string): number {
 }
 
 /** 全部实物在一个自然延伸的桌面中，没有选中卡或整组翻页。 */
-export function GalleryTable({records, currentId, density, showTitles, onFocus, onArtist}: GalleryStageProps) {
+export function GalleryTable({records, currentId, density, showTitles, roaming = false, roamingSpeed = GALLERY_ROAMING_DEFAULTS.table, onFocus, onArtist}: GalleryStageProps) {
   const root = useRef<HTMLDivElement>(null);
+  const [roamViewport, setRoamViewport] = useState(roaming);
+  const roamPosition = useRef({position: 0, painted: 0, direction: 1});
+  useEffect(() => {if (roaming) setRoamViewport(true);}, [roaming]);
+  useGalleryRoaming(root, roaming && roamViewport, seconds => {
+    const area = root.current; if (!area) return;
+    const cover = area.querySelector<HTMLElement>('.gallery-cover-button');
+    roamGalleryScroller(area, roamPosition.current, seconds, ((cover?.getBoundingClientRect().height || 160) + 36) / roamingSpeed);
+  });
   const scopeKey = useMemo(() => JSON.stringify(records.map(r => r.id)), [records]);
   useEffect(() => {
     if (!currentId) return;
@@ -224,7 +240,7 @@ export function GalleryTable({records, currentId, density, showTitles, onFocus, 
     [...(buttons || [])].find(button => button.dataset.recordId === currentId)
       ?.scrollIntoView({block: 'nearest', inline: 'nearest', behavior: 'instant'});
   }, [scopeKey]);
-  return <div ref={root} className={`gallery-stage gallery-stage--table gallery-density--${density}`}
+  return <div ref={root} className={`gallery-stage gallery-stage--table gallery-density--${density}${roamViewport ? ' has-roam-viewport' : ''}`}
     role="region" aria-label="桌面连续铺开，向下滚动查看全部收藏">
     <div className="gallery-table-grid" onDragStart={event => event.preventDefault()}>
       {records.map(record => {
@@ -246,7 +262,7 @@ export function GalleryTable({records, currentId, density, showTitles, onFocus, 
 }
 
 /** 三条错列组成连续等距墙；只保留附近行，小数位置不吸附。 */
-export function GalleryIsometric({records, currentId, density, roaming = false, onPick, onFocus}: GalleryStageProps) {
+export function GalleryIsometric({records, currentId, density, roaming = false, roamingSpeed = GALLERY_ROAMING_DEFAULTS.isometric, onPick, onFocus}: GalleryStageProps) {
   const viewport = useRef<HTMLDivElement>(null);
   const gestureArea = useRef<HTMLDivElement>(null);
   const index = galleryIndex(records, currentId);
@@ -281,8 +297,7 @@ export function GalleryIsometric({records, currentId, density, roaming = false, 
   const motion = useGalleryMotion({
     position: index, min: 0, max: Math.max(0, records.length - 1), snap: false, scopeKey,
     loopCount: records.length, autoRun: roaming,
-    // 每个方向约 8px/s，沿斜轨道的实际速度约 11px/s，与封面尺寸无关。
-    autoVelocity: () => 24 / axisStep.current,
+    autoVelocity: () => 1 / roamingSpeed,
     project: (start, point, startPosition) => startPosition - ((point.x - start.x) + (point.y - start.y)) * 3 / (axisStep.current * 2),
     onFrame: position => {
       paint(position);

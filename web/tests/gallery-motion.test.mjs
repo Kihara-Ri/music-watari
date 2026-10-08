@@ -61,6 +61,120 @@ test('自由轨道停在非整数位置，中心轨道轻柔归位而不是一�
   assert.equal(coast.phase, 'idle');
 });
 
+test('中心轨道释放后立即吸附，四分之一秒内消除九成偏移且保留初始速度', () => {
+  const initial = motion.releaseGalleryMotion(3.27, 0, 0, 30, true);
+  const settled = advanceAtRate(initial, 60, .25);
+  assert.ok(Math.abs(settled.position - 3) < .027, `remaining offset: ${settled.position - 3}`);
+  const moving = motion.releaseGalleryMotion(5.31, 3.8, 0, 30, true);
+  assert.equal(moving.phase, 'settle');
+  assert.equal(moving.target, 6);
+  const firstFrame = motion.advanceGalleryMotion(moving, .001, 0, 30, true);
+  assert.ok(firstFrame.position > 5.31);
+  assert.ok(Math.abs((firstFrame.position - 5.31) / .001 - 3.8) < .3);
+  assert.equal(advanceAtRate(moving, 60, .6).position, 6);
+});
+
+test('灯箱可传更紧的归位速率；省略参数保持展示板块手感不变', () => {
+  const initial = motion.releaseGalleryMotion(3.4, 0, 0, 30, true);
+  const withDefault = motion.advanceGalleryMotion(initial, .2, 0, 30, true);
+  const withShowcase = motion.advanceGalleryMotion(initial, .2, 0, 30, true, 24);
+  assert.equal(withDefault.position, withShowcase.position);
+  const tight = motion.advanceGalleryMotion(initial, .2, 0, 30, true, 36);
+  assert.ok(Math.abs(tight.position - 3) * 5 < Math.abs(withShowcase.position - 3),
+    `tight offset ${tight.position - 3} vs showcase ${withShowcase.position - 3}`);
+  const done = motion.advanceGalleryMotion(tight, .5, 0, 30, true, 36);
+  assert.equal(done.phase, 'idle');
+  assert.equal(done.position, 3);
+  // 保留释放速度的弹簧同样收得更紧，落点仍是释放时选定的目标。
+  const flick = motion.releaseGalleryMotion(2.8, 3.5, 0, 30, true);
+  const arrived = motion.advanceGalleryMotion(flick, .4, 0, 30, true, 36);
+  assert.equal(arrived.phase, 'idle');
+  assert.equal(arrived.position, flick.target);
+});
+
+test('唱片箱正常竖向划动只翻一张，小幅碰触与横向移动不会连翻', () => {
+  for (const size of [160, 190, 230, 280]) {
+    const project = distance => motion.projectGalleryCrate({x: 0, y: 0}, {x: 0, y: distance}, 5, size);
+    const ordinary = project(100);
+    assert.ok(ordinary > 5.5 && ordinary < 6, `${size}px: ${ordinary}`);
+    const release = motion.releaseGalleryMotion(ordinary, 1.8, 0, 30, true);
+    assert.equal(advanceAtRate(release, 60, .6).position, 6);
+    const longerSwipe = motion.releaseGalleryMotion(project(150), 1.8, 0, 30, true);
+    assert.equal(advanceAtRate(longerSwipe, 60, .6).position, 6);
+    const small = project(15);
+    assert.equal(advanceAtRate(motion.releaseGalleryMotion(small, 1.8, 0, 30, true), 60, .6).position, 5);
+    assert.equal(motion.projectGalleryCrate({x: 0, y: 0}, {x: 120, y: 0}, 5, size), 5);
+    const reverse = project(-100);
+    assert.equal(advanceAtRate(motion.releaseGalleryMotion(reverse, -1.8, 0, 30, true), 60, .6).position, 4);
+    const before = motion.galleryOrbitPoint('crate', 0, size);
+    const dragged = motion.galleryOrbitPoint('crate', 5 - ordinary, size);
+    assert.ok(dragged.y > before.y, `${size}px: the current cover must follow a downward finger`);
+  }
+});
+
+test('有界漫游沿原轨道连续折返，越过任意多个端点也不跳到另一张', () => {
+  const upper = motion.advanceGalleryRoaming(3.8, 1, .5, 1, 0, 4);
+  assert.ok(Math.abs(upper.position - 3.7) < 1e-10);
+  assert.equal(upper.direction, -1);
+  const lower = motion.advanceGalleryRoaming(.2, -1, .5, 1, 0, 4);
+  assert.ok(Math.abs(lower.position - .3) < 1e-10);
+  assert.equal(lower.direction, 1);
+  assert.deepEqual(motion.advanceGalleryRoaming(2, 1, 10, 1, 0, 4), {position: 4, direction: -1});
+  assert.deepEqual(motion.advanceGalleryRoaming(0, -1, 1, 1, 0, 0), {position: 0, direction: 1});
+  for (const rate of [30, 60, 120]) {
+    let current = {position: 3.8, direction: 1};
+    for (let frame = 0; frame < rate * 10; frame++) {
+      current = motion.advanceGalleryRoaming(current.position, current.direction, 1 / rate, .5, 0, 4);
+      assert.ok(current.position >= 0 && current.position <= 4);
+    }
+    assert.ok(Math.abs(current.position - .8) < 1e-10);
+    assert.equal(current.direction, 1);
+  }
+});
+
+test('中心轮播完整停留后只翻邻张，停留间隔不改变正常翻动速度', () => {
+  const trajectories = [];
+  for (const interval of [2, 5, 30]) {
+    let result = motion.advanceGalleryCarousel({elapsed: 0, direction: 1}, interval - .01, 5, interval, 0, 30);
+    assert.equal(result.destination, null);
+    result = motion.advanceGalleryCarousel(result.clock, .01, 5, interval, 0, 30);
+    assert.equal(result.destination, 6);
+    const initial = {position: 5, velocity: 0, phase: 'settle', target: result.destination};
+    trajectories.push([.1, .25, .4, .5].map(seconds => advanceAtRate(initial, 60, seconds)));
+    assert.equal(trajectories.at(-1).at(-1).position, 6);
+    assert.equal(trajectories.at(-1).at(-1).phase, 'idle');
+    assert.equal(motion.advanceGalleryCarousel(result.clock, interval - .01, 6, interval, 0, 30).destination, null);
+  }
+  assert.deepEqual(trajectories[0], trajectories[1]);
+  assert.deepEqual(trajectories[0], trajectories[2]);
+  const delayed = motion.advanceGalleryCarousel({elapsed: 0, direction: 1}, 100, 5, 4, 0, 30);
+  assert.equal(delayed.destination, 6, 'a delayed frame cannot enqueue or skip several albums');
+});
+
+test('中心轮播在同轨首尾逐张折返，单张收藏保持静止', () => {
+  let clock = {elapsed: 0, direction: 1};
+  let position = 0;
+  const path = [position];
+  for (let index = 0; index < 8; index++) {
+    const next = motion.advanceGalleryCarousel(clock, 4, position, 4, 0, 3);
+    clock = next.clock; position = next.destination; path.push(position);
+  }
+  assert.deepEqual(path, [0, 1, 2, 3, 2, 1, 0, 1, 2]);
+  assert.equal(motion.advanceGalleryCarousel(clock, 100, 0, 4, 0, 0).destination, null);
+});
+
+test('手势、叠层、后台和减少动态效果暂停后，中心轮播从完整停留重新计时', () => {
+  for (const interruption of ['gesture', 'overlay', 'background', 'reduced motion']) {
+    const nearlyReady = motion.advanceGalleryCarousel({elapsed: 0, direction: -1}, 3.9, 5, 4, 0, 30);
+    const paused = motion.advanceGalleryCarousel(nearlyReady.clock, 20, 5, 4, 0, 30, true);
+    assert.deepEqual(paused.clock, {elapsed: 0, direction: -1}, interruption);
+    assert.equal(paused.destination, null);
+    const resumed = motion.advanceGalleryCarousel(paused.clock, 3.99, 5, 4, 0, 30);
+    assert.equal(resumed.destination, null, interruption);
+    assert.equal(motion.advanceGalleryCarousel(resumed.clock, .01, 5, 4, 0, 30).destination, 4);
+  }
+});
+
 test('首尾释放不越界；反向速度可立即离开边界', () => {
   const first = motion.releaseGalleryMotion(0, -5, 0, 4, true);
   assert.equal(first.phase, 'idle');
@@ -180,6 +294,30 @@ test('扇形在整数停留点保留原来的封面位置、角度和大小', ()
     assert.equal(actual.rotateX, 0);
     assert.equal(actual.rotateY, 0);
   }
+});
+
+test('扇形交接以浅俯仰和宽缓转侧剥离，正面不会同时缩成刀片', () => {
+  const area = points => Math.abs(points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length];
+    return sum + point.x * next.y - next.x * point.y;
+  }, 0)) * .5;
+  for (const size of [100, 160, 230, 280, 360]) {
+    for (let index = -1000; index <= 1000; index++) {
+      const offset = index / 1000;
+      const pose = motion.galleryOrbitPose('fan', offset);
+      const track = motion.galleryOrbitPose('fan', offset, false);
+      assert.ok(Math.abs(pose.rotateY) <= 66 + 1e-10);
+      assert.ok(pose.rotateX >= -3 - 1e-10 && pose.rotateX <= 0);
+      assert.ok(pose.z >= track.z - 1e-10 && pose.z <= track.z + .015 + 1e-10);
+      const corners = motion.galleryOrbitCorners('fan', offset, size);
+      const front = [corners[1], corners[5], corners[7], corners[3]];
+      assert.ok(area(front) > size * size * .36,
+        `${size}px, offset=${offset}: preserve enough cover face to read the handoff`);
+    }
+  }
+  const quarter = motion.galleryOrbitPose('fan', .25);
+  assert.ok(Math.abs(quarter.rotateY) > 46, 'the peel starts broadly instead of flicking only at the midpoint');
+  assert.ok(quarter.rotateX < -2, 'a shallow case pitch reveals thickness during the peel');
 });
 
 test('扇形换层前后实体轮廓错开，触碰抬起和所有封面尺寸仍有安全间距', () => {

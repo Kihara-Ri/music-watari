@@ -102,7 +102,7 @@ test('九种展示模式的偏好均可保存恢复', () => {
   for (const mode of gallery.GALLERY_MODES) {
     assert.ok(mode.label.trim());
     assert.ok(mode.description.trim());
-    const preferences = {mode: mode.value, density: 'large', showTitles: true, sort: 'artist', currentId: 'copy-b', scope: {kind: 'all'}};
+    const preferences = {mode: mode.value, density: 'large', showTitles: true, sort: 'artist', currentId: 'copy-b', scope: {kind: 'all'}, roamingSpeeds: {}};
     gallery.saveGalleryPreferences(preferences);
     assert.deepEqual(gallery.readGalleryPreferences(), preferences, mode.value);
   }
@@ -114,6 +114,18 @@ test('当前副本移除后回退到有效起点', () => {
   assert.equal(gallery.galleryIndex(records.slice(0, 1), 'current'), 0);
   assert.equal(gallery.galleryIndex(records, null), 0);
   assert.equal(gallery.galleryIndex([], 'current'), 0);
+});
+
+test('每种布局独立恢复漫游速度，旧偏好和非法速度回退，不保存漫游启动状态', () => {
+  storage.set('album-gallery-v1', JSON.stringify({mode: 'crate', roaming: true,
+    roamingSpeeds: {crate: 3, film: 30, flow: 1, ring: 31, tiles: '8', waterfall: 2.5}}));
+  const preferences = gallery.readGalleryPreferences();
+  assert.deepEqual(preferences.roamingSpeeds, {film: 30, crate: 3});
+  assert.equal(Object.hasOwn(preferences, 'roaming'), false);
+  gallery.saveGalleryPreferences({...preferences, roamingSpeeds: {...preferences.roamingSpeeds, fan: 12}});
+  assert.deepEqual(gallery.readGalleryPreferences().roamingSpeeds, {film: 30, crate: 3, fan: 12});
+  storage.set('album-gallery-v1', JSON.stringify({mode: 'waterfall'}));
+  assert.deepEqual(gallery.readGalleryPreferences().roamingSpeeds, {});
 });
 
 test('艺人范围精确匹配本地名称，搜索继续限定在该艺人内', () => {

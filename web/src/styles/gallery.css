@@ -12,7 +12,8 @@
 .gallery-mode-trigger{flex:0 1 auto;min-width:0;min-height:44px;display:flex;align-items:center;gap:6px;padding:8px 10px}
 .gallery-mode-trigger strong{font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gallery-mode-trigger>span{flex:none}
-.gallery-adjust-trigger{flex:none;min-height:44px;min-width:52px;padding:7px 8px}
+.gallery-adjust-trigger{display:flex;align-items:center;gap:6px;flex:none;min-height:44px;padding:8px;font-size:12px}
+.gallery-adjust-trigger[aria-expanded=true] .dd-caret{transform:rotate(180deg)}
 .gallery-adjustments{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm)}
 .gallery-adjustments[hidden]{display:none}
 .gallery-setting{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
@@ -22,7 +23,6 @@
 .gallery-waterfall-note{font-size:11px;color:var(--faint)}
 .gallery-count{flex:1;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gallery-manage-link{flex:none;font-size:12px;color:var(--muted);min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center}
-.gallery-roaming{min-height:44px;padding:6px 10px;font-size:12px;white-space:normal}
 .gallery-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 
 /* 整个应用树一起沉浸，资料抽屉与照片灯箱仍保持可见。 */
@@ -36,7 +36,11 @@
   .gallery-controls{gap:9px;margin-bottom:12px}
   .gallery-filters{gap:8px}
   .gallery-filter-inputs{flex-basis:100%;max-width:none}
-  .gallery-toolbar{flex-basis:100%}
+  .gallery-toolbar{flex-basis:100%;gap:4px;flex-wrap:wrap}
+  .gallery-mode-trigger{flex:0 0 auto;min-width:0;padding-inline:10px}
+  .gallery-mode-trigger strong{font-size:12px}
+  .gallery-count{flex:1;font-size:11px}
+  .gallery-adjust-trigger{min-width:44px;padding-inline:4px}
   .gallery-adjustments{gap:8px;padding:8px 12px}
   .gallery-setting{width:100%;justify-content:space-between}
   #main.showcase-main:has(.gallery-page.is-immersive){padding:calc(12px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom))}

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react';
 import type {MouseEvent, PointerEvent} from 'react';
-import {advanceGalleryMotion, clampGalleryPosition, galleryReleaseVelocity, releaseGalleryMotion, wrapGalleryPosition} from '../core/gallery-motion';
+import {advanceGalleryCarousel, advanceGalleryMotion, advanceGalleryRoaming, clampGalleryPosition, galleryReleaseVelocity, releaseGalleryMotion, wrapGalleryPosition} from '../core/gallery-motion';
 import type {GalleryMotionState, GalleryPoint} from '../core/gallery-motion';
 
 export interface GalleryMotionOptions {
@@ -19,6 +19,11 @@ export interface GalleryMotionOptions {
   loopCount?: number;
   autoRun?: boolean;
   autoVelocity?(): number;
+  /** Center layouts dwell, then turn one album with the normal spring. */
+  autoInterval?(): number;
+  /** Bounded center rails reverse on their existing path at either end. */
+  autoBounce?: boolean;
+  releaseVelocityLimit?: number;
 }
 
 interface Gesture {
@@ -30,6 +35,9 @@ interface Gesture {
   moved: boolean;
   samples: Array<{position: number; at: number}>;
 }
+
+const hasGalleryOverlay = () => !!(document.getElementById('panel') || document.getElementById('lightbox') ||
+  document.querySelector('dialog[open]'));
 
 /** One continuous rail position. React and saved preferences only see committed anchors. */
 export function useGalleryMotion(options: GalleryMotionOptions) {
@@ -51,6 +59,9 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
   const tickRef = useRef<(at: number) => void>(() => {});
   const resumeAt = useRef(0);
   const wasAutoRunning = useRef(false);
+  const autoDirection = useRef(1);
+  const carousel = useRef({elapsed: 0, direction: 1});
+  const autoTransition = useRef(false);
   const pressedPointers = useRef(new Set<number>());
   const blurred = useRef(false);
   const bounds = () => latest.current.loopCount
@@ -71,10 +82,24 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
     stepTarget.current = null;
     setNavigationTarget(null);
   }, []);
+  const canAutoRun = useCallback(() => latest.current.autoRun && latest.current.enabled !== false &&
+    !reduced.current && !document.hidden && !blurred.current && !gesture.current && !pressedPointers.current.size &&
+    !hasGalleryOverlay(), []);
+  const schedule = useCallback(() => {
+    if (!frame.current) frame.current = requestAnimationFrame(at => tickRef.current(at));
+  }, []);
+  const resetAutoClock = useCallback(() => {
+    const current = latest.current;
+    carousel.current = advanceGalleryCarousel(carousel.current, 0, positionRef.current,
+      current.autoInterval?.() ?? 4, current.min, current.max, true).clock;
+    resumeAt.current = current.autoInterval ? 0 : performance.now() + 2800;
+  }, []);
   const stop = useCallback((save = true) => {
     if (frame.current) cancelAnimationFrame(frame.current);
     frame.current = 0;
     motion.current = null;
+    autoTransition.current = false;
+    resetAutoClock();
     clearStepTarget();
     previousAt.current = 0;
     const active = gesture.current;
@@ -86,37 +111,61 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
     }
     latest.current.onFrame(positionRef.current);
     if (save) commit();
-  }, [clearStepTarget, commit, releaseCapture]);
-  const schedule = useCallback(() => {
-    if (!frame.current) frame.current = requestAnimationFrame(at => tickRef.current(at));
-  }, []);
+    // Geometry changes and temporary interruptions retain the enabled switch.
+    if (canAutoRun()) schedule();
+  }, [canAutoRun, clearStepTarget, commit, releaseCapture, resetAutoClock, schedule]);
 
   tickRef.current = at => {
     frame.current = 0;
-    if (document.hidden || document.getElementById('panel') || document.getElementById('lightbox')) {
+    if (document.hidden || blurred.current || hasGalleryOverlay()) {
       stop(); return;
     }
     const state = motion.current;
+    if (autoTransition.current && !canAutoRun()) {stop(); return;}
     const seconds = previousAt.current ? Math.min(64, Math.max(0, at - previousAt.current)) / 1000 : 0;
     previousAt.current = at;
     if (state) {
       const {min, max} = bounds();
       motion.current = advanceGalleryMotion(state, seconds, min, max, latest.current.snap);
       positionRef.current = motion.current.position;
-    } else if (latest.current.autoRun && !reduced.current && !gesture.current && !pressedPointers.current.size && at >= resumeAt.current) {
-      const velocity = latest.current.autoVelocity?.() || 0;
-      if (Number.isFinite(velocity)) positionRef.current += velocity * seconds;
+    } else if (canAutoRun() && at >= resumeAt.current) {
+      if (latest.current.autoInterval) {
+        const center = clampGalleryPosition(Math.round(positionRef.current), latest.current.min, latest.current.max);
+        let destination: number | null = center !== positionRef.current ? center : null;
+        if (destination === null) {
+          const next = advanceGalleryCarousel(carousel.current, seconds, positionRef.current,
+            latest.current.autoInterval(), latest.current.min, latest.current.max);
+          carousel.current = next.clock;
+          destination = next.destination;
+        }
+        if (destination !== null) {
+          motion.current = {position: positionRef.current, velocity: 0, phase: 'settle', target: destination};
+          autoTransition.current = true;
+        }
+      } else {
+        const velocity = latest.current.autoVelocity?.() || 0;
+        if (latest.current.autoBounce) {
+          const next = advanceGalleryRoaming(positionRef.current, autoDirection.current, seconds, velocity,
+            latest.current.min, latest.current.max);
+          positionRef.current = next.position;
+          autoDirection.current = next.direction;
+        } else if (Number.isFinite(velocity)) positionRef.current += velocity * seconds;
+      }
     }
     latest.current.onFrame(positionRef.current);
     if (motion.current?.phase !== 'idle' && motion.current) schedule();
-    else if (motion.current) {motion.current = null; clearStepTarget(); commit();}
-    if (latest.current.autoRun && !reduced.current && !gesture.current && !pressedPointers.current.size) schedule();
+    else if (motion.current) {
+      motion.current = null;
+      autoTransition.current = false;
+      if (latest.current.autoInterval) resetAutoClock();
+      clearStepTarget(); commit();
+    }
+    if (canAutoRun()) schedule();
     else if (!motion.current) previousAt.current = 0;
   };
 
   const moveTo = useCallback((position: number, animate = true) => {
     stop(false);
-    resumeAt.current = performance.now() + 2800;
     trailingClick.current = false;
     const {min, max} = bounds();
     const target = clampGalleryPosition(position, min, max);
@@ -163,46 +212,52 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
       trailingClick.current = false;
       positionRef.current = clampGalleryPosition(options.position, options.min, options.max);
       lastCommitted.current = options.position;
+      if (scopeChanged) {autoDirection.current = 1; carousel.current.direction = 1;}
       latest.current.onFrame(positionRef.current);
     }
   }, [options.position, options.min, options.max, options.enabled, options.scopeKey, stop]);
 
+  const autoInterval = options.autoInterval?.();
   useEffect(() => {
-    if (options.autoRun && !reduced.current) {
+    if (canAutoRun()) {
+      resetAutoClock();
       previousAt.current = 0;
       schedule();
-    } else if (wasAutoRunning.current) stop();
+    } else if (wasAutoRunning.current && !options.autoRun && !gesture.current && (!motion.current || autoTransition.current)) {
+      if (options.snap) moveTo(Math.round(positionRef.current));
+      else stop();
+    }
     wasAutoRunning.current = !!options.autoRun;
-  }, [options.autoRun, schedule, stop]);
+  }, [options.autoRun, options.snap, autoInterval, canAutoRun, moveTo, resetAutoClock, schedule, stop]);
 
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const resume = () => {
+      if (canAutoRun()) {
+        resetAutoClock();
+        previousAt.current = 0; schedule();
+      }
+    };
     const change = () => {
       reduced.current = preference.matches;
       if (preference.matches) {
         const target = latest.current.snap ? Math.round(positionRef.current) : positionRef.current;
         moveTo(target, false);
-      }
-    };
-    const resume = () => {
-      if (latest.current.autoRun && !reduced.current && !document.hidden && !blurred.current &&
-          !document.getElementById('panel') && !document.getElementById('lightbox')) {
-        previousAt.current = 0; schedule();
-      }
+      } else resume();
     };
     const hide = () => {if (document.hidden) stop(); else resume();};
     const blur = () => {blurred.current = true; pressedPointers.current.clear(); stop();};
     const focus = () => {blurred.current = false; resume();};
     const release = (event: globalThis.PointerEvent) => {
       if (!pressedPointers.current.delete(event.pointerId)) return;
-      resumeAt.current = performance.now() + 2800;
+      resetAutoClock();
       if (!pressedPointers.current.size) resume();
     };
     const observer = new MutationObserver(() => {
-      if ((gesture.current || motion.current || frame.current) && (document.getElementById('panel') || document.getElementById('lightbox'))) stop();
+      if ((gesture.current || motion.current || frame.current) && hasGalleryOverlay()) stop();
       else if (!frame.current) resume();
     });
-    observer.observe(document.body, {childList: true, subtree: true});
+    observer.observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ['open']});
     preference.addEventListener('change', change);
     document.addEventListener('visibilitychange', hide);
     window.addEventListener('blur', blur);
@@ -225,7 +280,7 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
       gesture.current = null;
       if (active) releaseCapture(active);
     };
-  }, [moveTo, releaseCapture, schedule, stop]);
+  }, [canAutoRun, moveTo, releaseCapture, resetAutoClock, schedule, stop]);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button === 0) pressedPointers.current.add(event.pointerId);
@@ -233,11 +288,10 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
     trailingClick.current = false;
     if (!event.isPrimary || (gesture.current && gesture.current.id !== event.pointerId)) {stop(); return;}
     if (event.button !== 0 || latest.current.enabled === false || document.hidden ||
-        document.getElementById('panel') || document.getElementById('lightbox')) return;
+        hasGalleryOverlay()) return;
     if ((event.target as HTMLElement).closest('.gallery-stage-controls, a, input, textarea, select')) return;
     if (event.pointerType === 'touch' && event.clientX < 28) {stop(); return;}
     stop(false);
-    resumeAt.current = performance.now() + 2800;
     gesture.current = {id: event.pointerId, start: {x: event.clientX, y: event.clientY},
       position: positionRef.current, anchor: (event.target as HTMLElement).closest<HTMLElement>('[data-motion-index]'),
       element: event.currentTarget, moved: false, samples: [{position: positionRef.current, at: event.timeStamp}]};
@@ -269,7 +323,7 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
     if (active.moved) onPointerMove(event);
     gesture.current = null;
     draggingRef.current = false;
-    resumeAt.current = performance.now() + 2800;
+    resetAutoClock();
     releaseCapture(active);
     if (!active.moved) {motion.current = null; if (latest.current.autoRun && !reduced.current) schedule(); return;}
     trailingClick.current = true;
@@ -281,7 +335,9 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
       return;
     }
     const {min, max} = bounds();
-    motion.current = releaseGalleryMotion(positionRef.current, galleryReleaseVelocity(active.samples), min, max, latest.current.snap);
+    const limit = latest.current.releaseVelocityLimit ?? 10;
+    const velocity = Math.max(-limit, Math.min(limit, galleryReleaseVelocity(active.samples)));
+    motion.current = releaseGalleryMotion(positionRef.current, velocity, min, max, latest.current.snap);
     previousAt.current = performance.now();
     if (motion.current.phase === 'idle') {
       motion.current = null; latest.current.onFrame(positionRef.current); commit();
@@ -293,7 +349,7 @@ export function useGalleryMotion(options: GalleryMotionOptions) {
     if (gesture.current?.id !== event.pointerId) return;
     const moved = gesture.current.moved;
     stop();
-    resumeAt.current = performance.now() + 2800;
+    resetAutoClock();
     if (latest.current.autoRun && !reduced.current) schedule();
     trailingClick.current = moved;
   };
